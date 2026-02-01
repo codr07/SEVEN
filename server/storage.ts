@@ -1,9 +1,10 @@
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import {
-  products, messages,
+  products, messages, siteData,
   type Product, type InsertProduct,
-  type Message, type InsertMessage
+  type Message, type InsertMessage,
+  type SiteData
 } from "@shared/schema";
 
 export interface IStorage {
@@ -16,6 +17,12 @@ export interface IStorage {
 
   // Messages
   createMessage(message: InsertMessage): Promise<Message>;
+  getMessages(): Promise<Message[]>;
+  deleteMessage(id: number): Promise<void>;
+
+  // Site Data
+  getSiteData(key: string): Promise<SiteData | undefined>;
+  updateSiteData(key: string, value: any): Promise<SiteData>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -51,6 +58,32 @@ export class DatabaseStorage implements IStorage {
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
     const [message] = await db.insert(messages).values(insertMessage).returning();
     return message;
+  }
+
+  async getMessages(): Promise<Message[]> {
+    return await db.select().from(messages);
+  }
+
+  async deleteMessage(id: number): Promise<void> {
+    await db.delete(messages).where(eq(messages.id, id));
+  }
+
+  // Site Data
+  async getSiteData(key: string): Promise<SiteData | undefined> {
+    const [data] = await db.select().from(siteData).where(eq(siteData.key, key));
+    return data;
+  }
+
+  async updateSiteData(key: string, value: any): Promise<SiteData> {
+    const [data] = await db
+      .insert(siteData)
+      .values({ key, value })
+      .onConflictDoUpdate({
+        target: siteData.key,
+        set: { value, updatedAt: new Date() },
+      })
+      .returning();
+    return data;
   }
 }
 

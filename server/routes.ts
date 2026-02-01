@@ -67,6 +67,11 @@ export async function registerRoutes(
   });
 
   // === Messages API ===
+  app.get(api.messages.list.path, isAuthenticated, async (req, res) => {
+    const messages = await storage.getMessages();
+    res.json(messages);
+  });
+
   app.post(api.messages.create.path, async (req, res) => {
     try {
       const input = api.messages.create.input.parse(req.body);
@@ -81,6 +86,23 @@ export async function registerRoutes(
       }
       throw err;
     }
+  });
+
+  app.delete(api.messages.delete.path, isAuthenticated, async (req, res) => {
+    await storage.deleteMessage(Number(req.params.id));
+    res.status(204).end();
+  });
+
+  // === Site Data API ===
+  app.get(api.site.get.path, async (req, res) => {
+    const data = await storage.getSiteData(req.params.key);
+    if (!data) return res.status(404).json({ message: "Not found" });
+    res.json(data.value);
+  });
+
+  app.post(api.site.update.path, isAuthenticated, async (req, res) => {
+    const data = await storage.updateSiteData(req.params.key, req.body);
+    res.json(data.value);
   });
 
   // Seed Data

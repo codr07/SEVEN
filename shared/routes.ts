@@ -63,6 +63,14 @@ export const api = {
     },
   },
   messages: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/messages',
+      responses: {
+        200: z.array(z.custom<typeof messages.$inferSelect>()),
+        401: errorSchemas.internal,
+      },
+    },
     create: {
       method: 'POST' as const,
       path: '/api/messages',
@@ -70,6 +78,34 @@ export const api = {
       responses: {
         201: z.custom<typeof messages.$inferSelect>(),
         400: errorSchemas.validation,
+      },
+    },
+    delete: {
+      method: 'DELETE' as const,
+      path: '/api/messages/:id',
+      responses: {
+        204: z.void(),
+        404: errorSchemas.notFound,
+        401: errorSchemas.internal,
+      },
+    },
+  },
+  site: {
+    get: {
+      method: 'GET' as const,
+      path: '/api/site/:key',
+      responses: {
+        200: z.any(),
+        404: errorSchemas.notFound,
+      },
+    },
+    update: {
+      method: 'POST' as const,
+      path: '/api/site/:key',
+      input: z.any(),
+      responses: {
+        200: z.any(),
+        401: errorSchemas.internal,
       },
     },
   },
