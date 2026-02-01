@@ -1,14 +1,17 @@
 import { useProducts } from "@/hooks/use-products";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Download, Book, Video, Loader2 } from "lucide-react";
+import { ShoppingCart, Download, Book, Video, Loader2, FileText, X } from "lucide-react";
+import { PDFPreview } from "@/components/PDFPreview";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const categories = ["All", "Notes", "Courses", "Coaching"];
 
 export default function Services() {
   const { data: products, isLoading, error } = useProducts();
   const [activeCategory, setActiveCategory] = useState("All");
+  const [previewProduct, setPreviewProduct] = useState<any>(null);
 
   const filteredProducts = products?.filter(p => 
     activeCategory === "All" || p.category.toLowerCase().includes(activeCategory.toLowerCase().slice(0, -1))
@@ -95,10 +98,22 @@ export default function Services() {
                       ))}
                     </div>
 
-                    <Button className="w-full bg-white/5 hover:bg-primary hover:text-white border-0 transition-colors group-hover:bg-primary">
+                    <Button 
+                      className="flex-1 bg-white/5 hover:bg-primary hover:text-white border-0 transition-colors group-hover:bg-primary"
+                    >
                       <ShoppingCart className="w-4 h-4 mr-2" />
                       Add to Cart
                     </Button>
+                    {product.fileUrl && (
+                      <Button 
+                        size="icon" 
+                        variant="outline" 
+                        className="border-white/10 hover:bg-secondary hover:text-background"
+                        onClick={() => setPreviewProduct(product)}
+                      >
+                        <FileText className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -106,6 +121,22 @@ export default function Services() {
           )}
         </div>
       </section>
+
+      <Dialog open={!!previewProduct} onOpenChange={() => setPreviewProduct(null)}>
+        <DialogContent className="max-w-4xl bg-card border-white/10 p-0 overflow-hidden">
+          <DialogHeader className="p-6 bg-black/40 border-b border-white/10">
+            <DialogTitle className="flex items-center gap-2 text-white">
+              <FileText className="text-secondary" />
+              {previewProduct?.title} - <span className="text-muted-foreground text-sm font-normal italic">Preview Mode</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4 bg-background/50">
+            {previewProduct?.fileUrl && (
+              <PDFPreview fileUrl={previewProduct.fileUrl} isPurchased={false} />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
