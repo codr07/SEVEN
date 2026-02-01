@@ -83,9 +83,11 @@ export default {
         },
       },
       fontFamily: {
+        display: ["'Oxanium'", "sans-serif"],
+        body: ["'Outfit'", "sans-serif"],
+        mono: ["'Space Mono'", "monospace"],
         sans: ["var(--font-sans)"],
         serif: ["var(--font-serif)"],
-        mono: ["var(--font-mono)"],
       },
       keyframes: {
         "accordion-down": {
