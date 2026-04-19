@@ -89,9 +89,18 @@ const CustomCursor = () => {
 
   // Clean, sleek pencil icon mapping pointing to bottom left tip (0, 24 geometry roughly)
   const pencilSvg = encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${isHovering ? '#E05D5D' : '#fff'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 20h9"/>
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" fill="${isHovering ? '#000' : '#000'}"/>
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" fill="#000"/>
+    </svg>
+  `);
+
+  // Interactive Target icon for hovering over buttons/links
+  const pointerSvg = encodeURIComponent(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#E05D5D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="16" cy="16" r="12" fill="rgba(224,93,93,0.1)"/>
+      <circle cx="16" cy="16" r="4" fill="#E05D5D"/>
+      <path d="M16 2v4 M16 26v4 M2 16h4 M26 16h4"/>
     </svg>
   `);
 
@@ -103,9 +112,9 @@ const CustomCursor = () => {
             cursor: url("data:image/svg+xml;utf8,${pencilSvg}") 2 22, auto !important;
           }
           a, button, [role="button"], input, select, textarea, .view-profile-btn, a * {
-            cursor: pointer !important;
+            cursor: url("data:image/svg+xml;utf8,${pointerSvg}") 16 16, pointer !important;
           }
-          /* Ensure cards themselves do NOT force a pointer cursor */
+          /* Ensure cards themselves do NOT force a pointer cursor unless wrapped in a link */
           .hover-glow, .group, .bg-card, .rounded-3xl, .rounded-4xl {
             cursor: url("data:image/svg+xml;utf8,${pencilSvg}") 2 22, auto !important;
           }

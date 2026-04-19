@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { ChevronDown, Menu, X } from 'lucide-react';
+import { ChevronDown, Menu, X, Home, BookOpen, GraduationCap, FileText, Briefcase, Star, Mail, UserCircle, ChevronLeft, ChevronRight, LogIn } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { motion, AnimatePresence } from 'framer-motion';
 import logoLight from '../assets/seven_dark.svg';
 import logoDark from '../assets/seven.svg';
 
@@ -14,10 +15,11 @@ function cn(...inputs) {
 
 const Navbar = () => {
   const { theme } = useTheme();
-  const { user, profile, logout, login } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const { user, profile, logout, login, role } = useAuth();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
+  
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -26,14 +28,6 @@ const Navbar = () => {
   const avatarMenuRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -49,6 +43,7 @@ const Navbar = () => {
 
   useEffect(() => {
     setIsAvatarMenuOpen(false);
+    setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -86,150 +81,215 @@ const Navbar = () => {
   };
 
   const navItems = [
-    { name: 'Home', path: '/' },
-    { name: 'Academics', path: '/academics' },
-    { name: 'Courses', path: '/courses' },
-    { name: 'Notes', path: '/notes' },
-    { name: 'Services', path: '/services' },
-    { name: 'Stars', path: '/stars' },
-    { name: 'Contact', path: '/contact' },
-    { name: 'Student Zone', path: '/student-zone' },
+    { name: 'Home', path: '/', icon: Home },
+    { name: 'Academics', path: '/academics', icon: BookOpen },
+    { name: 'Courses', path: '/courses', icon: GraduationCap },
+    { name: 'Notes', path: '/notes', icon: FileText },
+    { name: 'Services', path: '/services', icon: Briefcase },
+    { name: 'Stars', path: '/stars', icon: Star },
+    { name: 'Contact', path: '/contact', icon: Mail },
+    { name: 'Student Zone', path: '/student-zone', icon: UserCircle },
   ];
 
-  return (
-    <nav
-      className={cn(
-        "fixed top-0 left-0 right-0 z-[5000] px-6 py-4 flex items-center justify-between transition-all duration-300",
-        isScrolled ? "bg-background/80 backdrop-blur-md shadow-lg py-3" : "bg-transparent"
-      )}
-    >
-      <div className="flex items-center gap-4">
-        <img
-          src={theme === 'dark' ? logoDark : logoLight}
-          alt="5EVEN Logo"
-          className="h-10 w-auto object-contain drop-shadow-xl"
-        />
-        <span className="font-bold text-2xl uppercase tracking-widest hidden sm:block pointer-events-none mt-1">
-          5EVEN
-        </span>
-      </div>
+  const SidebarContent = ({ forceExpanded = false }) => {
+    const collapsed = !forceExpanded && isDesktopCollapsed;
 
-      <div className="hidden md:flex items-center gap-8">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.path}
-            className={({ isActive }) =>
-              cn(
-                "text-sm font-medium tracking-wide transition-colors hover:text-primary",
-                isActive ? "text-primary" : "text-muted-foreground"
-              )
-            }
-          >
-            {item.name}
-          </NavLink>
-        ))}
-      </div>
+    return (
+      <div className="flex flex-col h-full w-full">
+        <div className={cn("flex items-center gap-4 py-8 relative transition-all duration-300", collapsed ? "px-0 justify-center" : "px-6")}>
+          <img
+            src={theme === 'dark' ? logoDark : logoLight}
+            alt="5EVEN Logo"
+            className="h-10 w-auto object-contain drop-shadow-xl shrink-0"
+          />
+          {!collapsed && (
+            <span className="font-bold text-2xl uppercase tracking-widest hidden sm:block pointer-events-none mt-1 whitespace-nowrap">
+              5EVEN
+            </span>
+          )}
+          
+          {/* Toggle Collapse Button (PC Only) */}
+          {!forceExpanded && (
+            <button
+              onClick={() => setIsDesktopCollapsed(!isDesktopCollapsed)}
+              className="absolute top-10 -right-3.5 p-1 rounded-full border border-border bg-card shadow-md hover:bg-accent hover:text-primary transition-colors z-[5100]"
+            >
+              {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+            </button>
+          )}
+        </div>
 
-      <div className="flex items-center gap-4">
-        {user ? (
-          <div className="hidden md:block relative" ref={avatarMenuRef}>
+        <div className="flex-1 flex flex-col gap-2 overflow-y-auto w-full px-3 lenis-prevent">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.name}
+                to={item.path}
+                title={collapsed ? item.name : undefined}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center rounded-xl text-sm font-bold uppercase tracking-widest transition-colors group overflow-hidden shrink-0",
+                    isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+                    collapsed ? "py-4 justify-center" : "px-4 py-3 gap-3"
+                  )
+                }
+              >
+                <Icon size={collapsed ? 22 : 18} className="shrink-0 group-hover:scale-110 transition-transform" />
+                {!collapsed && <span className="whitespace-nowrap">{item.name}</span>}
+              </NavLink>
+            );
+          })}
+        </div>
+
+        <div className={cn("p-4 mt-auto border-t border-border w-full", collapsed ? "flex justify-center flex-col gap-2 items-center" : "")}>
+          {user ? (
+            <div className={cn("relative w-full", collapsed ? "flex justify-center" : "")} ref={avatarMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsAvatarMenuOpen((v) => !v)}
+                className={cn(
+                  "flex items-center rounded-xl border border-border bg-card hover:bg-accent transition-colors w-full",
+                  collapsed ? "p-1.5 justify-center border-none shadow-none bg-transparent" : "p-2 justify-between"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <span className={cn(
+                    "rounded-full overflow-hidden flex items-center justify-center shrink-0",
+                    collapsed ? "w-10 h-10 border border-primary/20 bg-card shadow-sm" : "w-8 h-8 bg-primary/10"
+                  )}>
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className={cn("font-black text-primary", collapsed ? "text-base" : "text-xs")}>
+                        {(profile?.full_name || user?.email || 'U').charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </span>
+                  {!collapsed && (
+                    <span className="truncate text-xs font-bold text-left max-w-[100px]">
+                      {profile?.full_name || user?.email || 'User'}
+                    </span>
+                  )}
+                </div>
+                {!collapsed && <ChevronDown size={14} className="text-muted-foreground shrink-0" />}
+              </button>
+
+              {isAvatarMenuOpen && (
+                <div className={cn(
+                  "absolute bottom-full mb-4 rounded-2xl border border-border bg-card shadow-2xl p-2 z-50",
+                  collapsed ? "left-full ml-4 w-44" : "left-0 w-full"
+                )}>
+                  <NavLink
+                    to="/student-zone?tab=settings"
+                    className="block w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-accent"
+                  >
+                    Account
+                  </NavLink>
+                  <NavLink
+                    to="/student-zone?tab=dashboard"
+                    className="block w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-accent"
+                  >
+                    Dashboard
+                  </NavLink>
+                  {role === 'admin' && (
+                    <NavLink
+                      to="/seven-mod"
+                      className="block w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-primary hover:bg-primary/10"
+                    >
+                      Admin Panel
+                    </NavLink>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="block w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-destructive hover:bg-destructive/10"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
             <button
               type="button"
-              onClick={() => setIsAvatarMenuOpen((v) => !v)}
-              className="flex items-center gap-2 px-3 py-2 rounded-full border border-border bg-card hover:bg-accent transition-colors"
-              aria-haspopup="menu"
-              aria-expanded={isAvatarMenuOpen}
+              onClick={() => setIsLoginOpen(true)}
+              title={collapsed ? "Sign In" : undefined}
+              className={cn(
+                "flex items-center justify-center rounded-xl transition-colors w-full",
+                collapsed 
+                  ? "p-3 hover:bg-primary/20 text-muted-foreground hover:text-primary" 
+                  : "px-4 py-3 bg-primary text-primary-foreground font-black uppercase tracking-widest text-xs"
+              )}
             >
-              <span className="w-7 h-7 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center">
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-[10px] font-black text-primary">
-                    {(profile?.full_name || user?.email || 'U').charAt(0).toUpperCase()}
-                  </span>
-                )}
-              </span>
-              <ChevronDown size={14} className="text-muted-foreground" />
+              {collapsed ? <LogIn size={20} /> : "Sign In"}
             </button>
+          )}
+        </div>
+      </div>
+    );
+  };
 
-            {isAvatarMenuOpen && (
-              <div className="absolute right-0 mt-2 w-44 rounded-2xl border border-border bg-card shadow-2xl p-2 z-50">
-                <NavLink
-                  to="/student-zone?tab=settings"
-                  className="block w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-accent"
-                >
-                  Account
-                </NavLink>
-                <NavLink
-                  to="/student-zone?tab=dashboard"
-                  className="block w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-accent"
-                >
-                  Dashboard
-                </NavLink>
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  className="block w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-destructive hover:bg-destructive/10"
-                >
-                  Sign Out
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setIsLoginOpen(true)}
-            className="hidden md:flex items-center justify-center px-4 py-2 rounded-full border border-border bg-card hover:bg-accent transition-colors text-xs font-black uppercase tracking-widest"
-          >
-            Login
-          </button>
+  return (
+    <>
+      {/* Desktop Persistent Sidebar */}
+      <aside 
+        className={cn(
+          "hidden md:flex sticky top-0 h-screen border-r border-border bg-card/80 backdrop-blur-3xl shrink-0 z-[5000] shadow-2xl",
+          // CSS Transition purely for layout expansion pushing App.jsx content over gracefully
+          "transition-[width] duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]",
+          isDesktopCollapsed ? "w-20" : "w-[260px]"
         )}
+      >
+        <SidebarContent />
+      </aside>
 
+      {/* Mobile Topbar */}
+      <div className="md:hidden sticky top-0 left-0 right-0 h-20 bg-background/80 backdrop-blur-md border-b border-border z-[4000] flex items-center justify-between px-6 shadow-sm">
+        <div className="flex items-center gap-4">
+          <img
+            src={theme === 'dark' ? logoDark : logoLight}
+            alt="5EVEN Logo"
+            className="h-8 w-auto object-contain"
+          />
+          <span className="font-bold text-xl uppercase tracking-widest mt-1">
+            5EVEN
+          </span>
+        </div>
+        
         <button
-          className="md:hidden p-2 rounded-full hover:bg-accent transition-colors"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="p-2 rounded-full border border-border bg-card shadow-sm hover:bg-accent transition-colors relative"
+          onClick={() => setIsMobileMenuOpen(true)}
         >
-          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          <Menu size={24} />
         </button>
       </div>
 
-      {/* Mobile Menu */}
-      <div
-        className={cn(
-          "fixed inset-0 z-[-1] bg-background/95 backdrop-blur-xl flex flex-col items-center justify-center gap-8 transition-transform duration-500 ease-in-out md:hidden",
-          isMenuOpen ? "translate-x-0" : "translate-x-full"
+      {/* Mobile Sidebar */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[5400]"
+            />
+            <motion.aside
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+              className="md:hidden fixed top-0 left-0 h-dvh w-[80vw] max-w-[320px] bg-card border-r border-border z-[5500] flex flex-col shadow-2xl"
+            >
+              <SidebarContent forceExpanded={true} />
+            </motion.aside>
+          </>
         )}
-      >
-        {navItems.map((item) => (
-          <NavLink
-            key={item.name}
-            to={item.path}
-            className="text-2xl font-bold uppercase tracking-widest"
-            onClick={() => setIsMenuOpen(false)}
-          >
-            {item.name}
-          </NavLink>
-        ))}
-        {user ? (
-          <NavLink to="/student-zone?tab=dashboard" className="text-2xl font-bold uppercase tracking-widest" onClick={() => setIsMenuOpen(false)}>
-            Dashboard
-          </NavLink>
-        ) : (
-          <button
-            type="button"
-            className="text-2xl font-bold uppercase tracking-widest"
-            onClick={() => {
-              setIsMenuOpen(false);
-              setIsLoginOpen(true);
-            }}
-          >
-            Login
-          </button>
-        )}
-      </div>
+      </AnimatePresence>
 
+      {/* Login Modal */}
       {!user && isLoginOpen && (
         <div className="fixed inset-0 z-[6000] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md rounded-3xl border border-border bg-card shadow-2xl p-6">
@@ -275,7 +335,7 @@ const Navbar = () => {
           </div>
         </div>
       )}
-    </nav>
+    </>
   );
 };
 

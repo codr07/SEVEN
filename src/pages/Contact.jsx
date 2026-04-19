@@ -7,7 +7,7 @@ const Contact = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
         <div className="space-y-12 animate-in slide-in-from-left-20 duration-1000">
           <div>
-            <h1 className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter mb-4">Connect</h1>
+            <h1 className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter mb-4 text-animate-gradient">Connect</h1>
             <p className="text-xl md:text-2xl font-light tracking-widest uppercase opacity-70">
               With 5EVEN Institution
             </p>

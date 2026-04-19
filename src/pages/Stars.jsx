@@ -1,18 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import { Star, Quote, Award, TrendingUp, Loader2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, withTimeout } from '../lib/supabase';
 
 const Stars = () => {
   const [testimonials, setTestimonials] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const fetchFaculty = async () => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const { data, error } = await withTimeout(
+        supabase.from('faculty').select('*'),
+        10000,
+        'Database connection timed out. Please check your network or try again.'
+      );
+      if (error) throw error;
+      setTestimonials(data || []);
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err.message || String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchFaculty = async () => {
-      const { data, error } = await supabase.from('faculty').select('*');
-      if (error) console.error(error);
-      else setTestimonials(data || []);
-      setLoading(false);
-    };
     fetchFaculty();
   }, []);
 
@@ -20,7 +34,7 @@ const Stars = () => {
     <div className="pt-32 pb-20 px-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
         <div className="flex-1">
-          <h1 className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter mb-4">Our Stars</h1>
+          <h1 className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter mb-4 text-animate-gradient">Our Stars</h1>
           <p className="text-xl font-bold uppercase tracking-widest text-primary">Hall of Fame</p>
         </div>
         <div className="flex gap-4">
@@ -32,6 +46,22 @@ const Stars = () => {
       {loading ? (
         <div className="flex justify-center items-center py-20">
           <Loader2 className="animate-spin text-primary w-12 h-12" />
+        </div>
+      ) : errorMsg ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-6 text-destructive">
+          <div className="text-xl font-bold uppercase tracking-widest">Connection Issue</div>
+          <div className="text-sm opacity-80 max-w-xl text-center px-4 mb-4">{errorMsg}</div>
+          <button 
+            onClick={fetchFaculty}
+            className="px-8 py-3 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
+          >
+            Retry Connection
+          </button>
+        </div>
+      ) : testimonials.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+          <div className="text-xl font-bold uppercase tracking-widest">No Stars Found</div>
+          <div className="text-sm opacity-80">We currently have no stars available. Check back soon!</div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">

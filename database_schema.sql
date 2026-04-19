@@ -330,7 +330,7 @@ BEGIN
         new.raw_user_meta_data->>'full_name',
         new.raw_user_meta_data->>'avatar_url',
         new.raw_user_meta_data->>'phone',
-        COALESCE((new.raw_user_meta_data->'social_links')::jsonb, '{"linkedin": "", "github": "", "linktree": ""}'::jsonb),
+        COALESCE((new.raw_user_meta_data->'social_links')::jsonb, '[]'::jsonb),
         'student'
     )
     ON CONFLICT (id) DO UPDATE SET
@@ -347,3 +347,51 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- To enable automatic profile creation:
 -- CREATE TRIGGER ON_AUTH_USER_CREATED AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ==============================================================================
+-- MIGRATION: ENHANCED PROFILES & STORAGE
+-- ==============================================================================
+
+-- 1. Add new columns to profiles
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS institution TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS major TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS location TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS portfolio_url TEXT;
+
+-- 2. Update social_links to be a dynamic list (Default to empty array)
+-- Note: Existing data is preserved; UI logic should handle both object and array formats temporarily.
+ALTER TABLE public.profiles ALTER COLUMN social_links SET DEFAULT '[]'::jsonb;
+
+-- 3. Create Storage Bucket for Avatars (Publicly readable, Owner writable)
+-- This assumes the 'storage' schema and 'buckets' table exist in your Supabase instance.
+-- These commands are typically run in the SQL Editor.
+
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage Policies for 'avatars' bucket
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
+
+DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
+CREATE POLICY "Users can upload their own avatar" ON storage.objects 
+FOR INSERT WITH CHECK (
+    bucket_id = 'avatars' AND 
+    (storage.foldername(name))[1] = auth.uid()::text
+);
+
+DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
+CREATE POLICY "Users can update their own avatar" ON storage.objects 
+FOR UPDATE USING (
+    bucket_id = 'avatars' AND 
+    (storage.foldername(name))[1] = auth.uid()::text
+);
+
+DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
+CREATE POLICY "Users can delete their own avatar" ON storage.objects 
+FOR DELETE USING (
+    bucket_id = 'avatars' AND 
+    (storage.foldername(name))[1] = auth.uid()::text
+);

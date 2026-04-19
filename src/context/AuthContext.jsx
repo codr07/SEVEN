@@ -40,9 +40,16 @@ export const AuthProvider = ({ children }) => {
         setSession(session);
         const currentUser = session?.user ?? null;
         setUser(currentUser);
-        await fetchProfile(currentUser?.id);
+        if (currentUser) {
+          await fetchProfile(currentUser.id);
+        } else {
+          setProfile(null);
+          setRole('guest');
+        }
       } catch (err) {
         console.error('Failed to load session profile:', err);
+        setProfile(null);
+        setRole('guest');
       } finally {
         setLoading(false);
       }
@@ -54,15 +61,33 @@ export const AuthProvider = ({ children }) => {
         setSession(session);
         const currentUser = session?.user ?? null;
         setUser(currentUser);
-        await fetchProfile(currentUser?.id);
+        if (currentUser) {
+          await fetchProfile(currentUser.id);
+        } else {
+          setProfile(null);
+          setRole('guest');
+        }
       } catch (err) {
         console.error('Failed to update auth state:', err);
+        setProfile(null);
+        setRole('guest');
       } finally {
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Backup timeout: Force loading to false after 5 seconds
+    const backupTimeout = setTimeout(() => {
+      if (loading) {
+        console.warn('Auth initialization timed out after 5s. Forcing ready state.');
+        setLoading(false);
+      }
+    }, 5000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(backupTimeout);
+    };
   }, []);
 
   const login = async (email, password) => {

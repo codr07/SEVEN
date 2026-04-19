@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import supabase from '../lib/supabase';
+import { supabase, withTimeout } from '../lib/supabase';
 import { Loader2, Code, Rocket, Brain, Cpu, Sparkles, BookOpen, GraduationCap, Laptop, Book as BookIcon } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import sevenLogo from '../assets/seven_dark.svg';
@@ -117,34 +117,44 @@ const Home = () => {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [profileType, setProfileType] = useState(null);
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const [facultiesRes, foundersRes, academicsRes, coursesRes, servicesRes] = await Promise.all([
+  const [loadError, setLoadError] = useState('');
+
+  const fetchData = async () => {
+    setLoading(true);
+    setLoadError('');
+    try {
+      const [facultiesRes, foundersRes, academicsRes, coursesRes, servicesRes] = await withTimeout(
+        Promise.all([
           supabase.from('faculty').select('*'),
           supabase.from('founders').select('*'),
-          supabase.from('academics').select('title, category'),
-          supabase.from('courses').select('name, category'),
-          supabase.from('services').select('title, category')
-        ]);
+          supabase.from('academics').select('*'),
+          supabase.from('courses').select('*'),
+          supabase.from('services').select('*')
+        ]),
+        12000,
+        'Connection timed out. Please check your internet and try again.'
+      );
 
-        if (facultiesRes.error) throw facultiesRes.error;
-        if (foundersRes.error) throw foundersRes.error;
-        if (academicsRes.error) throw academicsRes.error;
-        if (coursesRes.error) throw coursesRes.error;
-        if (servicesRes.error) throw servicesRes.error;
+      if (facultiesRes.error) throw facultiesRes.error;
+      if (foundersRes.error) throw foundersRes.error;
+      if (academicsRes.error) throw academicsRes.error;
+      if (coursesRes.error) throw coursesRes.error;
+      if (servicesRes.error) throw servicesRes.error;
 
-        setFaculties(facultiesRes.data || []);
-        setFounders(foundersRes.data || []);
-        setAcademics(academicsRes.data || []);
-        setCourses(coursesRes.data || []);
-        setServices(servicesRes.data || []);
-      } catch (err) {
-        console.error("Error fetching data:", err);
-      } finally {
-        setLoading(false);
-      }
+      setFaculties(facultiesRes.data || []);
+      setFounders(foundersRes.data || []);
+      setAcademics(academicsRes.data || []);
+      setCourses(coursesRes.data || []);
+      setServices(servicesRes.data || []);
+    } catch (err) {
+      console.error('Error fetching home data:', err);
+      setLoadError(err.message || String(err));
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -202,7 +212,7 @@ const Home = () => {
                 Welcome to
               </span>
               <span className="relative inline-block">
-                <span className="bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(hsl(var(--primary)),0.2)] animate-gradient-x p-2">5EVEN</span>
+                <span className="text-animate-gradient drop-shadow-[0_0_30px_rgba(hsl(var(--primary)),0.2)] p-2">5EVEN</span>
                 <Sparkles className="absolute -top-4 -right-8 w-10 h-10 text-secondary opacity-70 animate-pulse" />
               </span>
             </h1>
@@ -234,6 +244,7 @@ const Home = () => {
       </div>
 
       {/* Main Content Areas */}
+      
       <div className="relative z-10 w-full flex flex-col gap-24 px-4 md:px-8 max-w-7xl mx-auto pb-20">
 
         {/* Services Grid */}
@@ -323,7 +334,7 @@ const Home = () => {
         {/* About 5EVEN */}
         <section className="flex flex-col gap-12 w-full mt-10 border-t border-border pt-20">
           <div className="flex flex-col items-center justify-center gap-6 w-full">
-            <h2 className="text-4xl md:text-5xl font-black text-center tracking-tight">About 5EVEN</h2>
+            <h2 className="text-4xl md:text-5xl font-black text-center tracking-tight text-animate-gradient">About 5EVEN</h2>
             <p className="text-lg md:text-xl text-muted-foreground max-w-4xl text-center leading-relaxed font-medium">
               5EVEN is a premium educational institution dedicated to transforming academic excellence through innovative learning methodologies. We combine cutting-edge technology with expert mentorship to empower students across Data Science, Machine Learning, AI, and Full Stack Development.
             </p>
@@ -381,12 +392,25 @@ const Home = () => {
             <div className="h-64 flex items-center justify-center w-full">
               <Loader2 className="w-12 h-12 animate-spin text-primary" />
             </div>
+          ) : loadError ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-6 text-destructive">
+              <div className="text-xl font-bold uppercase tracking-widest text-animate-gradient">Connection Issue</div>
+              <div className="text-sm opacity-80 max-w-xl text-center px-4 mb-4">{loadError}</div>
+              <button onClick={fetchData} className="px-8 py-3 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20">
+                Retry Connection
+              </button>
+            </div>
           ) : (
             <>
               {/* Founders Section */}
               <div className="flex flex-col gap-10 w-full">
-                <h3 className="text-4xl font-black text-center tracking-tight">Meet Our Founders</h3>
+                <h3 className="text-4xl font-black text-center tracking-tight text-animate-gradient">Meet Our Founders</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto w-full">
+                  {founders.length === 0 && (
+                    <div className="col-span-full py-10 text-center text-muted-foreground font-bold uppercase tracking-widest opacity-60">
+                      No founders found. Check back soon!
+                    </div>
+                  )}
                   {founders.map((founder) => (
                     <TiltCard key={founder.id} className="h-full">
                       <div className="flex flex-col rounded-3xl overflow-hidden border border-border bg-card/40 backdrop-blur-xl shadow-lg hover:shadow-2xl transition-all duration-500 p-8 pt-10 h-full group">
@@ -423,8 +447,13 @@ const Home = () => {
 
               {/* Faculty Section */}
               <div className="flex flex-col gap-10 w-full">
-                <h3 className="text-4xl font-black text-center tracking-tight">Our Expert Faculties</h3>
+                <h3 className="text-4xl font-black text-center tracking-tight text-animate-gradient">Our Expert Faculties</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {faculties.length === 0 && (
+                    <div className="col-span-full py-10 text-center text-muted-foreground font-bold uppercase tracking-widest opacity-60">
+                      No faculties found. Check back soon!
+                    </div>
+                  )}
                   {faculties.map((faculty) => (
                     <TiltCard key={faculty.id} className="h-full">
                       <div className="flex flex-col rounded-3xl overflow-hidden border border-border bg-card/40 backdrop-blur-xl shadow-lg hover:shadow-2xl transition-all duration-500 p-8 pt-10 h-full group text-center">

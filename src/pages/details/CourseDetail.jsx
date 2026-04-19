@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import supabase from '../../lib/supabase';
+import { supabase, withTimeout } from '../../lib/supabase';
 import { Loader2, ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
 
 const CourseDetail = () => {
@@ -11,7 +11,11 @@ const CourseDetail = () => {
   useEffect(() => {
     async function fetchCourse() {
       try {
-        const { data, error } = await supabase.from('courses').select('*').eq('id', id).single();
+        const { data, error } = await withTimeout(
+          supabase.from('courses').select('*').eq('id', id).single(),
+          10000,
+          'Could not load course details. Please try again.'
+        );
         if (error) throw error;
         setCourse(data);
       } catch (err) {
@@ -45,7 +49,7 @@ const CourseDetail = () => {
 
   // Parse extra_details block
   const view = course.extra_details || {};
-  const coverUrl = view.cover || course.cover_image || '/assets/seven.svg';
+  const coverUrl = view.cover || course.thumbnail || course.image_url || course.cover_image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop';
 
   return (
     <div className="min-h-screen w-full bg-background pb-20 pt-32 px-4 md:px-8 text-foreground">
@@ -61,13 +65,18 @@ const CourseDetail = () => {
         {/* Hero Card */}
         <section className="overflow-hidden rounded-3xl border-2 border-border bg-card shadow-2xl hover-glow transition-all duration-500">
           <div className="relative h-64 w-full sm:h-80 lg:h-96 bg-muted">
-            <img src={coverUrl} alt={course.name} className="h-full w-full object-cover mix-blend-overlay" />
+            <img 
+              src={coverUrl} 
+              alt={course.name} 
+              className="h-full w-full object-cover" 
+              onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop'; }}
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
             <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10">
               <span className="mb-4 inline-flex items-center rounded-full bg-primary px-4 py-1.5 text-xs font-extrabold uppercase tracking-widest text-primary-foreground shadow-lg">
                 {course.category}
               </span>
-              <h1 className="text-3xl font-black text-white sm:text-5xl lg:text-6xl drop-shadow-md">
+              <h1 className="text-3xl font-black sm:text-5xl lg:text-6xl drop-shadow-md text-animate-gradient">
                 {view.title || course.name}
               </h1>
               <p className="mt-4 max-w-3xl text-base text-white/90 sm:text-lg font-medium drop-shadow">

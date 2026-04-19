@@ -25,39 +25,53 @@ const AppContent = ({ loading, setLoading }) => {
   const location = useLocation();
   const isAdminPage = location.pathname === '/seven-mod';
 
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    // If Lenis is active, force it to reset to top immediately to prevent scrolling physics from offsetting the top
+    if (window.lenis) {
+      window.lenis.scrollTo(0, { immediate: true });
+    }
+  }, [location.pathname]);
+
   return (
     <>
       {loading && <LoadingScreen onLoadingComplete={() => setLoading(false)} />}
       <CustomCursor />
       {!loading && (
-        <div className="min-h-screen bg-background transition-colors duration-300">
+        <div className="min-h-screen bg-background transition-colors duration-300 flex flex-col md:flex-row">
           {!isAdminPage && <Navbar />}
-          <main>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/academics" element={<Academics />} />
-              <Route path="/courses" element={<Courses />} />
-              <Route path="/notes" element={<Notes />} />
-              <Route path="/services" element={<Services />} />
-              <Route path="/stars" element={<Stars />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/student-zone" element={<StudentZone />} />
-              <Route path="/courses/:id" element={<CourseDetail />} />
-              <Route path="/services/:id" element={<ServiceDetail />} />
-              <Route path="/notes/:id" element={<NoteDetail />} />
-              <Route path="/academics/:id" element={<AcademicsDetail />} />
-              <Route path="/seven-mod" element={<SevenMod />} />
-            </Routes>
-          </main>
-          {!isAdminPage && <Footer />}
+          <div className="flex-1 flex flex-col w-full min-w-0">
+            <main className="flex-1">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/academics" element={<Academics />} />
+                <Route path="/courses" element={<Courses />} />
+                <Route path="/notes" element={<Notes />} />
+                <Route path="/services" element={<Services />} />
+                <Route path="/stars" element={<Stars />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/student-zone" element={<StudentZone />} />
+                <Route path="/courses/:id" element={<CourseDetail />} />
+                <Route path="/services/:id" element={<ServiceDetail />} />
+                <Route path="/notes/:id" element={<NoteDetail />} />
+                <Route path="/academics/:id" element={<AcademicsDetail />} />
+                <Route path="/seven-mod" element={<SevenMod />} />
+              </Routes>
+            </main>
+            {!isAdminPage && <Footer />}
+          </div>
         </div>
       )}
     </>
   );
 };
 
+import { useMagneticHover } from './hooks/useMagneticHover';
+
 const App = () => {
   const [loading, setLoading] = useState(false);
+
+  useMagneticHover();
 
   useLayoutEffect(() => {
     console.log('App: Initializing smooth scroll (Lenis)');

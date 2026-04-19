@@ -25,7 +25,7 @@ const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT
 
 const adminSupabase = createClient(supabaseUrl, supabasePublishableKey, {
   auth: {
-    storageKey: 'seven-admin-auth',
+    storageKey: 'seven-admin-auth-v3',
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
@@ -126,6 +126,28 @@ const SevenMod = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+
+  const fetchRowsWithCreatedAtFallback = async (tableName, selectClause = '*') => {
+    const orderedQuery = adminSupabase.from(tableName).select(selectClause).order('created_at', { ascending: false });
+    const orderedResult = await orderedQuery;
+
+    if (!orderedResult.error) {
+      return orderedResult;
+    }
+
+    const fallbackResult = await adminSupabase.from(tableName).select(selectClause);
+    if (fallbackResult.error) {
+      return fallbackResult;
+    }
+
+    const sorted = [...(fallbackResult.data || [])].sort((a, b) => {
+      const aTime = a?.created_at ? new Date(a.created_at).getTime() : 0;
+      const bTime = b?.created_at ? new Date(b.created_at).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    return { data: sorted, error: null };
+  };
 
   const loadAdminRole = async (userId) => {
     if (!userId) {
@@ -228,7 +250,7 @@ const SevenMod = () => {
   const fetchTable = async (tableName) => {
     setLoading(true);
     try {
-      const { data, error } = await adminSupabase.from(tableName).select('*').order('created_at', { ascending: false });
+      const { data, error } = await fetchRowsWithCreatedAtFallback(tableName);
       if (error) throw error;
       setTableData(data || []);
     } catch (err) {
@@ -242,10 +264,10 @@ const SevenMod = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const { data, error } = await adminSupabase
-        .from('profiles')
-        .select('id, username, full_name, phone, avatar_url, role, created_at')
-        .order('created_at', { ascending: false });
+      const { data, error } = await fetchRowsWithCreatedAtFallback(
+        'profiles',
+        'id, username, full_name, phone, avatar_url, role, created_at'
+      );
 
       if (error) throw error;
       setUsers(data || []);
@@ -260,10 +282,7 @@ const SevenMod = () => {
   const fetchSubmissions = async () => {
     setLoading(true);
     try {
-      const { data, error } = await adminSupabase
-        .from('student_submissions')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await fetchRowsWithCreatedAtFallback('student_submissions');
 
       if (error) throw error;
 
@@ -386,8 +405,8 @@ const SevenMod = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row">
-      <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r border-border p-4 md:p-6 bg-card md:h-screen md:sticky md:top-0">
+    <div className="h-screen w-full bg-background flex flex-col md:flex-row overflow-hidden">
+      <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r border-border p-4 md:p-6 bg-card md:h-full overflow-y-auto">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-11 h-11 rounded-xl bg-primary text-white flex items-center justify-center">
             <Settings size={20} />
@@ -425,10 +444,10 @@ const SevenMod = () => {
         </button>
       </aside>
 
-      <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full">
+      <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full overflow-y-auto">
         <header className="mb-8 flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-black tracking-tight">{activeTableTitle}</h1>
+            <h1 className="text-4xl font-black tracking-tight text-animate-gradient">{activeTableTitle}</h1>
             <p className="text-muted-foreground">Manage all data, users, and publishing workflow.</p>
           </div>
 
@@ -438,9 +457,9 @@ const SevenMod = () => {
                 setEditingItem(null);
                 setIsModalOpen(true);
               }}
-              className="px-5 py-3 rounded-xl bg-primary text-white font-black uppercase tracking-widest text-xs flex items-center gap-2"
+              className="px-6 py-4 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
             >
-              <Plus size={16} /> Add Entry
+              <Plus size={18} /> Add New Entry
             </button>
           )}
         </header>
@@ -606,15 +625,31 @@ const SevenMod = () => {
 
       {isModalOpen && CONTENT_TABLES.some((t) => t.id === activeTab) && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm" onClick={() => setIsModalOpen(false)}></div>
-          <div className="w-full max-w-4xl bg-card border border-border rounded-3xl shadow-2xl relative z-10 max-h-[90vh] overflow-auto">
-            <div className="p-5 border-b border-border flex items-center justify-between">
-              <h3 className="text-xl font-black">{editingItem ? 'Edit Entry' : 'Add Entry'}</h3>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 rounded-lg border border-border">
-                <X size={16} />
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            className="absolute inset-0 bg-background/95 backdrop-blur-2xl" 
+            onClick={() => setIsModalOpen(false)}
+          />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 40 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="w-full max-w-4xl bg-card border border-border/60 sm:rounded-[48px] rounded-none shadow-[0_0_80px_-20px_rgba(0,0,0,0.5)] relative z-10 max-h-screen sm:max-h-[85vh] flex flex-col overflow-hidden"
+          >
+            <div className="p-10 border-b border-border/40 flex items-center justify-between bg-muted/20">
+              <div>
+                <h3 className="text-3xl font-black italic tracking-tighter text-animate-gradient">{editingItem ? 'Edit Entry' : 'New Entry'}</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">Configure {activeTab} data points</p>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="p-3 rounded-full hover:bg-background border border-border transition-all hover:scale-110"
+              >
+                <X size={20} />
               </button>
             </div>
-            <div className="p-5">
+            <div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
               <AdminForm
                 table={activeTab}
                 initialData={editingItem}
@@ -626,9 +661,125 @@ const SevenMod = () => {
                 }}
               />
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
+    </div>
+  );
+};
+
+const JSONFieldEditor = ({ value, onChange, label }) => {
+  const [pairs, setPairs] = useState(() => {
+    if (!value || typeof value !== 'object') return [{ key: '', value: '' }];
+    return Object.entries(value).map(([k, v]) => ({ key: k, value: String(v) }));
+  });
+
+  const updatePairs = (newPairs) => {
+    setPairs(newPairs);
+    const obj = {};
+    newPairs.forEach((p) => {
+      if (p.key.trim()) obj[p.key.trim()] = p.value;
+    });
+    onChange(obj);
+  };
+
+  const addPair = () => updatePairs([...pairs, { key: '', value: '' }]);
+  const removePair = (idx) => {
+    const next = pairs.filter((_, i) => i !== idx);
+    updatePairs(next.length ? next : [{ key: '', value: '' }]);
+  };
+
+  return (
+    <div className="space-y-3 p-4 rounded-2xl bg-muted/30 border border-border/50">
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</label>
+        <button type="button" onClick={addPair} className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-primary hover:opacity-80">
+          <Plus size={12} /> Add Detail
+        </button>
+      </div>
+      <div className="space-y-2">
+        {pairs.map((pair, idx) => (
+          <div key={idx} className="flex gap-2 group animate-in slide-in-from-left-2 duration-300">
+            <input
+              placeholder="Label"
+              value={pair.key}
+              onChange={(e) => {
+                const next = [...pairs];
+                next[idx].key = e.target.value;
+                updatePairs(next);
+              }}
+              className="flex-1 px-3 py-2 rounded-lg bg-background border border-border focus:border-primary outline-none text-xs font-bold"
+            />
+            <input
+              placeholder="Value"
+              value={pair.value}
+              onChange={(e) => {
+                const next = [...pairs];
+                next[idx].value = e.target.value;
+                updatePairs(next);
+              }}
+              className="flex-1 px-3 py-2 rounded-lg bg-background border border-border focus:border-primary outline-none text-xs"
+            />
+            <button type="button" onClick={() => removePair(idx)} className="p-2 text-muted-foreground hover:text-destructive transition-colors">
+              <Trash2 size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const AdminImageField = ({ value, onChange, label }) => {
+  const [uploading, setUploading] = useState(false);
+
+  const onFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).slice(2)}_${Date.now()}.${fileExt}`;
+      const filePath = `admin/${fileName}`;
+
+      const { error: uploadError } = await adminSupabase.storage
+        .from('content')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = adminSupabase.storage
+        .from('content')
+        .getPublicUrl(filePath);
+
+      onChange(publicUrl);
+    } catch (err) {
+      alert('Upload failed: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+        {label}
+      </label>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Paste Image URL"
+          className="flex-1 px-4 py-2.5 rounded-xl bg-background border border-border focus:border-primary outline-none text-sm"
+        />
+        <label className={`cursor-pointer px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted transition-all flex items-center gap-2 text-xs font-bold ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+          {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+          <span>{uploading ? '...' : 'Upload'}</span>
+          <input type="file" accept="image/*" onChange={onFileChange} className="hidden" />
+        </label>
+      </div>
     </div>
   );
 };
@@ -788,15 +939,27 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel }) => {
   };
 
   return (
-    <form onSubmit={submit} className="space-y-5">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {fields.map((field) => (
-          <div key={field.name} className={field.type === 'textarea' || field.type === 'json' ? 'md:col-span-2 space-y-2' : 'space-y-2'}>
+    <form onSubmit={submit} className="space-y-6 pb-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+        {fields.map((field, fIdx) => (
+          <motion.div 
+            key={field.name} 
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: fIdx * 0.05 }}
+            className={field.type === 'textarea' || field.type === 'json' ? 'md:col-span-2 space-y-2' : 'space-y-2'}
+          >
             <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
               {field.label} {field.required ? '*' : ''}
             </label>
 
-            {field.type === 'textarea' ? (
+            {field.type === 'text' && (field.name.includes('image') || field.name.includes('url')) ? (
+              <AdminImageField
+                label={field.label}
+                value={formData[field.name]}
+                onChange={(val) => setValue(field.name, val)}
+              />
+            ) : field.type === 'textarea' ? (
               <textarea
                 value={formData[field.name] || ''}
                 onChange={(e) => setValue(field.name, e.target.value)}
@@ -804,10 +967,10 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel }) => {
                 className="w-full min-h-[120px] px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
               />
             ) : field.type === 'json' ? (
-              <textarea
-                defaultValue={formData[field.name] ? JSON.stringify(formData[field.name], null, 2) : ''}
-                onChange={(e) => setJson(field.name, e.target.value)}
-                className="w-full min-h-[130px] px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none font-mono text-sm"
+              <JSONFieldEditor
+                label={field.label}
+                value={formData[field.name]}
+                onChange={(val) => setValue(field.name, val)}
               />
             ) : (
               <input
@@ -818,7 +981,7 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel }) => {
                 className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
               />
             )}
-          </div>
+          </motion.div>
         ))}
       </div>
 

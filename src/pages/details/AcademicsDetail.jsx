@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import supabase from '../../lib/supabase';
+import { supabase, withTimeout } from '../../lib/supabase';
 import { ArrowLeft, CheckCircle2, XCircle, Loader2, GraduationCap } from 'lucide-react';
 
 const AcademicsDetail = () => {
@@ -11,11 +11,15 @@ const AcademicsDetail = () => {
   useEffect(() => {
     async function fetchDetail() {
       try {
-        const { data, error } = await supabase.from('academics').select('*').eq('id', id).single();
+        const { data, error } = await withTimeout(
+          supabase.from('academics').select('*').eq('id', id).single(),
+          10000,
+          'Could not load academic details. Please try again.'
+        );
         if (error) throw error;
         setAcademic(data);
       } catch (err) {
-        console.error("Error fetching academic detail:", err);
+        console.error('Error fetching academic detail:', err);
       } finally {
         setLoading(false);
       }
@@ -61,7 +65,7 @@ const AcademicsDetail = () => {
         <section className="overflow-hidden rounded-3xl border-2 border-border bg-card shadow-2xl hover-glow transition-all duration-500">
           <div className="relative h-64 w-full sm:h-80 lg:h-96 bg-muted flex items-center justify-center overflow-hidden">
             {coverUrl ? (
-                <img src={coverUrl} alt={academic.title} className="h-full w-full object-cover mix-blend-overlay" />
+                <img src={coverUrl} alt={academic.title} className="h-full w-full object-cover" />
             ) : (
                 <div className="absolute inset-0 bg-primary/10 flex flex-col items-center justify-center text-primary/20">
                     <GraduationCap size={128} className="drop-shadow-2xl" />
@@ -72,7 +76,7 @@ const AcademicsDetail = () => {
               <span className="mb-4 inline-flex items-center rounded-full bg-primary px-4 py-1.5 text-xs font-extrabold uppercase tracking-widest text-primary-foreground shadow-lg">
                 Academic Program
               </span>
-              <h1 className="text-3xl font-black text-white sm:text-5xl lg:text-6xl drop-shadow-md">
+              <h1 className="text-3xl font-black sm:text-5xl lg:text-6xl drop-shadow-md text-animate-gradient">
                 {academic.title}
               </h1>
               <p className="mt-4 max-w-3xl text-base text-white/90 sm:text-lg font-medium drop-shadow">

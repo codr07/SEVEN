@@ -1,37 +1,57 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import supabase from '../lib/supabase';
+import { supabase, withTimeout } from '../lib/supabase';
 import { Loader2, GraduationCap } from 'lucide-react';
 
 const Academics = () => {
   const [academics, setAcademics] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const fetchAcademics = async () => {
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const { data, error } = await withTimeout(
+        supabase.from('academics').select('*').order('created_at', { ascending: false }),
+        10000,
+        'Database connection timed out. Please check your network or try again.'
+      );
+      if (error) throw error;
+      setAcademics(data || []);
+    } catch (err) {
+      console.error("Error fetching academics:", err);
+      setErrorMsg(err.message || String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchAcademics() {
-      try {
-        const { data, error } = await supabase.from('academics').select('*').order('created_at', { ascending: false });
-        if (error) throw error;
-        setAcademics(data || []);
-      } catch (err) {
-        console.error("Error fetching academics:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchAcademics();
   }, []);
 
   return (
     <div className="min-h-screen w-full bg-background pt-32 pb-20 px-6 max-w-7xl mx-auto flex flex-col gap-12">
       <div className="flex flex-col items-center justify-center gap-4 text-center">
-         <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-foreground">Academics Support</h1>
+         <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tighter text-animate-gradient">Academics Support</h1>
          <p className="text-lg text-muted-foreground font-medium max-w-2xl">Structured academic support designed for measurable learning outcomes across school grades and university programs.</p>
       </div>
 
       {loading ? (
         <div className="h-64 flex items-center justify-center w-full">
           <Loader2 className="w-12 h-12 animate-spin text-primary" />
+        </div>
+      ) : errorMsg ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-6 text-destructive">
+          <div className="text-xl font-bold uppercase tracking-widest text-animate-gradient">Connection Issue</div>
+          <div className="text-sm opacity-80 max-w-xl text-center px-4 mb-4">{errorMsg}</div>
+          <button 
+            onClick={fetchAcademics}
+            className="px-8 py-3 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
+          >
+            Retry Connection
+          </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

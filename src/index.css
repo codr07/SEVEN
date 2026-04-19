@@ -199,6 +199,23 @@ html.lenis {
   animation: gradient-x 3s ease infinite;
 }
 
+.text-animate-gradient {
+  background-image: linear-gradient(
+    to right,
+    hsl(var(--primary)),
+    hsl(var(--secondary)),
+    hsl(var(--accent)),
+    hsl(var(--secondary)),
+    hsl(var(--primary))
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-x 3s linear infinite;
+  display: inline-block;
+}
+
 .animate-pulse-slow {
   animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

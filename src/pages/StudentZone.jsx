@@ -17,9 +17,12 @@ import {
   Link as LinkIcon,
   Phone,
   Upload,
+  Camera,
+  Trash2,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import supabase from '../lib/supabase';
+import { supabase, withTimeout } from '../lib/supabase';
 
 const INITIAL_SIGNUP = {
   username: '',
@@ -70,14 +73,34 @@ const StudentZone = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    setEditableProfile(profile || null);
+    if (profile) {
+      let socials = profile.social_links;
+      if (socials && !Array.isArray(socials)) {
+        // Migration: Convert { linkedin: '...', ... } to [{ platform: 'LinkedIn', url: '...' }, ...]
+        socials = Object.entries(socials)
+          .filter(([_, url]) => !!url)
+          .map(([platform, url]) => ({
+            platform: platform.charAt(0).toUpperCase() + platform.slice(1),
+            url
+          }));
+      }
+      setEditableProfile({ ...profile, social_links: socials || [] });
+    } else {
+      setEditableProfile(null);
+    }
   }, [profile]);
 
   useEffect(() => {
     const loadData = async () => {
       setLoadingData(true);
       try {
-        await Promise.all([fetchPublicPosts(), user ? fetchMyPosts() : Promise.resolve()]);
+        await withTimeout(
+          Promise.all([fetchPublicPosts(), user ? fetchMyPosts() : Promise.resolve()]),
+          10000,
+          'Connection timed out. Trying to fetch the latest work...'
+        );
+      } catch (err) {
+        console.error("StudentZone Data Error:", err);
       } finally {
         setLoadingData(false);
       }
@@ -191,7 +214,12 @@ const StudentZone = () => {
         avatar_url: editableProfile.avatar_url || null,
         cover_url: editableProfile.cover_url || null,
         education: editableProfile.education || [],
-        social_links: editableProfile.social_links || { linkedin: '', github: '', linktree: '' },
+        social_links: editableProfile.social_links || [],
+        bio: editableProfile.bio || null,
+        institution: editableProfile.institution || null,
+        major: editableProfile.major || null,
+        location: editableProfile.location || null,
+        portfolio_url: editableProfile.portfolio_url || null,
         updated_at: new Date().toISOString(),
       };
 
@@ -205,6 +233,85 @@ const StudentZone = () => {
     } finally {
       setIsBusy(false);
     }
+  };
+
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    if (!file.type.startsWith('image/')) {
+      setMessage({ text: 'Please select an image file.', type: 'error' });
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setMessage({ text: 'Image size should be less than 2MB.', type: 'error' });
+      return;
+    }
+
+    setIsBusy(true);
+    setMessage({ text: '', type: '' });
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Math.random()}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      setEditableProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+      setMessage({ text: 'Avatar uploaded! Click "Save Profile" to apply changes.', type: 'success' });
+    } catch (err) {
+      setMessage({ text: err.message || 'Upload failed.', type: 'error' });
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const addEducation = () => {
+    const newEdu = { school: '', degree: '', year: '' };
+    setEditableProfile(prev => ({
+      ...prev,
+      education: [...(prev.education || []), newEdu]
+    }));
+  };
+
+  const updateEducation = (index, field, value) => {
+    const updated = [...(editableProfile.education || [])];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditableProfile(prev => ({ ...prev, education: updated }));
+  };
+
+  const removeEducation = (index) => {
+    const updated = (editableProfile.education || []).filter((_, i) => i !== index);
+    setEditableProfile(prev => ({ ...prev, education: updated }));
+  };
+
+  const addSocial = () => {
+    const newSocial = { platform: 'LinkedIn', url: '' };
+    setEditableProfile(prev => ({
+      ...prev,
+      social_links: [...(prev.social_links || []), newSocial]
+    }));
+  };
+
+  const updateSocial = (index, field, value) => {
+    const updated = [...(editableProfile.social_links || [])];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditableProfile(prev => ({ ...prev, social_links: updated }));
+  };
+
+  const removeSocial = (index) => {
+    const updated = (editableProfile.social_links || []).filter((_, i) => i !== index);
+    setEditableProfile(prev => ({ ...prev, social_links: updated }));
   };
 
   const submitPost = async (e) => {
@@ -292,7 +399,7 @@ const StudentZone = () => {
             animate={{ opacity: 1, y: 0 }}
             className="w-full p-8 md:p-10 rounded-4xl bg-card border border-border shadow-2xl"
           >
-            <h2 className="text-3xl font-black uppercase tracking-tight mb-2">Student Zone</h2>
+            <h2 className="text-3xl font-black uppercase tracking-tight mb-2 text-animate-gradient">Student Zone</h2>
             <p className="text-sm text-muted-foreground">
               Login and account controls are handled from the top-right navbar avatar menu. Student Zone shows published work here.
             </p>
@@ -356,9 +463,15 @@ const StudentZone = () => {
                 </motion.div>
               )}
 
-              {activeTab === 'settings' && editableProfile && (
+              {activeTab === 'settings' && (
                 <motion.div key="settings" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                  <form onSubmit={updateProfile} className="space-y-5 p-6 rounded-3xl border border-border bg-card shadow-xl">
+                  {!editableProfile ? (
+                    <div className="flex flex-col items-center justify-center py-20 bg-card/40 rounded-3xl border border-border">
+                       <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+                       <p className="text-muted-foreground font-black uppercase tracking-widest text-xs">Loading Profile Data...</p>
+                    </div>
+                  ) : (
+                    <form onSubmit={updateProfile} className="space-y-5 p-6 rounded-3xl border border-border bg-card shadow-xl">
                     <h3 className="text-xl font-black">Profile Settings</h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -395,73 +508,157 @@ const StudentZone = () => {
                           className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-muted-foreground"
                         />
                       </Field>
-                      <Field label="Avatar URL">
+                      <Field label="Avatar">
+                        <div className="flex items-center gap-4 p-4 rounded-2xl bg-background border border-border">
+                          <div className="w-16 h-16 rounded-full overflow-hidden bg-muted flex items-center justify-center shrink-0 border-2 border-primary/20">
+                            {editableProfile.avatar_url ? (
+                              <img src={editableProfile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                              <Camera size={24} className="text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-xs font-black uppercase tracking-widest hover:bg-primary/20 transition-colors">
+                              <Upload size={14} />
+                              <span>Upload Photo</span>
+                              <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={isBusy} />
+                            </label>
+                            <p className="text-[10px] text-muted-foreground mt-1.5 font-medium uppercase tracking-tight">JPG, PNG or GIF. Max 2MB.</p>
+                          </div>
+                        </div>
+                      </Field>
+                      <Field label="Bio / Slogan">
+                        <textarea
+                          value={editableProfile.bio || ''}
+                          onChange={(e) => setEditableProfile((p) => ({ ...p, bio: e.target.value }))}
+                          placeholder="Short slogan or professional summary..."
+                          className="w-full h-[88px] px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none resize-none"
+                        />
+                      </Field>
+                      <Field label="Institution">
                         <input
                           type="text"
-                          value={editableProfile.avatar_url || ''}
-                          onChange={(e) => setEditableProfile((p) => ({ ...p, avatar_url: e.target.value }))}
+                          value={editableProfile.institution || ''}
+                          onChange={(e) => setEditableProfile((p) => ({ ...p, institution: e.target.value }))}
+                          placeholder="University / School"
                           className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
                         />
                       </Field>
-                      <Field label="Cover URL">
+                      <Field label="Major / Specialization">
                         <input
                           type="text"
-                          value={editableProfile.cover_url || ''}
-                          onChange={(e) => setEditableProfile((p) => ({ ...p, cover_url: e.target.value }))}
+                          value={editableProfile.major || ''}
+                          onChange={(e) => setEditableProfile((p) => ({ ...p, major: e.target.value }))}
+                          placeholder="e.g. Data Science, CSE"
                           className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
                         />
+                      </Field>
+                      <Field label="Location">
+                        <input
+                          type="text"
+                          value={editableProfile.location || ''}
+                          onChange={(e) => setEditableProfile((p) => ({ ...p, location: e.target.value }))}
+                          placeholder="City, Country"
+                          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                        />
+                      </Field>
+                      <Field label="Portfolio / CV Link">
+                        <div className="relative">
+                          <ExternalLink size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                          <input
+                            type="text"
+                            value={editableProfile.portfolio_url || ''}
+                            onChange={(e) => setEditableProfile((p) => ({ ...p, portfolio_url: e.target.value }))}
+                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                            placeholder="https://yourportfolio.com"
+                          />
+                        </div>
                       </Field>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <Field label="LinkedIn">
-                        <div className="relative">
-                          <Globe size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                          <input
-                            type="text"
-                            value={editableProfile.social_links?.linkedin || ''}
-                            onChange={(e) =>
-                              setEditableProfile((p) => ({
-                                ...p,
-                                social_links: { ...(p.social_links || {}), linkedin: e.target.value },
-                              }))
-                            }
-                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                          />
-                        </div>
-                      </Field>
-                      <Field label="GitHub">
-                        <div className="relative">
-                          <FolderGit2 size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                          <input
-                            type="text"
-                            value={editableProfile.social_links?.github || ''}
-                            onChange={(e) =>
-                              setEditableProfile((p) => ({
-                                ...p,
-                                social_links: { ...(p.social_links || {}), github: e.target.value },
-                              }))
-                            }
-                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                          />
-                        </div>
-                      </Field>
-                      <Field label="Linktree">
-                        <div className="relative">
-                          <LinkIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                          <input
-                            type="text"
-                            value={editableProfile.social_links?.linktree || ''}
-                            onChange={(e) =>
-                              setEditableProfile((p) => ({
-                                ...p,
-                                social_links: { ...(p.social_links || {}), linktree: e.target.value },
-                              }))
-                            }
-                            className="w-full pl-10 pr-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                          />
-                        </div>
-                      </Field>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                          <Plus size={14} /> Education History
+                        </h4>
+                        <button type="button" onClick={addEducation} className="text-[10px] font-black uppercase tracking-widest hover:text-primary transition-colors">
+                          Add New
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 gap-4">
+                        {(editableProfile.education || []).map((edu, idx) => (
+                          <div key={idx} className="p-4 rounded-2xl bg-background border border-border flex flex-col md:flex-row gap-4 items-start md:items-end group relative transition-all hover:border-primary/30">
+                            <div className="flex-1 w-full flex flex-col gap-2">
+                              <label className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground">School / Institute</label>
+                              <input
+                                value={edu.school}
+                                onChange={(e) => updateEducation(idx, 'school', e.target.value)}
+                                className="w-full px-4 py-2 rounded-xl bg-card border border-border text-xs focus:border-primary outline-none"
+                              />
+                            </div>
+                            <div className="flex-1 w-full flex flex-col gap-2">
+                              <label className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground">Degree / Course</label>
+                              <input
+                                value={edu.degree}
+                                onChange={(e) => updateEducation(idx, 'degree', e.target.value)}
+                                className="w-full px-4 py-2 rounded-xl bg-card border border-border text-xs focus:border-primary outline-none"
+                              />
+                            </div>
+                            <div className="w-full md:w-32 flex flex-col gap-2">
+                              <label className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground">Year</label>
+                              <input
+                                value={edu.year}
+                                onChange={(e) => updateEducation(idx, 'year', e.target.value)}
+                                className="w-full px-4 py-2 rounded-xl bg-card border border-border text-xs focus:border-primary outline-none"
+                              />
+                            </div>
+                            <button type="button" onClick={() => removeEducation(idx)} className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors bg-card border border-border">
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                          <Plus size={14} /> Social Links (As many as you need)
+                        </h4>
+                        <button type="button" onClick={addSocial} className="text-[10px] font-black uppercase tracking-widest hover:text-primary transition-colors">
+                          Add New
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {(Array.isArray(editableProfile.social_links) ? editableProfile.social_links : []).map((link, idx) => (
+                          <div key={idx} className="p-4 rounded-2xl bg-background border border-border flex items-center gap-3 transition-all hover:border-primary/30">
+                            <div className="w-32">
+                              <select
+                                value={link.platform}
+                                onChange={(e) => updateSocial(idx, 'platform', e.target.value)}
+                                className="w-full px-3 py-2 rounded-xl bg-card border border-border text-[10px] font-black uppercase tracking-widest focus:border-primary outline-none"
+                              >
+                                <option>LinkedIn</option>
+                                <option>GitHub</option>
+                                <option>Twitter/X</option>
+                                <option>Portfolio</option>
+                                <option>Instagram</option>
+                                <option>Discord</option>
+                                <option>Other</option>
+                              </select>
+                            </div>
+                            <input
+                              placeholder="URL"
+                              value={link.url}
+                              onChange={(e) => updateSocial(idx, 'url', e.target.value)}
+                              className="flex-1 px-4 py-2 rounded-xl bg-card border border-border text-xs focus:border-primary outline-none"
+                            />
+                            <button type="button" onClick={() => removeSocial(idx)} className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors bg-card border border-border">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -483,6 +680,7 @@ const StudentZone = () => {
 
                     {message.text && <MessageBox type={message.type}>{message.text}</MessageBox>}
                   </form>
+                  )}
                 </motion.div>
               )}
 
@@ -566,9 +764,8 @@ const StudentZone = () => {
 const TabButton = ({ icon: Icon, active, onClick, children }) => (
   <button
     onClick={onClick}
-    className={`flex items-center gap-3 px-5 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${
-      active ? 'bg-primary text-white' : 'hover:bg-card text-muted-foreground border border-border'
-    }`}
+    className={`flex items-center gap-3 px-5 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${active ? 'bg-primary text-white' : 'hover:bg-card text-muted-foreground border border-border'
+      }`}
   >
     <Icon size={16} />
     {children}
@@ -586,11 +783,10 @@ const Field = ({ label, required, children }) => (
 
 const MessageBox = ({ type, children }) => (
   <div
-    className={`p-3 rounded-xl border text-sm font-semibold flex items-center gap-2 ${
-      type === 'success'
+    className={`p-3 rounded-xl border text-sm font-semibold flex items-center gap-2 ${type === 'success'
         ? 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400'
         : 'border-destructive/30 bg-destructive/10 text-destructive'
-    }`}
+      }`}
   >
     {type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
     {children}
@@ -606,13 +802,12 @@ const StatCard = ({ title, value }) => (
 
 const StatusBadge = ({ pushed, status }) => (
   <span
-    className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-      pushed
+    className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${pushed
         ? 'bg-green-500/10 text-green-600 dark:text-green-400'
         : status === 'unpushed'
           ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
           : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-    }`}
+      }`}
   >
     {pushed ? 'Pushed' : status === 'unpushed' ? 'Unpushed' : 'On Hold'}
   </span>
