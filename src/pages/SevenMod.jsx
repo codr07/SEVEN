@@ -21,9 +21,9 @@ import {
 } from 'lucide-react';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const adminSupabase = createClient(supabaseUrl, supabasePublishableKey, {
+const adminSupabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storageKey: 'seven-admin-auth-v3',
     persistSession: true,
@@ -420,29 +420,40 @@ const SevenMod = () => {
 
   return (
     <div className="h-screen w-full bg-background flex flex-col md:flex-row overflow-hidden">
-      <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r border-border p-4 md:p-6 bg-card md:h-full overflow-y-auto">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-11 h-11 rounded-xl bg-primary text-white flex items-center justify-center">
-            <Settings size={20} />
+      <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r border-border p-4 md:p-6 bg-card flex flex-col flex-shrink-0 z-20">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-primary text-white flex items-center justify-center flex-shrink-0">
+              <Settings size={20} />
+            </div>
+            <div>
+              <p className="font-black text-base md:text-lg leading-tight">5EVEN Admin</p>
+              <p className="text-[9px] md:text-[10px] uppercase tracking-widest font-black text-muted-foreground">Control Center</p>
+            </div>
           </div>
-          <div>
-            <p className="font-black text-lg">5EVEN Admin</p>
-            <p className="text-[10px] uppercase tracking-widest font-black text-muted-foreground">Control Center</p>
-          </div>
+          
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="md:hidden flex items-center justify-center p-2.5 rounded-xl border border-destructive/40 text-destructive bg-destructive/5 hover:bg-destructive/10"
+            title="Sign Out"
+          >
+            <LogOut size={18} />
+          </button>
         </div>
 
-        <nav className="space-y-2">
+        <nav className="flex overflow-x-auto md:flex-col gap-2 md:gap-0 md:space-y-2 pb-2 md:pb-0 custom-scrollbar">
           {ADMIN_TABS.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-black transition-all ${
-                  activeTab === tab.id ? 'bg-primary text-white' : 'hover:bg-background text-muted-foreground'
+                className={`flex-shrink-0 whitespace-nowrap w-auto md:w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-xs md:text-sm font-black transition-all ${
+                  activeTab === tab.id ? 'bg-primary text-white' : 'hover:bg-background text-muted-foreground border border-transparent md:border-none hover:border-border'
                 }`}
               >
-                <Icon size={16} />
+                <Icon size={14} className="md:w-4 md:h-4" />
                 <span>{tab.name}</span>
               </button>
             );
@@ -452,17 +463,17 @@ const SevenMod = () => {
         <button
           type="button"
           onClick={handleLogout}
-          className="mt-8 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-destructive/40 text-destructive font-black uppercase tracking-widest text-xs"
+          className="hidden md:flex mt-auto w-full items-center justify-center gap-2 px-4 py-3 rounded-xl border border-destructive/40 text-destructive font-black uppercase tracking-widest text-xs hover:bg-destructive hover:text-white transition-all flex-shrink-0"
         >
           <LogOut size={16} /> Sign Out
         </button>
       </aside>
 
-      <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full overflow-y-auto">
-        <header className="mb-8 flex items-center justify-between gap-4">
+      <main className="flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full overflow-y-auto">
+        <header className="mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-black tracking-tight text-animate-gradient">{activeTableTitle}</h1>
-            <p className="text-muted-foreground">Manage all data, users, and publishing workflow.</p>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-animate-gradient">{activeTableTitle}</h1>
+            <p className="text-sm text-muted-foreground mt-1">Manage all data, users, and publishing workflow.</p>
           </div>
 
           {CONTENT_TABLES.some((t) => t.id === activeTab) && (
@@ -471,7 +482,7 @@ const SevenMod = () => {
                 setEditingItem(null);
                 setIsModalOpen(true);
               }}
-              className="px-6 py-4 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
+              className="w-full sm:w-auto px-6 py-3.5 md:py-4 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
             >
               <Plus size={18} /> Add New Entry
             </button>
@@ -663,7 +674,7 @@ const SevenMod = () => {
                 <X size={20} />
               </button>
             </div>
-            <div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
+            <div className="p-8 overflow-y-auto flex-1 custom-scrollbar" data-lenis-prevent="true">
               <AdminForm
                 key={editingItem ? editingItem.id : 'new'}
                 table={activeTab}
@@ -684,63 +695,46 @@ const SevenMod = () => {
 };
 
 const JSONFieldEditor = ({ value, onChange, label }) => {
-  const [pairs, setPairs] = useState(() => {
-    if (!value || typeof value !== 'object') return [{ key: '', value: '' }];
-    return Object.entries(value).map(([k, v]) => ({ key: k, value: String(v) }));
+  const [text, setText] = useState(() => {
+    try {
+      return value ? JSON.stringify(value, null, 2) : '';
+    } catch {
+      return '';
+    }
   });
+  const [error, setError] = useState('');
 
-  const updatePairs = (newPairs) => {
-    setPairs(newPairs);
-    const obj = {};
-    newPairs.forEach((p) => {
-      if (p.key.trim()) obj[p.key.trim()] = p.value;
-    });
-    onChange(obj);
-  };
-
-  const addPair = () => updatePairs([...pairs, { key: '', value: '' }]);
-  const removePair = (idx) => {
-    const next = pairs.filter((_, i) => i !== idx);
-    updatePairs(next.length ? next : [{ key: '', value: '' }]);
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setText(val);
+    if (!val.trim()) {
+      onChange(null);
+      setError('');
+      return;
+    }
+    try {
+      const parsed = JSON.parse(val);
+      onChange(parsed);
+      setError('');
+    } catch (err) {
+      setError('Invalid JSON');
+    }
   };
 
   return (
-    <div className="space-y-3 p-4 rounded-2xl bg-muted/30 border border-border/50">
+    <div className="space-y-2 p-4 rounded-2xl bg-muted/30 border border-border/50 flex flex-col">
       <div className="flex items-center justify-between mb-1">
         <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</label>
-        <button type="button" onClick={addPair} className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-primary hover:opacity-80">
-          <Plus size={12} /> Add Detail
-        </button>
+        {error && <span className="text-[10px] font-black text-destructive uppercase bg-destructive/10 px-2 py-0.5 rounded-md">{error}</span>}
       </div>
-      <div className="space-y-2">
-        {pairs.map((pair, idx) => (
-          <div key={idx} className="flex gap-2 group animate-in slide-in-from-left-2 duration-300">
-            <input
-              placeholder="Label"
-              value={pair.key}
-              onChange={(e) => {
-                const next = [...pairs];
-                next[idx].key = e.target.value;
-                updatePairs(next);
-              }}
-              className="flex-1 px-3 py-2 rounded-lg bg-background border border-border focus:border-primary outline-none text-xs font-bold"
-            />
-            <input
-              placeholder="Value"
-              value={pair.value}
-              onChange={(e) => {
-                const next = [...pairs];
-                next[idx].value = e.target.value;
-                updatePairs(next);
-              }}
-              className="flex-1 px-3 py-2 rounded-lg bg-background border border-border focus:border-primary outline-none text-xs"
-            />
-            <button type="button" onClick={() => removePair(idx)} className="p-2 text-muted-foreground hover:text-destructive transition-colors">
-              <Trash2 size={14} />
-            </button>
-          </div>
-        ))}
-      </div>
+      <textarea
+        value={text}
+        onChange={handleChange}
+        placeholder='{"key": ["value1", "value2"]}'
+        className={`w-full min-h-[120px] max-h-64 px-4 py-3 rounded-xl bg-background border ${error ? 'border-destructive focus:border-destructive' : 'border-border focus:border-primary'} outline-none overflow-y-auto custom-scrollbar resize-y font-mono text-xs`}
+        data-lenis-prevent="true"
+        spellCheck="false"
+      />
     </div>
   );
 };
@@ -856,13 +850,23 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel }) => {
           { name: 'price', type: 'text', label: 'Price' },
           { name: 'link', type: 'text', label: 'Link' },
           { name: 'cover_image', type: 'text', label: 'Cover Image URL' },
-          { name: 'details', type: 'json', label: 'Details JSON' },
-          { name: 'extra_details', type: 'json', label: 'Extra Details JSON' },
+          { name: 'extra_details.details', type: 'string_array', label: 'Syllabus/Details (Comma separated)' },
+          { name: 'extra_details.why_choose_this_course', type: 'textarea', label: 'Why Choose This Course?' },
+          { name: 'extra_details.public_review', type: 'textarea', label: 'Student Review Text' },
+          { name: 'extra_details.certification_available', type: 'boolean', label: 'Certification Available?' },
+          { name: 'extra_details.certification_cost', type: 'text', label: 'Certification Cost' },
         ];
       case 'academics':
         return [
           { name: 'title', type: 'text', label: 'Title', required: true },
           { name: 'description', type: 'textarea', label: 'Description' },
+          { name: 'price', type: 'text', label: 'Price' },
+          { name: 'cover_image', type: 'text', label: 'Cover Image URL' },
+          { name: 'extra_details.details', type: 'string_array', label: 'Program Highlights (Comma separated)' },
+          { name: 'extra_details.detailed_description', type: 'textarea', label: 'Detailed Description' },
+          { name: 'extra_details.public_review', type: 'textarea', label: 'Student Review Text' },
+          { name: 'extra_details.certification_available', type: 'boolean', label: 'Certification Available?' },
+          { name: 'extra_details.certification_cost', type: 'text', label: 'Certification/Extra Cost' },
         ];
       case 'services':
         return [
@@ -871,8 +875,10 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel }) => {
           { name: 'price', type: 'text', label: 'Price' },
           { name: 'link', type: 'text', label: 'Link' },
           { name: 'cover_image', type: 'text', label: 'Cover Image URL' },
-          { name: 'description', type: 'json', label: 'Description JSON' },
-          { name: 'extra_details', type: 'json', label: 'Extra Details JSON' },
+          { name: 'description', type: 'textarea', label: 'Short Description' },
+          { name: 'extra_details.details', type: 'string_array', label: 'Service Details (Comma separated)' },
+          { name: 'extra_details.detailed_description', type: 'textarea', label: 'Detailed Description' },
+          { name: 'extra_details.public_review', type: 'textarea', label: 'Client Review Text' },
         ];
       case 'faculty':
         return [
@@ -883,7 +889,11 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel }) => {
           { name: 'link', type: 'text', label: 'Link' },
           { name: 'description', type: 'textarea', label: 'Description' },
           { name: 'cover_image', type: 'text', label: 'Cover Image URL' },
-          { name: 'extra_details', type: 'json', label: 'Extra Details JSON' },
+          { name: 'extra_details.education', type: 'string_array', label: 'Education (Comma separated)' },
+          { name: 'extra_details.expertise', type: 'string_array', label: 'Expertise (Comma separated)' },
+          { name: 'extra_details.research', type: 'string_array', label: 'Research Papers (Comma separated)' },
+          { name: 'extra_details.books', type: 'string_array', label: 'Written Books (Comma separated)' },
+          { name: 'extra_details.gamesPlayed', type: 'json', label: 'Games Played JSON Profile' }
         ];
       case 'notes':
         return [
@@ -893,7 +903,8 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel }) => {
           { name: 'date', type: 'text', label: 'Date' },
           { name: 'link', type: 'text', label: 'Link' },
           { name: 'cover_image', type: 'text', label: 'Cover Image URL' },
-          { name: 'extra_details', type: 'json', label: 'Extra Details JSON' },
+          { name: 'extra_details.details', type: 'string_array', label: 'Note Highlights (Comma separated)' },
+          { name: 'extra_details.detailed_description', type: 'textarea', label: 'Detailed Note Details' },
         ];
       case 'founders':
         return [
@@ -903,7 +914,11 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel }) => {
           { name: 'cover_image', type: 'text', label: 'Cover Image URL' },
           { name: 'linkedin_url', type: 'text', label: 'LinkedIn URL' },
           { name: 'portfolio_url', type: 'text', label: 'Portfolio URL' },
-          { name: 'extra_details', type: 'json', label: 'Extra Details JSON' },
+          { name: 'extra_details.education', type: 'string_array', label: 'Education (Comma separated)' },
+          { name: 'extra_details.expertise', type: 'string_array', label: 'Expertise (Comma separated)' },
+          { name: 'extra_details.research', type: 'string_array', label: 'Research Papers (Comma separated)' },
+          { name: 'extra_details.books', type: 'string_array', label: 'Written Books (Comma separated)' },
+          { name: 'extra_details.gamesPlayed', type: 'json', label: 'Games Played JSON Profile' }
         ];
       default:
         return [];
@@ -911,20 +926,26 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel }) => {
   }, [table]);
 
   const setValue = (name, value) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData((prev) => ({
+        ...prev,
+        [parent]: {
+          ...(prev[parent] || {}),
+          [child]: value,
+        },
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
-  const setJson = (name, value) => {
-    if (!value.trim()) {
-      setValue(name, null);
-      return;
+  const getValue = (name) => {
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      return formData[parent] ? formData[parent][child] : undefined;
     }
-
-    try {
-      setValue(name, JSON.parse(value));
-    } catch {
-      // Keep current value until valid JSON is provided.
-    }
+    return formData[name];
   };
 
   const submit = async (e) => {
@@ -971,26 +992,48 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel }) => {
             {field.type === 'text' && (field.name.includes('image') || field.name.includes('url')) ? (
               <AdminImageField
                 label={field.label}
-                value={formData[field.name]}
+                value={getValue(field.name)}
                 onChange={(val) => setValue(field.name, val)}
               />
             ) : field.type === 'textarea' ? (
               <textarea
-                value={formData[field.name] || ''}
+                value={getValue(field.name) || ''}
                 onChange={(e) => setValue(field.name, e.target.value)}
                 required={field.required}
-                className="w-full min-h-[120px] px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                className="w-full min-h-[120px] max-h-64 px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none overflow-y-auto custom-scrollbar resize-y"
+                data-lenis-prevent="true"
               />
+            ) : field.type === 'string_array' ? (
+              <textarea
+                value={Array.isArray(getValue(field.name)) ? getValue(field.name).join(', ') : (getValue(field.name) || '')}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setValue(field.name, val ? val.split(',').map(s => s.trim()).filter(Boolean) : []);
+                }}
+                className="w-full min-h-[80px] max-h-64 px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none overflow-y-auto custom-scrollbar resize-y"
+                placeholder="Item 1, Item 2..."
+                data-lenis-prevent="true"
+              />
+            ) : field.type === 'boolean' ? (
+              <div className="flex items-center gap-3 pt-2">
+                <input
+                  type="checkbox"
+                  checked={!!getValue(field.name)}
+                  onChange={(e) => setValue(field.name, e.target.checked)}
+                  className="w-6 h-6 rounded-md border-border bg-background focus:ring-primary accent-primary"
+                />
+                <span className="text-xs font-bold uppercase tracking-widest text-foreground">Yes</span>
+              </div>
             ) : field.type === 'json' ? (
               <JSONFieldEditor
                 label={field.label}
-                value={formData[field.name]}
+                value={getValue(field.name)}
                 onChange={(val) => setValue(field.name, val)}
               />
             ) : (
               <input
                 type={field.type}
-                value={formData[field.name] || ''}
+                value={getValue(field.name) || ''}
                 onChange={(e) => setValue(field.name, e.target.value)}
                 required={field.required}
                 className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"

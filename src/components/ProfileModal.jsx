@@ -95,11 +95,19 @@ const ProfileModal = ({ profile, type, onClose }) => {
   const headingLabel = type === 'faculty' ? 'Faculty Profile' : `${profile.role || 'Founder'} Profile`;
   const secondaryLabel = type === 'faculty' ? 'Department' : 'Role';
   const secondaryValue = type === 'faculty' ? profile.topic : profile.role;
-  const eduArr = profile.extra_details?.education || [];
-  const expertiseArr = profile.extra_details?.expertise || [];
-  const gamesArr = profile.extra_details?.gamesPlayed || [];
-  const researchArr = profile.extra_details?.research || [];
-  const booksArr = profile.extra_details?.books || [];
+
+  const getArray = (val) => {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') return val.split(',').map(s => s.trim()).filter(Boolean);
+    return [String(val)];
+  };
+
+  const eduArr = getArray(profile.extra_details?.education);
+  const expertiseArr = getArray(profile.extra_details?.expertise);
+  const gamesArr = getArray(profile.extra_details?.gamesPlayed);
+  const researchArr = getArray(profile.extra_details?.research);
+  const booksArr = getArray(profile.extra_details?.books);
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
