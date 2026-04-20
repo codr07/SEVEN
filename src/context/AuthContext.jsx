@@ -50,7 +50,12 @@ let globalSessionPromise = null;
           setRole('guest');
         }
       } catch (err) {
-        console.error('Failed to load session profile:', err);
+        console.error('Failed to load session profile, possible corrupted JWT:', err);
+        // If the server rejects the JWT (e.g. PGRST301) or any fatal profile error occurs,
+        // we MUST purge the corrupted local session so public queries don't continue to fail!
+        await supabase.auth.signOut().catch(() => {});
+        setSession(null);
+        setUser(null);
         setProfile(null);
         setRole('guest');
       } finally {
