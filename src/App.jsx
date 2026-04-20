@@ -32,6 +32,23 @@ const AppContent = ({ loading, setLoading }) => {
     if (window.lenis) {
       window.lenis.scrollTo(0, { immediate: true });
     }
+
+    // Update document title based on the route
+    const titles = {
+      '/': 'Home',
+      '/academics': 'Academics',
+      '/courses': 'Courses',
+      '/notes': 'Notes',
+      '/services': 'Services',
+      '/stars': 'Stars',
+      '/contact': 'Contact',
+      '/student-zone': 'Student Zone',
+      '/seven-mod': 'Admin Panel',
+    };
+    const baseRoute = '/' + location.pathname.split('/')[1];
+    const pageName = titles[location.pathname] || titles[baseRoute] || '';
+    
+    document.title = pageName || '5EVEN Institution';
   }, [location.pathname]);
 
   const isAppLoading = loading || authLoading;
