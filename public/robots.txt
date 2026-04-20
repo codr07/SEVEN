@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /seven-mod
+Disallow: /api/
+
+# Specify the path to the sitemap
+Sitemap: https://5even.netlify.app/sitemap.xml
