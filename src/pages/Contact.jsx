@@ -15,7 +15,16 @@ const Contact = () => {
 
           <div className="space-y-8">
             <ContactItem icon={<Mail />} title="Email" value="institution5even@gmail.com" />
-            <ContactItem icon={<Phone />} title="Phone" value="+91 80178 74821" />
+            <ContactItem
+              icon={<Phone />}
+              title="Phone"
+              value={
+                <div className="flex flex-col gap-1">
+                  <span>+91 93306 89143</span>
+                  <span>+91 83899 37314</span>
+                </div>
+              }
+            />
             <ContactItem icon={<MapPin />} title="Campus" value="Masalandapur, North 24 Parganas, West Bengal" />
           </div>
 
