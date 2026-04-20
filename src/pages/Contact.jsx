@@ -14,9 +14,9 @@ const Contact = () => {
           </div>
 
           <div className="space-y-8">
-            <ContactItem icon={<Mail />} title="Email" value="admissions@5even.edu" />
-            <ContactItem icon={<Phone />} title="Phone" value="+91 1234 567 890" />
-            <ContactItem icon={<MapPin />} title="Campus" value="Techno Park, Sector 5, Kolkata" />
+            <ContactItem icon={<Mail />} title="Email" value="institution5even@gmail.com" />
+            <ContactItem icon={<Phone />} title="Phone" value="+91 80178 74821" />
+            <ContactItem icon={<MapPin />} title="Campus" value="Masalandapur, North 24 Parganas, West Bengal" />
           </div>
 
           <div className="pt-12 flex gap-6">
