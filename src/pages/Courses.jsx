@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { PlayCircle, Clock, BookOpen, Star, Loader2, IndianRupee } from 'lucide-react';
+import { PlayCircle, Clock, BookOpen, Star, Loader2, IndianRupee, Search, Filter } from 'lucide-react';
 import { supabase, withTimeout, filterVisible } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 
@@ -7,6 +7,9 @@ const Courses = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
 
   const fetchCourses = async () => {
     setLoading(true);
@@ -33,11 +36,57 @@ const Courses = () => {
 
   return (
     <div className="pt-32 pb-20 px-6 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
-        <h1 className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter text-animate-gradient">Courses</h1>
-        <p className="max-w-md text-muted-foreground text-lg uppercase tracking-widest leading-relaxed">
-          Master the future with our industry-driven curriculum and hands-on projects.
-        </p>
+      <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
+        <div>
+          <h1 className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter text-animate-gradient">Courses</h1>
+          <p className="max-w-md text-muted-foreground text-lg uppercase tracking-widest leading-relaxed mt-2">
+            Master the future with our industry-driven curriculum and hands-on projects.
+          </p>
+        </div>
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="relative flex-1 md:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+            <input
+              type="text"
+              placeholder="Search courses..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-6 py-4 bg-card border border-border rounded-full outline-none focus:border-primary transition-all shadow-sm"
+            />
+          </div>
+          <div className="relative">
+            <button 
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className={`p-4 border rounded-full transition-colors shadow-sm ${selectedCategory ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent border-border"}`}
+            >
+              <Filter size={20} />
+            </button>
+            
+            {isFilterOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)}></div>
+                <div className="absolute right-0 top-full mt-2 w-56 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50">
+                  <div className="px-3 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground opacity-70 mb-1">Filter by Category</div>
+                  <button 
+                    onClick={() => { setSelectedCategory(''); setIsFilterOpen(false); }} 
+                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-colors ${!selectedCategory ? "bg-primary/10 text-primary" : "hover:bg-accent"}`}
+                  >
+                    All Courses
+                  </button>
+                  {[...new Set(courses.map(c => c.category))].filter(Boolean).map(cat => (
+                    <button 
+                      key={cat} 
+                      onClick={() => { setSelectedCategory(cat); setIsFilterOpen(false); }} 
+                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-colors ${selectedCategory === cat ? "bg-primary/10 text-primary" : "hover:bg-accent"}`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -59,7 +108,14 @@ const Courses = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {courses.map((course) => (
+          {courses.filter(course => {
+            const matchesSearch = !searchQuery || 
+              String(course.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+              String(course.short_desc || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+              String(course.category || '').toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesCategory = !selectedCategory || course.category === selectedCategory;
+            return matchesSearch && matchesCategory;
+          }).map((course) => (
             <Link 
               to={`/courses/${course.id}`} 
               key={course.id} 

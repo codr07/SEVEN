@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Zap, X, MessageSquarePlus } from 'lucide-react';
+import { Loader2, Zap, X, MessageSquarePlus, Search, Filter } from 'lucide-react';
 import { supabase, withTimeout, filterVisible } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 
@@ -8,6 +8,9 @@ const Services = () => {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('');
   
   // Form State
   const [selectedService, setSelectedService] = useState('');
@@ -81,11 +84,57 @@ const Services = () => {
 
   return (
     <div className="pt-32 pb-20 px-6 max-w-7xl mx-auto">
-      <div className="text-center mb-20 max-w-3xl mx-auto">
-        <h1 className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter mb-8 transform hover:scale-105 transition-transform duration-500 text-animate-gradient">Services</h1>
-        <p className="text-lg md:text-xl font-light tracking-widest uppercase opacity-70 leading-relaxed">
-          Comprehensive commercial and digital support beyond the classroom. We care about your professional success.
-        </p>
+      <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
+        <div>
+          <h1 className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter mb-4 transform hover:scale-105 transition-transform duration-500 text-animate-gradient">Services</h1>
+          <p className="max-w-xl text-lg font-light tracking-widest uppercase opacity-70 leading-relaxed mt-2 text-left">
+            Comprehensive commercial and digital support beyond the classroom. We care about your professional success.
+          </p>
+        </div>
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="relative flex-1 md:w-80">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+            <input
+              type="text"
+              placeholder="Search services..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-6 py-4 bg-card border border-border rounded-full outline-none focus:border-primary transition-all shadow-sm"
+            />
+          </div>
+          <div className="relative">
+            <button 
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className={`p-4 border rounded-full transition-colors shadow-sm ${selectedCategory ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent border-border"}`}
+            >
+              <Filter size={20} />
+            </button>
+            
+            {isFilterOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)}></div>
+                <div className="absolute right-0 top-full mt-2 w-56 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50">
+                  <div className="px-3 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground opacity-70 mb-1">Filter by Category</div>
+                  <button 
+                    onClick={() => { setSelectedCategory(''); setIsFilterOpen(false); }} 
+                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-colors ${!selectedCategory ? "bg-primary/10 text-primary" : "hover:bg-accent"}`}
+                  >
+                    All Services
+                  </button>
+                  {[...new Set(services.map(s => s.category))].filter(Boolean).map(cat => (
+                    <button 
+                      key={cat} 
+                      onClick={() => { setSelectedCategory(cat); setIsFilterOpen(false); }} 
+                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-colors ${selectedCategory === cat ? "bg-primary/10 text-primary" : "hover:bg-accent"}`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -110,7 +159,14 @@ const Services = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {services.map((service) => (
+          {services.filter(service => {
+            const matchesSearch = !searchQuery || 
+              String(service.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+              String(service.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+              String(service.category || '').toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesCategory = !selectedCategory || service.category === selectedCategory;
+            return matchesSearch && matchesCategory;
+          }).map((service) => (
             <Link 
               to={`/services/${service.id}`} 
               key={service.id} 

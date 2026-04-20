@@ -19,7 +19,8 @@ import {
   Users,
   X,
   Eye,
-  EyeOff
+  EyeOff,
+  Search
 } from 'lucide-react';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -117,6 +118,8 @@ const LoginScreen = ({ onLogin }) => {
 };
 
 const SevenMod = () => {
+  const [expandedId, setExpandedId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [adminUser, setAdminUser] = useState(null);
   const [adminRole, setAdminRole] = useState('guest');
   const [authLoading, setAuthLoading] = useState(true);
@@ -129,6 +132,10 @@ const SevenMod = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+
+  useEffect(() => {
+    setSearchQuery('');
+  }, [activeTab]);
 
   const fetchRowsWithCreatedAtFallback = async (tableName, selectClause = '*') => {
     const orderedQuery = adminSupabase.from(tableName).select(selectClause).order('created_at', { ascending: false });
@@ -503,15 +510,27 @@ const SevenMod = () => {
           </div>
 
           {CONTENT_TABLES.some((t) => t.id === activeTab) && (
-            <button
-              onClick={() => {
-                setEditingItem(null);
-                setIsModalOpen(true);
-              }}
-              className="w-full sm:w-auto px-6 py-3.5 md:py-4 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
-            >
-              <Plus size={18} /> Add New Entry
-            </button>
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mt-4 sm:mt-0">
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                <input
+                  type="text"
+                  placeholder="Search entries..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-3 md:py-3.5 rounded-2xl bg-card border border-border text-sm outline-none focus:border-primary transition-all"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  setEditingItem(null);
+                  setIsModalOpen(true);
+                }}
+                className="w-full sm:w-auto px-6 py-3.5 md:py-4 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20 shrink-0"
+              >
+                <Plus size={18} /> Add New Entry
+              </button>
+            </div>
           )}
         </header>
 
@@ -535,46 +554,89 @@ const SevenMod = () => {
             ) : tableData.length === 0 ? (
               <EmptyState text="No entries found in this table." />
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {tableData.map((item) => (
-                  <article key={item.id} className="p-5 rounded-2xl border border-border bg-card space-y-4">
-                    <div>
-                      <p className="font-black text-lg line-clamp-1">{item.name || item.title || item.role || 'Untitled'}</p>
-                      <p className="text-sm text-muted-foreground line-clamp-3 mt-2">
-                        {item.short_desc || item.description || item.bio || 'No description'}
-                      </p>
+              <>{(() => {
+                const visibleTableData = tableData.filter(item => {
+                  if (!searchQuery) return true;
+                  const searchLower = searchQuery.toLowerCase();
+                  return (
+                    String(item.name || '').toLowerCase().includes(searchLower) ||
+                    String(item.title || '').toLowerCase().includes(searchLower) ||
+                    String(item.role || '').toLowerCase().includes(searchLower) ||
+                    String(item.short_desc || '').toLowerCase().includes(searchLower) ||
+                    String(item.description || '').toLowerCase().includes(searchLower) ||
+                    String(item.topic || '').toLowerCase().includes(searchLower) ||
+                    String(item.category || '').toLowerCase().includes(searchLower)
+                  );
+                });
+
+                const counters = { Total: visibleTableData.length };
+                visibleTableData.forEach(item => {
+                   const typeName = item.category || item.role || item.topic || item.type;
+                   if (typeName) {
+                     counters[typeName] = (counters[typeName] || 0) + 1;
+                   }
+                });
+
+                // Display only Total if that's the only counter
+                const hasCategories = Object.keys(counters).length > 1;
+
+                return (
+                  <div className="flex flex-col gap-6 w-full">
+                    <div className="flex flex-wrap gap-2 w-full">
+                      <div className="px-3 py-1.5 bg-card/60 backdrop-blur-sm border border-border rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm">
+                        <span className="text-muted-foreground uppercase tracking-widest">Total:</span>
+                        <span className="text-primary">{counters.Total}</span>
+                      </div>
+                      {hasCategories && Object.entries(counters).filter(([label]) => label !== 'Total').map(([label, count]) => (
+                        <div key={label} className="px-3 py-1.5 bg-card/60 backdrop-blur-sm border border-border rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm">
+                          <span className="text-muted-foreground uppercase tracking-widest">{label}:</span>
+                          <span className="text-primary">{count}</span>
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        title={item.extra_details?.is_visible === false ? "Hidden on site. Click to show." : "Visible on site. Click to hide."}
-                        onClick={() => toggleVisibility(activeTab, item)}
-                        className={`px-4 py-2 rounded-xl flex items-center justify-center transition-all ${
-                          item.extra_details?.is_visible === false
-                          ? 'border border-muted text-muted-foreground bg-muted/10'
-                          : 'border border-primary/40 text-primary bg-primary/5'
-                        }`}
-                      >
-                        {item.extra_details?.is_visible === false ? <EyeOff size={14} /> : <Eye size={14} />}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditingItem(item);
-                          setIsModalOpen(true);
-                        }}
-                        className="flex-1 px-4 py-2 rounded-xl border border-border text-[10px] uppercase tracking-widest font-black flex items-center justify-center gap-2 hover:bg-background"
-                      >
-                        <Pencil size={12} /> Edit
-                      </button>
-                      <button
-                        onClick={() => removeItem(activeTab, item.id)}
-                        className="px-4 py-2 rounded-xl border border-destructive/40 text-destructive hover:bg-destructive/10 transition-all"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {visibleTableData.map((item) => (
+                        <article key={item.id} className="p-5 rounded-2xl border border-border bg-card space-y-4">
+                          <div>
+                            <p className="font-black text-lg line-clamp-1">{item.name || item.title || item.role || 'Untitled'}</p>
+                            <p className="text-sm text-muted-foreground line-clamp-3 mt-2">
+                              {item.short_desc || item.description || item.bio || 'No description'}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              title={item.extra_details?.is_visible === false ? "Hidden on site. Click to show." : "Visible on site. Click to hide."}
+                              onClick={() => toggleVisibility(activeTab, item)}
+                              className={`px-4 py-2 rounded-xl flex items-center justify-center transition-all ${
+                                item.extra_details?.is_visible === false
+                                ? 'border border-muted text-muted-foreground bg-muted/10'
+                                : 'border border-primary/40 text-primary bg-primary/5'
+                              }`}
+                            >
+                              {item.extra_details?.is_visible === false ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingItem(item);
+                                setIsModalOpen(true);
+                              }}
+                              className="flex-1 px-4 py-2 rounded-xl border border-border text-[10px] uppercase tracking-widest font-black flex items-center justify-center gap-2 hover:bg-background"
+                            >
+                              <Pencil size={12} /> Edit
+                            </button>
+                            <button
+                              onClick={() => removeItem(activeTab, item.id)}
+                              className="px-4 py-2 rounded-xl border border-destructive/40 text-destructive hover:bg-destructive/10 transition-all"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </article>
+                      ))}
                     </div>
-                  </article>
-                ))}
-              </div>
+                  </div>
+                );
+              })()}</>
             )}
           </section>
         )}

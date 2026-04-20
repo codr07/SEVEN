@@ -15,7 +15,7 @@ function cn(...inputs) {
 
 const Navbar = () => {
   const { theme } = useTheme();
-  const { user, profile, logout, login, role } = useAuth();
+  const { user, profile, logout, login, signup, role } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
@@ -23,6 +23,9 @@ const Navbar = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
+  const [signupFullName, setSignupFullName] = useState('');
+  const [signupPhone, setSignupPhone] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoginBusy, setIsLoginBusy] = useState(false);
   const avatarMenuRef = useRef(null);
@@ -51,20 +54,32 @@ const Navbar = () => {
       setIsLoginOpen(false);
       setLoginEmail('');
       setLoginPassword('');
+      setSignupFullName('');
+      setSignupPhone('');
       setLoginError('');
       setIsLoginBusy(false);
     }
   }, [user]);
 
-  const handleWebsiteLogin = async (event) => {
+  const handleWebsiteAuth = async (event) => {
     event.preventDefault();
     setLoginError('');
     setIsLoginBusy(true);
 
     try {
-      await login(loginEmail, loginPassword);
+      if (isSignUpMode) {
+        if (!signupFullName || !loginEmail || !loginPassword) {
+           throw new Error("Full Name, Email, and Password are required.");
+        }
+        await signup(loginEmail, loginPassword, {
+          fullName: signupFullName,
+          phone: signupPhone
+        });
+      } else {
+        await login(loginEmail, loginPassword);
+      }
     } catch (error) {
-      setLoginError(error.message || 'Login failed. Please try again.');
+      setLoginError(error.message || 'Authentication failed. Please try again.');
     } finally {
       setIsLoginBusy(false);
     }
@@ -297,20 +312,66 @@ const Navbar = () => {
               <h3 className="text-xl font-black uppercase tracking-widest">Website Login</h3>
               <button
                 type="button"
-                onClick={() => setIsLoginOpen(false)}
+                onClick={() => {
+                  setIsLoginOpen(false);
+                  setIsSignUpMode(false);
+                }}
                 className="px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest border border-border hover:bg-accent"
               >
                 Close
               </button>
             </div>
 
-            <form onSubmit={handleWebsiteLogin} className="space-y-3">
+            <div className="flex items-center gap-4 mb-6">
+              <button
+                type="button"
+                onClick={() => setIsSignUpMode(false)}
+                className={cn(
+                  "flex-1 pb-3 text-sm font-black uppercase tracking-widest text-center border-b-2 transition-colors",
+                  !isSignUpMode ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSignUpMode(true)}
+                className={cn(
+                  "flex-1 pb-3 text-sm font-black uppercase tracking-widest text-center border-b-2 transition-colors",
+                  isSignUpMode ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Create Account
+              </button>
+            </div>
+
+            <form onSubmit={handleWebsiteAuth} className="space-y-4">
+              {isSignUpMode && (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-4">
+                  <input
+                    type="text"
+                    required
+                    value={signupFullName}
+                    onChange={(e) => setSignupFullName(e.target.value)}
+                    placeholder="Full Name"
+                    className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                  />
+                  <input
+                    type="tel"
+                    value={signupPhone}
+                    onChange={(e) => setSignupPhone(e.target.value)}
+                    placeholder="Phone Number (Optional)"
+                    className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                  />
+                </div>
+              )}
+              
               <input
                 type="email"
                 required
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder="Email"
+                placeholder="Email Address"
                 className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
               />
               <input
@@ -322,14 +383,16 @@ const Navbar = () => {
                 className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
               />
 
-              {loginError && <p className="text-sm text-destructive break-words">{loginError}</p>}
+              {loginError && <p className="text-sm text-destructive break-words font-medium p-3 bg-destructive/10 rounded-xl">{loginError}</p>}
 
               <button
                 type="submit"
                 disabled={isLoginBusy}
-                className="w-full py-3 rounded-xl bg-primary text-white font-black uppercase tracking-widest text-xs"
+                className="w-full py-4 mt-2 rounded-xl bg-primary text-white font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
-                {isLoginBusy ? 'Signing In...' : 'Sign In'}
+                {isLoginBusy 
+                  ? (isSignUpMode ? 'Creating Account...' : 'Signing In...') 
+                  : (isSignUpMode ? 'Create Account' : 'Sign In')}
               </button>
             </form>
           </div>
