@@ -33,9 +33,12 @@ export const AuthProvider = ({ children }) => {
     return resolvedProfile;
   };
 
+let globalSessionPromise = null;
+
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    let mounted = true;
+
+    const handleSessionLoad = async (session) => {
       try {
         setSession(session);
         const currentUser = session?.user ?? null;
@@ -51,40 +54,38 @@ export const AuthProvider = ({ children }) => {
         setProfile(null);
         setRole('guest');
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
-    });
+    };
+
+    if (!globalSessionPromise) {
+      globalSessionPromise = supabase.auth.getSession();
+    }
+
+    globalSessionPromise
+      .then(async ({ data: { session } }) => {
+        if (mounted) await handleSessionLoad(session);
+      })
+      .catch((err) => {
+        console.error('getSession error:', err);
+        if (mounted) setLoading(false);
+      });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      try {
-        setSession(session);
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        if (currentUser) {
-          await fetchProfile(currentUser.id);
-        } else {
-          setProfile(null);
-          setRole('guest');
-        }
-      } catch (err) {
-        console.error('Failed to update auth state:', err);
-        setProfile(null);
-        setRole('guest');
-      } finally {
-        setLoading(false);
-      }
+      if (mounted) await handleSessionLoad(session);
     });
 
     // Backup timeout: Force loading to false after 5 seconds
     const backupTimeout = setTimeout(() => {
-      if (loading) {
+      if (mounted && loading) {
         console.warn('Auth initialization timed out after 5s. Forcing ready state.');
         setLoading(false);
       }
     }, 5000);
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
       clearTimeout(backupTimeout);
     };

@@ -29,6 +29,7 @@ const adminSupabase = createClient(supabaseUrl, supabasePublishableKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    lock: (name, acquireTimeout, fn) => fn(),
   },
 });
 
@@ -172,25 +173,38 @@ const SevenMod = () => {
   useEffect(() => {
     let mounted = true;
 
-    adminSupabase.auth.getSession().then(async ({ data: { session } }) => {
+    const handleSession = async (session) => {
       if (!mounted) return;
-      const user = session?.user ?? null;
-      setAdminUser(user);
-      await loadAdminRole(user?.id);
-      if (mounted) setAuthLoading(false);
+      try {
+        const user = session?.user ?? null;
+        setAdminUser(user);
+        await loadAdminRole(user?.id);
+      } catch (err) {
+        console.error('Session handle error:', err);
+      } finally {
+        if (mounted) setAuthLoading(false);
+      }
+    };
+
+    adminSupabase.auth.getSession()
+      .then(({ data: { session } }) => handleSession(session))
+      .catch((err) => {
+        console.error('getSession error:', err);
+        if (mounted) setAuthLoading(false);
+      });
+
+    const { data: { subscription } } = adminSupabase.auth.onAuthStateChange((_event, session) => {
+      handleSession(session);
     });
 
-    const { data: { subscription } } = adminSupabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!mounted) return;
-      const user = session?.user ?? null;
-      setAdminUser(user);
-      await loadAdminRole(user?.id);
-      if (mounted) setAuthLoading(false);
-    });
+    const safetyTimer = setTimeout(() => {
+      if (mounted && authLoading) setAuthLoading(false);
+    }, 2000);
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      clearTimeout(safetyTimer);
     };
   }, []);
 
@@ -651,6 +665,7 @@ const SevenMod = () => {
             </div>
             <div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
               <AdminForm
+                key={editingItem ? editingItem.id : 'new'}
                 table={activeTab}
                 initialData={editingItem}
                 onCancel={() => setIsModalOpen(false)}

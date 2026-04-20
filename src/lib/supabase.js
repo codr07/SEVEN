@@ -9,26 +9,29 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
+    lock: (name, acquireTimeout, fn) => {
+      // Bypass Web Locks API to prevent phantom locks from halting initialization for 5000ms
+      return fn();
+    }
   }
 });
 
 export default supabase;
 
-/**
- * Wraps a Supabase query (or any thenable) in a timeout.
- * Supabase QueryBuilders are lazy — we must call .then() to start
- * execution before passing to Promise.race, otherwise the timeout
- * fires immediately because the query hasn't started yet.
- */
 export const withTimeout = (queryOrPromise, ms = 10000, timeoutError = 'Request timed out') => {
-  // Wrap in new Promise to force the thenable (Supabase QueryBuilder) to execute
-  const dataPromise = new Promise((resolve, reject) => {
-    Promise.resolve(queryOrPromise).then(resolve).catch(reject);
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(timeoutError));
+    }, ms);
+
+    Promise.resolve(queryOrPromise)
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
   });
-
-  const timeoutPromise = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error(timeoutError)), ms)
-  );
-
-  return Promise.race([dataPromise, timeoutPromise]);
 };

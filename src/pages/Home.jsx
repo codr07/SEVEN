@@ -162,13 +162,6 @@ const Home = () => {
     <div className="relative w-full overflow-hidden flex flex-col bg-background text-foreground">
       {/* Background Graphic */}
       <div className="absolute inset-0 pointer-events-none z-0">
-        <video
-          src="/assets/components/graphics/Topographic Textures _ After Effects _ Topographic Design _ Topographic Map  _ Background hd(720P_HD).mp4"
-          autoPlay
-          muted
-          loop
-          className="w-full h-full object-cover object-center opacity-10 mix-blend-overlay"
-        ></video>
         <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background opacity-60"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,hsl(var(--background))_100%)] opacity-40"></div>
       </div>
@@ -244,7 +237,7 @@ const Home = () => {
       </div>
 
       {/* Main Content Areas */}
-      
+
       <div className="relative z-10 w-full flex flex-col gap-24 px-4 md:px-8 max-w-7xl mx-auto pb-20">
 
         {/* Services Grid */}

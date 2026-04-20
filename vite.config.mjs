@@ -19,7 +19,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: 8001,
     strictPort: false,
     hmr: {
       overlay: true,

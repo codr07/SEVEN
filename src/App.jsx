@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect } from 'react';
+import React, { useState, useLayoutEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Lenis from 'lenis';
 import { ThemeProvider } from './context/ThemeContext';
@@ -18,45 +18,50 @@ import ServiceDetail from './pages/details/ServiceDetail';
 import NoteDetail from './pages/details/NoteDetail';
 import AcademicsDetail from './pages/details/AcademicsDetail';
 import Footer from './components/Footer';
-import { AuthProvider } from './context/AuthContext';
-import SevenMod from './pages/SevenMod';
+import { AuthProvider, useAuth } from './context/AuthContext';
+
+const SevenMod = lazy(() => import('./pages/SevenMod'));
 
 const AppContent = ({ loading, setLoading }) => {
+  const { loading: authLoading } = useAuth();
   const location = useLocation();
   const isAdminPage = location.pathname === '/seven-mod';
 
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    // If Lenis is active, force it to reset to top immediately to prevent scrolling physics from offsetting the top
     if (window.lenis) {
       window.lenis.scrollTo(0, { immediate: true });
     }
   }, [location.pathname]);
 
+  const isAppLoading = loading || authLoading;
+
   return (
     <>
-      {loading && <LoadingScreen onLoadingComplete={() => setLoading(false)} />}
+      {isAppLoading && <LoadingScreen onLoadingComplete={() => setLoading(false)} />}
       <CustomCursor />
-      {!loading && (
+      {!isAppLoading && (
         <div className="min-h-screen bg-background transition-colors duration-300 flex flex-col md:flex-row">
           {!isAdminPage && <Navbar />}
           <div className="flex-1 flex flex-col w-full min-w-0">
             <main className="flex-1">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/academics" element={<Academics />} />
-                <Route path="/courses" element={<Courses />} />
-                <Route path="/notes" element={<Notes />} />
-                <Route path="/services" element={<Services />} />
-                <Route path="/stars" element={<Stars />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/student-zone" element={<StudentZone />} />
-                <Route path="/courses/:id" element={<CourseDetail />} />
-                <Route path="/services/:id" element={<ServiceDetail />} />
-                <Route path="/notes/:id" element={<NoteDetail />} />
-                <Route path="/academics/:id" element={<AcademicsDetail />} />
-                <Route path="/seven-mod" element={<SevenMod />} />
-              </Routes>
+              <Suspense fallback={<div className="h-screen w-full flex items-center justify-center">Loading...</div>}>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/academics" element={<Academics />} />
+                  <Route path="/courses" element={<Courses />} />
+                  <Route path="/notes" element={<Notes />} />
+                  <Route path="/services" element={<Services />} />
+                  <Route path="/stars" element={<Stars />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/student-zone" element={<StudentZone />} />
+                  <Route path="/courses/:id" element={<CourseDetail />} />
+                  <Route path="/services/:id" element={<ServiceDetail />} />
+                  <Route path="/notes/:id" element={<NoteDetail />} />
+                  <Route path="/academics/:id" element={<AcademicsDetail />} />
+                  <Route path="/seven-mod" element={<SevenMod />} />
+                </Routes>
+              </Suspense>
             </main>
             {!isAdminPage && <Footer />}
           </div>
