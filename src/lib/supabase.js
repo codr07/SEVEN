@@ -35,3 +35,16 @@ export const withTimeout = (queryOrPromise, ms = 10000, timeoutError = 'Request 
       });
   });
 };
+
+export const filterVisible = (items = []) => {
+  if (!items) return [];
+  return items.filter(item => {
+    let details = {};
+    if (typeof item.extra_details === 'string') {
+      try { details = JSON.parse(item.extra_details); } catch {}
+    } else if (item.extra_details) {
+      details = item.extra_details;
+    }
+    return details?.is_visible !== false;
+  });
+};

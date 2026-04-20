@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase, withTimeout } from '../lib/supabase';
+import { supabase, withTimeout, filterVisible } from '../lib/supabase';
 import { Loader2, Code, Rocket, Brain, Cpu, Sparkles, BookOpen, GraduationCap, Laptop, Book as BookIcon } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import sevenLogo from '../assets/seven_dark.svg';
@@ -141,11 +141,11 @@ const Home = () => {
       if (coursesRes.error) throw coursesRes.error;
       if (servicesRes.error) throw servicesRes.error;
 
-      setFaculties(facultiesRes.data || []);
-      setFounders(foundersRes.data || []);
-      setAcademics(academicsRes.data || []);
-      setCourses(coursesRes.data || []);
-      setServices(servicesRes.data || []);
+      setFaculties(filterVisible(facultiesRes.data));
+      setFounders(filterVisible(foundersRes.data));
+      setAcademics(filterVisible(academicsRes.data));
+      setCourses(filterVisible(coursesRes.data));
+      setServices(filterVisible(servicesRes.data));
     } catch (err) {
       console.error('Error fetching home data:', err);
       setLoadError(err.message || String(err));

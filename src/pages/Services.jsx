@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, Zap, X, MessageSquarePlus } from 'lucide-react';
-import { supabase, withTimeout } from '../lib/supabase';
+import { supabase, withTimeout, filterVisible } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 
 const Services = () => {
@@ -29,7 +29,7 @@ const Services = () => {
         'Database connection timed out. Please check your network or try again.'
       );
       if (error) throw error;
-      setServices(data || []);
+      setServices(filterVisible(data));
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message || String(err));

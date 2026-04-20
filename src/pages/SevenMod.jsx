@@ -18,6 +18,8 @@ import {
   User,
   Users,
   X,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -349,6 +351,30 @@ const SevenMod = () => {
     fetchStats();
   };
 
+  const toggleVisibility = async (tableName, item) => {
+    let currentDetails = {};
+    if (typeof item.extra_details === 'string') {
+      try { currentDetails = JSON.parse(item.extra_details) || {}; } catch {}
+    } else if (item.extra_details && typeof item.extra_details === 'object') {
+      currentDetails = { ...item.extra_details };
+    }
+    
+    const currentVisible = currentDetails.is_visible !== false;
+    currentDetails.is_visible = !currentVisible;
+    
+    const { error } = await adminSupabase
+      .from(tableName)
+      .update({ extra_details: currentDetails })
+      .eq('id', item.id);
+      
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    
+    fetchTable(tableName);
+  };
+
   const updateUserRole = async (id, nextRole) => {
     const { error } = await adminSupabase
       .from('profiles')
@@ -442,7 +468,7 @@ const SevenMod = () => {
           </button>
         </div>
 
-        <nav className="flex overflow-x-auto md:flex-col gap-2 md:gap-0 md:space-y-2 pb-2 md:pb-0 custom-scrollbar">
+        <nav data-lenis-prevent="true" className="flex overflow-x-auto md:flex-col gap-2 md:gap-0 md:space-y-2 pb-2 md:pb-0 custom-scrollbar">
           {ADMIN_TABS.map((tab) => {
             const Icon = tab.icon;
             return (
@@ -469,7 +495,7 @@ const SevenMod = () => {
         </button>
       </aside>
 
-      <main className="flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full overflow-y-auto">
+      <main data-lenis-prevent="true" className="flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full overflow-y-auto">
         <header className="mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl md:text-4xl font-black tracking-tight text-animate-gradient">{activeTableTitle}</h1>
@@ -520,17 +546,28 @@ const SevenMod = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
+                        title={item.extra_details?.is_visible === false ? "Hidden on site. Click to show." : "Visible on site. Click to hide."}
+                        onClick={() => toggleVisibility(activeTab, item)}
+                        className={`px-4 py-2 rounded-xl flex items-center justify-center transition-all ${
+                          item.extra_details?.is_visible === false
+                          ? 'border border-muted text-muted-foreground bg-muted/10'
+                          : 'border border-primary/40 text-primary bg-primary/5'
+                        }`}
+                      >
+                        {item.extra_details?.is_visible === false ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
+                      <button
                         onClick={() => {
                           setEditingItem(item);
                           setIsModalOpen(true);
                         }}
-                        className="flex-1 px-4 py-2 rounded-xl border border-border text-sm font-bold flex items-center justify-center gap-2"
+                        className="flex-1 px-4 py-2 rounded-xl border border-border text-[10px] uppercase tracking-widest font-black flex items-center justify-center gap-2 hover:bg-background"
                       >
-                        <Pencil size={14} /> Edit
+                        <Pencil size={12} /> Edit
                       </button>
                       <button
                         onClick={() => removeItem(activeTab, item.id)}
-                        className="px-4 py-2 rounded-xl border border-destructive/40 text-destructive"
+                        className="px-4 py-2 rounded-xl border border-destructive/40 text-destructive hover:bg-destructive/10 transition-all"
                       >
                         <Trash2 size={14} />
                       </button>

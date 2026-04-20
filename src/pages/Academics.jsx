@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase, withTimeout } from '../lib/supabase';
+import { supabase, withTimeout, filterVisible } from '../lib/supabase';
 import { Loader2, GraduationCap } from 'lucide-react';
 
 const Academics = () => {
@@ -18,7 +18,7 @@ const Academics = () => {
         'Database connection timed out. Please check your network or try again.'
       );
       if (error) throw error;
-      setAcademics(data || []);
+      setAcademics(filterVisible(data));
     } catch (err) {
       console.error("Error fetching academics:", err);
       setErrorMsg(err.message || String(err));

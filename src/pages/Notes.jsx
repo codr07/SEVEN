@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FileText, Download, Share2, Search, Filter, Loader2, Link as LinkIcon } from 'lucide-react';
-import { supabase, withTimeout } from '../lib/supabase';
+import { supabase, withTimeout, filterVisible } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 
 const Notes = () => {
@@ -21,7 +21,7 @@ const Notes = () => {
         'Database connection timed out. Please check your network or try again.'
       );
       if (error) throw error;
-      setNotes(data || []);
+      setNotes(filterVisible(data));
     } catch (err) {
       console.error(err);
       setErrorMsg(err.message || String(err));

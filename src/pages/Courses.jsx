@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { PlayCircle, Clock, BookOpen, Star, Loader2, IndianRupee } from 'lucide-react';
-import { supabase, withTimeout } from '../lib/supabase';
+import { supabase, withTimeout, filterVisible } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 
 const Courses = () => {
@@ -18,7 +18,7 @@ const Courses = () => {
         'Database connection timed out. Please check your network or try again.'
       );
       if (error) throw error;
-      setCourses(data || []);
+      setCourses(filterVisible(data));
     } catch (err) {
       console.error('Supabase fetch error:', err);
       setErrorMsg(err.message || String(err));
