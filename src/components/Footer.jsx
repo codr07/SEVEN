@@ -67,11 +67,11 @@ const Footer = () => {
             <h4 className="font-bold text-lg uppercase tracking-wide">Contact</h4>
             <div className="flex flex-col gap-3 text-muted-foreground">
               <a href="mailto:hello@5even.com" className="hover:text-primary flex items-center gap-2 transition-colors w-fit">
-                <i className="ri-mail-line"></i> hello@5even.com
+                <i className="ri-mail-line"></i> espozindia@gmail.com
               </a>
               <p className="flex items-start gap-2">
                 <i className="ri-map-pin-line mt-1"></i>
-                <span>Sector 5, Salt Lake<br />Kolkata, West Bengal</span>
+                <span>Masalandapur<br />, West Bengal</span>
               </p>
             </div>
           </div>
