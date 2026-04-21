@@ -24,7 +24,8 @@ export const AuthProvider = ({ children }) => {
       .single();
 
     if (error && error.code !== 'PGRST116') {
-      throw error;
+      console.warn('fetchProfile error:', error);
+      return null;
     }
 
     const resolvedProfile = data || null;
@@ -44,7 +45,27 @@ let globalSessionPromise = null;
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         if (currentUser) {
-          await fetchProfile(currentUser.id);
+          let resolvedProfile = await fetchProfile(currentUser.id);
+          
+          if (!resolvedProfile) {
+            // Attempt to create the profile from user metadata if it's missing (fallback if trigger/signup insert failed)
+            const meta = currentUser.user_metadata || {};
+            const { error: createError } = await supabase.from('profiles').insert({
+              id: currentUser.id,
+              username: meta.username || '',
+              full_name: meta.full_name || '',
+              phone: meta.phone || '',
+              avatar_url: meta.avatar_url || '',
+              social_links: meta.social_links || { linkedin: '', github: '', linktree: '' },
+              role: 'student',
+              updated_at: new Date().toISOString(),
+            });
+            if (!createError) {
+              resolvedProfile = await fetchProfile(currentUser.id);
+            } else {
+              console.warn('Fallback profile creation failed:', createError.message);
+            }
+          }
         } else {
           setProfile(null);
           setRole('guest');
@@ -143,7 +164,9 @@ let globalSessionPromise = null;
           updated_at: new Date().toISOString(),
         });
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.warn('Profile upsert failed during signup (often due to RLS when email confirmation is needed or triggers are handling it):', profileError.message);
+      }
     }
 
     return data;
