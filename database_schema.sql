@@ -140,6 +140,11 @@ CREATE TABLE IF NOT EXISTS profiles (
         avatar_url TEXT,
         cover_url TEXT,
         phone TEXT,
+        bio TEXT,
+        institution TEXT,
+        major TEXT,
+        location TEXT,
+        portfolio_url TEXT,
         role TEXT NOT NULL DEFAULT 'student' CHECK (role IN ('admin', 'student')),
         education JSONB DEFAULT '[]'::jsonb,
         social_links JSONB DEFAULT '{"linkedin": "", "github": "", "linktree": ""}'::jsonb,
@@ -395,3 +400,25 @@ FOR DELETE USING (
     bucket_id = 'avatars' AND 
     (storage.foldername(name))[1] = auth.uid()::text
 );
+
+-- ==============================================================================
+-- ACCOUNT DELETION (RPC)
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.delete_user()
+RETURNS void AS $$
+BEGIN
+  -- Deletes the user from auth.users (which cascades to profiles and submissions automatically)
+  DELETE FROM auth.users WHERE id = auth.uid();
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ==============================================================================
+-- ADD MISSING PROFILE COLUMNS (MIGRATION)
+-- ==============================================================================
+-- Run this if the profiles table already exists and needs the extended fields:
+ALTER TABLE public.profiles 
+  ADD COLUMN IF NOT EXISTS bio TEXT,
+  ADD COLUMN IF NOT EXISTS institution TEXT,
+  ADD COLUMN IF NOT EXISTS major TEXT,
+  ADD COLUMN IF NOT EXISTS location TEXT,
+  ADD COLUMN IF NOT EXISTS portfolio_url TEXT;

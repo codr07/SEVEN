@@ -195,9 +195,29 @@ let globalSessionPromise = null;
     if (error) throw error;
   };
 
+  const deleteAccount = async () => {
+    // Attempt to invoke a custom Postgres function 'delete_user'
+    // This is the recommended approach for true account deletion in Supabase from the client
+    const { error } = await supabase.rpc('delete_user');
+    
+    if (error) {
+      console.warn("RPC 'delete_user' failed or not configured, falling back to deleting the profile...", error);
+      // Fallback: Delete the user's profile row
+      if (user?.id) {
+        const { error: profileError } = await supabase.from('profiles').delete().eq('id', user.id);
+        if (profileError) throw profileError;
+      } else {
+        throw error;
+      }
+    }
+    
+    // Log them out regardless
+    await logout();
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, session, loading, role, profile, login, signup, logout, resetPassword, refreshProfile }}
+      value={{ user, session, loading, role, profile, login, signup, logout, resetPassword, refreshProfile, deleteAccount }}
     >
       {children}
     </AuthContext.Provider>

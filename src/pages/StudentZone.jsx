@@ -44,7 +44,7 @@ const INITIAL_POST = {
 
 const StudentZone = () => {
   const [searchParams] = useSearchParams();
-  const { user, login, signup, logout, role, profile, refreshProfile, loading: authLoading, resetPassword } = useAuth();
+  const { user, login, signup, logout, role, profile, refreshProfile, loading: authLoading, resetPassword, deleteAccount } = useAuth();
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [authMode, setAuthMode] = useState('login');
@@ -372,6 +372,19 @@ const StudentZone = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone and will permanently erase your profile.")) return;
+    
+    setIsBusy(true);
+    try {
+      await deleteAccount();
+      // On success, the user is logged out globally and redirected or UI updates
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to delete account. You may need an admin to do this.' });
+      setIsBusy(false);
+    }
+  };
+
   const stats = useMemo(() => {
     const pushed = myPosts.filter((p) => p.is_pushed).length;
     const onHold = myPosts.filter((p) => !p.is_pushed).length;
@@ -661,7 +674,7 @@ const StudentZone = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 mt-6 flex-wrap">
                       <button
                         type="submit"
                         disabled={isBusy}
@@ -676,9 +689,17 @@ const StudentZone = () => {
                       >
                         Reset Password
                       </button>
+                      <button
+                        type="button"
+                        onClick={handleDeleteAccount}
+                        disabled={isBusy}
+                        className="px-6 py-3 rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 font-black uppercase tracking-widest text-xs transition-colors ml-auto md:ml-0"
+                      >
+                        Delete Account
+                      </button>
                     </div>
 
-                    {message.text && <MessageBox type={message.type}>{message.text}</MessageBox>}
+                    {message.text && <div className="mt-4"><MessageBox type={message.type}>{message.text}</MessageBox></div>}
                   </form>
                   )}
                 </motion.div>

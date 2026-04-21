@@ -195,11 +195,19 @@ const Navbar = () => {
                   "absolute bottom-full mb-4 rounded-2xl border border-border bg-card shadow-2xl p-2 z-50",
                   collapsed ? "left-full ml-4 w-44" : "left-0 w-full"
                 )}>
+                  {profile?.username && (
+                    <NavLink
+                      to={`/profile/${profile.username}`}
+                      className="block w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/20 mb-1"
+                    >
+                      My Profile
+                    </NavLink>
+                  )}
                   <NavLink
                     to="/student-zone?tab=settings"
                     className="block w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-accent"
                   >
-                    Account
+                    Account Settings
                   </NavLink>
                   <NavLink
                     to="/student-zone?tab=dashboard"

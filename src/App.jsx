@@ -1,5 +1,5 @@
 import React, { useState, useLayoutEffect, Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Lenis from 'lenis';
 import { ThemeProvider } from './context/ThemeContext';
 import CustomCursor from './components/CustomCursor';
@@ -17,6 +17,7 @@ import CourseDetail from './pages/details/CourseDetail';
 import ServiceDetail from './pages/details/ServiceDetail';
 import NoteDetail from './pages/details/NoteDetail';
 import AcademicsDetail from './pages/details/AcademicsDetail';
+import PublicProfile from './pages/PublicProfile';
 import Footer from './components/Footer';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -46,7 +47,8 @@ const AppContent = ({ loading, setLoading }) => {
       '/seven-mod': 'Admin Panel',
     };
     const baseRoute = '/' + location.pathname.split('/')[1];
-    const pageName = titles[location.pathname] || titles[baseRoute] || '';
+    let pageName = titles[location.pathname] || titles[baseRoute] || '';
+    if (baseRoute === '/profile') pageName = 'Profile';
     
     document.title = pageName || '5EVEN Institution';
   }, [location.pathname]);
@@ -76,6 +78,8 @@ const AppContent = ({ loading, setLoading }) => {
                   <Route path="/services/:id" element={<ServiceDetail />} />
                   <Route path="/notes/:id" element={<NoteDetail />} />
                   <Route path="/academics/:id" element={<AcademicsDetail />} />
+                  <Route path="/profile" element={<Navigate to="/student-zone?tab=settings" replace />} />
+                  <Route path="/profile/:username" element={<PublicProfile />} />
                   <Route path="/seven-mod" element={<SevenMod />} />
                 </Routes>
               </Suspense>
