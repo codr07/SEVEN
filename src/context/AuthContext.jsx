@@ -195,6 +195,17 @@ let globalSessionPromise = null;
     if (error) throw error;
   };
 
+  const signInWithGoogle = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/student-zone`,
+      }
+    });
+    if (error) throw error;
+    return data;
+  };
+
   const deleteAccount = async () => {
     // Attempt to invoke a custom Postgres function 'delete_user'
     // This is the recommended approach for true account deletion in Supabase from the client
@@ -217,7 +228,7 @@ let globalSessionPromise = null;
 
   return (
     <AuthContext.Provider
-      value={{ user, session, loading, role, profile, login, signup, logout, resetPassword, refreshProfile, deleteAccount }}
+      value={{ user, session, loading, role, profile, login, signup, logout, resetPassword, refreshProfile, deleteAccount, signInWithGoogle }}
     >
       {children}
     </AuthContext.Provider>

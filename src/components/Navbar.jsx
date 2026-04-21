@@ -15,7 +15,7 @@ function cn(...inputs) {
 
 const Navbar = () => {
   const { theme } = useTheme();
-  const { user, profile, logout, login, signup, role } = useAuth();
+  const { user, profile, logout, login, signup, role, signInWithGoogle } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
@@ -81,6 +81,17 @@ const Navbar = () => {
     } catch (error) {
       setLoginError(error.message || 'Authentication failed. Please try again.');
     } finally {
+      setIsLoginBusy(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoginError('');
+    setIsLoginBusy(true);
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      setLoginError(error.message || 'Google Sign In failed.');
       setIsLoginBusy(false);
     }
   };
@@ -401,6 +412,25 @@ const Navbar = () => {
                 {isLoginBusy 
                   ? (isSignUpMode ? 'Creating Account...' : 'Signing In...') 
                   : (isSignUpMode ? 'Create Account' : 'Sign In')}
+              </button>
+
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border"></div>
+                </div>
+                <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest">
+                  <span className="bg-card px-3 text-muted-foreground">OR</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={isLoginBusy}
+                onClick={handleGoogleLogin}
+                className="w-full py-4 flex items-center justify-center gap-3 rounded-xl border border-border bg-background hover:bg-accent transition-all group shadow-sm active:scale-[0.98]"
+              >
+                <i className="ri-google-fill text-xl text-primary group-hover:scale-110 transition-transform"></i>
+                <span className="text-xs font-black uppercase tracking-widest">Continue with Google</span>
               </button>
             </form>
           </div>
