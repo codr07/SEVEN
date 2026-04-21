@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { ChevronDown, Menu, X, Home, BookOpen, GraduationCap, FileText, Briefcase, Star, Mail, UserCircle, ChevronLeft, ChevronRight, LogIn, Server } from 'lucide-react';
+import { ChevronDown, Menu, X, Home, BookOpen, GraduationCap, FileText, Briefcase, Star, Mail, UserCircle, ChevronLeft, ChevronRight, LogIn } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -508,27 +508,8 @@ const Navbar = () => {
                   <i className="ri-google-fill text-xl text-primary group-hover:scale-110 transition-transform"></i>
                   <span className="text-xs font-black uppercase tracking-widest">Continue with Google</span>
                 </button>
-
-                <button
-                  type="button"
-                  disabled={isLoginBusy}
-                  onClick={async () => {
-                    setLoginError('');
-                    setIsLoginBusy(true);
-                    try {
-                      await signInWithFirebase();
-                    } catch (error) {
-                      setLoginError(error.message || 'Firebase Sign In failed.');
-                      setIsLoginBusy(false);
-                    }
-                  }}
-                  className="w-full py-4 flex items-center justify-center gap-3 rounded-xl border border-border bg-background hover:bg-accent transition-all group shadow-sm active:scale-[0.98]"
-                >
-                  <Server size={18} className="text-amber-500 group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-black uppercase tracking-widest">Login via Firebase</span>
-                </button>
               </>
-              )}
+            )}
             </form>
           </div>
         </div>

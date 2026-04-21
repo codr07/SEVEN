@@ -223,7 +223,7 @@ const SevenMod = () => {
   };
 
   const handleLogout = async () => {
-    const { error } = await adminSupabase.auth.signOut({ scope: 'local' });
+    const { error } = await adminSupabase.auth.signOut();
     if (error) {
       alert(error.message || 'Failed to sign out. Please try again.');
       return;

@@ -175,17 +175,6 @@ let globalSessionPromise = null;
     }
   };
 
-  const signInWithFirebase = async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'oidc',
-      options: {
-        domain: 'securetoken.google.com/seven-inst',
-        redirectTo: `${window.location.origin}/student-zone`,
-      }
-    });
-    if (error) throw error;
-    return data;
-  };
 
   const resetPassword = async (email) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {

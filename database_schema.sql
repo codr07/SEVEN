@@ -282,21 +282,6 @@ WITH CHECK (auth.uid() = id OR public.is_admin());
 DROP POLICY IF EXISTS "Admins can delete profiles" ON profiles;
 CREATE POLICY "Admins can delete profiles" ON profiles FOR DELETE USING (public.is_admin());
 
-CREATE OR REPLACE FUNCTION public.prevent_non_admin_role_change()
-RETURNS trigger AS $$
-BEGIN
-    IF NEW.role IS DISTINCT FROM OLD.role AND NOT public.is_admin() THEN
-        RAISE EXCEPTION 'Only admins can change user roles';
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trg_prevent_non_admin_role_change ON public.profiles;
-CREATE TRIGGER trg_prevent_non_admin_role_change
-BEFORE UPDATE ON public.profiles
-FOR EACH ROW
-EXECUTE FUNCTION public.prevent_non_admin_role_change();
 
 -- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 -- STUDENT SUBMISSIONS RLS POLICIES
@@ -329,25 +314,31 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
     -- Only create the profile row if the user is confirmed (Email confirmed or Social Login)
-    -- This prevents ghost profiles for unverified users. 
     IF (new.email_confirmed_at IS NOT NULL) THEN
-        INSERT INTO public.profiles (id, username, full_name, avatar_url, phone, social_links, role)
-        VALUES (
-            new.id,
-            new.raw_user_meta_data->>'username',
-            new.raw_user_meta_data->>'full_name',
-            new.raw_user_meta_data->>'avatar_url',
-            new.raw_user_meta_data->>'phone',
-            COALESCE((new.raw_user_meta_data->'social_links')::jsonb, '[]'::jsonb),
-            'student'
-        )
-        ON CONFLICT (id) DO UPDATE SET
-            username = COALESCE(EXCLUDED.username, profiles.username),
-            full_name = COALESCE(EXCLUDED.full_name, profiles.full_name),
-            avatar_url = COALESCE(EXCLUDED.avatar_url, profiles.avatar_url),
-            phone = COALESCE(EXCLUDED.phone, profiles.phone),
-            social_links = COALESCE(EXCLUDED.social_links, profiles.social_links),
-            updated_at = NOW();
+        BEGIN
+            INSERT INTO public.profiles (id, username, full_name, avatar_url, phone, social_links, role)
+            VALUES (
+                new.id,
+                new.raw_user_meta_data->>'username',
+                new.raw_user_meta_data->>'full_name',
+                new.raw_user_meta_data->>'avatar_url',
+                new.raw_user_meta_data->>'phone',
+                COALESCE((new.raw_user_meta_data->'social_links')::jsonb, '[]'::jsonb),
+                'student'
+            )
+            ON CONFLICT (id) DO UPDATE SET
+                username = COALESCE(EXCLUDED.username, profiles.username),
+                full_name = COALESCE(EXCLUDED.full_name, profiles.full_name),
+                avatar_url = COALESCE(EXCLUDED.avatar_url, profiles.avatar_url),
+                phone = COALESCE(EXCLUDED.phone, profiles.phone),
+                social_links = COALESCE(EXCLUDED.social_links, profiles.social_links),
+                updated_at = NOW();
+        EXCEPTION WHEN unique_violation THEN
+            -- If username or phone conflicts occur for a DIFFERENT user, 
+            -- we gracefully ignore the update to avoid a fatal "Database Error Updating User".
+            -- This usually happens if someone tries to use a phone/username that is already taken.
+            RAISE NOTICE 'Caught unique_violation in handle_new_user for user %', new.id;
+        END;
     END IF;
 
     RETURN new;
@@ -361,71 +352,10 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ==============================================================================
--- MIGRATION: ENHANCED PROFILES & STORAGE
+-- ADMIN DATA SETUP
 -- ==============================================================================
-
--- 1. Add new columns to profiles
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS bio TEXT;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS institution TEXT;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS major TEXT;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS location TEXT;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS portfolio_url TEXT;
-
--- 2. Update social_links to be a dynamic list (Default to empty array)
--- Note: Existing data is preserved; UI logic should handle both object and array formats temporarily.
-ALTER TABLE public.profiles ALTER COLUMN social_links SET DEFAULT '[]'::jsonb;
-
--- 3. Create Storage Bucket for Avatars (Publicly readable, Owner writable)
--- This assumes the 'storage' schema and 'buckets' table exist in your Supabase instance.
--- These commands are typically run in the SQL Editor.
-
-INSERT INTO storage.buckets (id, name, public) 
-VALUES ('avatars', 'avatars', true)
-ON CONFLICT (id) DO NOTHING;
-
--- Storage Policies for 'avatars' bucket
-DROP POLICY IF EXISTS "Public Access" ON storage.objects;
-CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
-
-DROP POLICY IF EXISTS "Users can upload their own avatar" ON storage.objects;
-CREATE POLICY "Users can upload their own avatar" ON storage.objects 
-FOR INSERT WITH CHECK (
-    bucket_id = 'avatars' AND 
-    (storage.foldername(name))[1] = auth.uid()::text
-);
-
-DROP POLICY IF EXISTS "Users can update their own avatar" ON storage.objects;
-CREATE POLICY "Users can update their own avatar" ON storage.objects 
-FOR UPDATE USING (
-    bucket_id = 'avatars' AND 
-    (storage.foldername(name))[1] = auth.uid()::text
-);
-
-DROP POLICY IF EXISTS "Users can delete their own avatar" ON storage.objects;
-CREATE POLICY "Users can delete their own avatar" ON storage.objects 
-FOR DELETE USING (
-    bucket_id = 'avatars' AND 
-    (storage.foldername(name))[1] = auth.uid()::text
-);
-
--- ==============================================================================
--- ACCOUNT DELETION (RPC)
--- ==============================================================================
-CREATE OR REPLACE FUNCTION public.delete_user()
-RETURNS void AS $$
-BEGIN
-  -- Deletes the user from auth.users (which cascades to profiles and submissions automatically)
-  DELETE FROM auth.users WHERE id = auth.uid();
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- ==============================================================================
--- ADD MISSING PROFILE COLUMNS (MIGRATION)
--- ==============================================================================
--- Run this if the profiles table already exists and needs the extended fields:
-ALTER TABLE public.profiles 
-  ADD COLUMN IF NOT EXISTS bio TEXT,
-  ADD COLUMN IF NOT EXISTS institution TEXT,
-  ADD COLUMN IF NOT EXISTS major TEXT,
-  ADD COLUMN IF NOT EXISTS location TEXT,
-  ADD COLUMN IF NOT EXISTS portfolio_url TEXT;
+-- Run this in your SQL Editor to grant admin access to specific users.
+-- User UID: 9892a796-a7d5-4a3c-9ee7-2da68243199d
+INSERT INTO public.profiles (id, full_name, role)
+VALUES ('9892a796-a7d5-4a3c-9ee7-2da68243199d', 'Super Admin', 'admin')
+ON CONFLICT (id) DO UPDATE SET role = 'admin';
