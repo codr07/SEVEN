@@ -139,6 +139,7 @@ let globalSessionPromise = null;
       email,
       password,
       options: {
+        emailRedirectTo: `${window.location.origin}/student-zone`,
         data: {
           username,
           full_name: fullName,
@@ -158,14 +159,32 @@ let globalSessionPromise = null;
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut({ scope: 'local' });
-    if (error) throw error;
+    try {
+      // Attempt global sign out
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.warn("Sign out request failed, purging local state anyway:", error);
+    } finally {
+      // FORCE local state purge regardless of server success
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setRole('guest');
+      // Clear persistence just in case
+      localStorage.removeItem('seven-auth-v3-stable');
+    }
+  };
 
-    // Ensure UI state resets immediately even if auth event propagation is delayed.
-    setSession(null);
-    setUser(null);
-    setProfile(null);
-    setRole('guest');
+  const signInWithFirebase = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'oidc',
+      options: {
+        domain: 'securetoken.google.com/seven-inst',
+        redirectTo: `${window.location.origin}/student-zone`,
+      }
+    });
+    if (error) throw error;
+    return data;
   };
 
   const resetPassword = async (email) => {

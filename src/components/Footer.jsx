@@ -59,6 +59,7 @@ const Footer = () => {
               <Link to="/courses" className="hover:text-foreground hover:translate-x-1 transition-all w-fit">Courses</Link>
               <Link to="/services" className="hover:text-foreground hover:translate-x-1 transition-all w-fit">Services</Link>
               <Link to="/notes" className="hover:text-foreground hover:translate-x-1 transition-all w-fit">Notes</Link>
+              <Link to="/developers" className="hover:text-foreground hover:translate-x-1 transition-all w-fit text-primary font-bold">Developers</Link>
             </div>
           </div>
 

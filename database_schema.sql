@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS profiles (
         full_name TEXT,
         avatar_url TEXT,
         cover_url TEXT,
-        phone TEXT,
+        phone TEXT UNIQUE,
         bio TEXT,
         institution TEXT,
         major TEXT,

@@ -18,6 +18,8 @@ import ServiceDetail from './pages/details/ServiceDetail';
 import NoteDetail from './pages/details/NoteDetail';
 import AcademicsDetail from './pages/details/AcademicsDetail';
 import PublicProfile from './pages/PublicProfile';
+import OAuthConsent from './pages/OAuthConsent';
+import DeveloperDocs from './pages/DeveloperDocs';
 import Footer from './components/Footer';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -45,6 +47,8 @@ const AppContent = ({ loading, setLoading }) => {
       '/contact': 'Contact',
       '/student-zone': 'Student Zone',
       '/seven-mod': 'Admin Panel',
+      '/oauth/consent': 'Authorization Request',
+      '/developers': 'Developer API',
     };
     const baseRoute = '/' + location.pathname.split('/')[1];
     let pageName = titles[location.pathname] || titles[baseRoute] || '';
@@ -80,6 +84,8 @@ const AppContent = ({ loading, setLoading }) => {
                   <Route path="/academics/:id" element={<AcademicsDetail />} />
                   <Route path="/profile" element={<Navigate to="/student-zone?tab=settings" replace />} />
                   <Route path="/profile/:username" element={<PublicProfile />} />
+                  <Route path="/oauth/consent" element={<OAuthConsent />} />
+                  <Route path="/developers" element={<DeveloperDocs />} />
                   <Route path="/seven-mod" element={<SevenMod />} />
                 </Routes>
               </Suspense>

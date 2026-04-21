@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { ChevronDown, Menu, X, Home, BookOpen, GraduationCap, FileText, Briefcase, Star, Mail, UserCircle, ChevronLeft, ChevronRight, LogIn } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { ChevronDown, Menu, X, Home, BookOpen, GraduationCap, FileText, Briefcase, Star, Mail, UserCircle, ChevronLeft, ChevronRight, LogIn, Server } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,7 +16,7 @@ function cn(...inputs) {
 
 const Navbar = () => {
   const { theme } = useTheme();
-  const { user, profile, logout, login, signup, role, signInWithGoogle } = useAuth();
+  const { user, profile, logout, login, signup, role, signInWithGoogle, signInWithFirebase } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
@@ -24,6 +25,7 @@ const Navbar = () => {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [isSignUpMode, setIsSignUpMode] = useState(false);
+  const [signupUsername, setSignupUsername] = useState('');
   const [signupFullName, setSignupFullName] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -82,10 +84,31 @@ const Navbar = () => {
     setIsLoginBusy(true);
 
     try {
-      if (!signupFullName || !loginEmail || !loginPassword) {
-        throw new Error("Full Name, Email, and Password are required.");
+      if (!signupUsername || !signupFullName || !loginEmail || !loginPassword) {
+        throw new Error("Username, Full Name, Email, and Password are required.");
       }
+
+      // Pre-check for Uniqueness (Username & Phone)
+      // This provides a better UX than waiting for the DB trigger to fail
+      const { data: existingUser, error: checkError } = await supabase
+        .from('profiles')
+        .select('username, phone')
+        .or(`username.eq.${signupUsername}${signupPhone ? `,phone.eq.${signupPhone}` : ''}`)
+        .maybeSingle();
+
+      if (checkError) console.warn("Uniqueness check error:", checkError);
+      
+      if (existingUser) {
+        if (existingUser.username === signupUsername) {
+          throw new Error("This username is already taken. Please choose another.");
+        }
+        if (signupPhone && existingUser.phone === signupPhone) {
+          throw new Error("This phone number is already registered.");
+        }
+      }
+
       await signup(loginEmail, loginPassword, {
+        username: signupUsername,
         fullName: signupFullName,
         phone: signupPhone
       });
@@ -111,11 +134,18 @@ const Navbar = () => {
 
   const handleSignOut = async () => {
     try {
-      await logout();
+      // Close all interactive UI elements first to prevent ghost clicks
       setIsAvatarMenuOpen(false);
-      navigate('/');
+      setIsMobileMenuOpen(false);
+      
+      await logout();
+      
+      // Navigate to home to ensure fresh state load
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Failed to sign out:', error);
+      // Fallback: reload page if cleanup is hanging
+      window.location.reload();
     }
   };
 
@@ -414,6 +444,14 @@ const Navbar = () => {
                     className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
                   />
                   <input
+                    type="text"
+                    required
+                    value={signupUsername}
+                    onChange={(e) => setSignupUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                    placeholder="Username (e.g. john_doe)"
+                    className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                  />
+                  <input
                     type="tel"
                     value={signupPhone}
                     onChange={(e) => setSignupPhone(e.target.value)}
@@ -461,15 +499,34 @@ const Navbar = () => {
                 </div>
               </div>
 
-              <button
-                type="button"
-                disabled={isLoginBusy}
-                onClick={handleGoogleLogin}
-                className="w-full py-4 flex items-center justify-center gap-3 rounded-xl border border-border bg-background hover:bg-accent transition-all group shadow-sm active:scale-[0.98]"
-              >
-                <i className="ri-google-fill text-xl text-primary group-hover:scale-110 transition-transform"></i>
-                <span className="text-xs font-black uppercase tracking-widest">Continue with Google</span>
-              </button>
+                <button
+                  type="button"
+                  disabled={isLoginBusy}
+                  onClick={handleGoogleLogin}
+                  className="w-full py-4 flex items-center justify-center gap-3 rounded-xl border border-border bg-background hover:bg-accent transition-all group shadow-sm active:scale-[0.98]"
+                >
+                  <i className="ri-google-fill text-xl text-primary group-hover:scale-110 transition-transform"></i>
+                  <span className="text-xs font-black uppercase tracking-widest">Continue with Google</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isLoginBusy}
+                  onClick={async () => {
+                    setLoginError('');
+                    setIsLoginBusy(true);
+                    try {
+                      await signInWithFirebase();
+                    } catch (error) {
+                      setLoginError(error.message || 'Firebase Sign In failed.');
+                      setIsLoginBusy(false);
+                    }
+                  }}
+                  className="w-full py-4 flex items-center justify-center gap-3 rounded-xl border border-border bg-background hover:bg-accent transition-all group shadow-sm active:scale-[0.98]"
+                >
+                  <Server size={18} className="text-amber-500 group-hover:scale-110 transition-transform" />
+                  <span className="text-xs font-black uppercase tracking-widest">Login via Firebase</span>
+                </button>
               </>
               )}
             </form>
