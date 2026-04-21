@@ -149,26 +149,6 @@ let globalSessionPromise = null;
       },
     });
     if (error) throw error;
-
-    if (data?.user?.id) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: data.user.id,
-          username,
-          full_name: fullName,
-          phone,
-          avatar_url: avatarUrl,
-          social_links: socialLinks,
-          role: 'student',
-          updated_at: new Date().toISOString(),
-        });
-
-      if (profileError) {
-        console.warn('Profile upsert failed during signup (often due to RLS when email confirmation is needed or triggers are handling it):', profileError.message);
-      }
-    }
-
     return data;
   };
 

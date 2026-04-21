@@ -28,6 +28,7 @@ const Navbar = () => {
   const [signupPhone, setSignupPhone] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoginBusy, setIsLoginBusy] = useState(false);
+  const [showVerificationSent, setShowVerificationSent] = useState(false);
   const avatarMenuRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -57,9 +58,9 @@ const Navbar = () => {
       setSignupFullName('');
       setSignupPhone('');
       setLoginError('');
-      setIsLoginBusy(false);
+      setShowVerificationSent(false);
     }
-  }, [user]);
+  }, [user, isLoginOpen]);
 
   const handleWebsiteAuth = async (event) => {
     event.preventDefault();
@@ -67,19 +68,31 @@ const Navbar = () => {
     setIsLoginBusy(true);
 
     try {
-      if (isSignUpMode) {
-        if (!signupFullName || !loginEmail || !loginPassword) {
-           throw new Error("Full Name, Email, and Password are required.");
-        }
-        await signup(loginEmail, loginPassword, {
-          fullName: signupFullName,
-          phone: signupPhone
-        });
-      } else {
-        await login(loginEmail, loginPassword);
-      }
+      await login(loginEmail, loginPassword);
     } catch (error) {
       setLoginError(error.message || 'Authentication failed. Please try again.');
+    } finally {
+      setIsLoginBusy(false);
+    }
+  };
+
+  const handleManualSignUp = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    setIsLoginBusy(true);
+
+    try {
+      if (!signupFullName || !loginEmail || !loginPassword) {
+        throw new Error("Full Name, Email, and Password are required.");
+      }
+      await signup(loginEmail, loginPassword, {
+        fullName: signupFullName,
+        phone: signupPhone
+      });
+      // If we get here, signup was successful (Supabase didn't throw)
+      setShowVerificationSent(true);
+    } catch (error) {
+      setLoginError(error.message || 'Signup failed. Please try again.');
     } finally {
       setIsLoginBusy(false);
     }
@@ -364,8 +377,33 @@ const Navbar = () => {
               </button>
             </div>
 
-            <form onSubmit={handleWebsiteAuth} className="space-y-4">
-              {isSignUpMode && (
+            <form onSubmit={isSignUpMode ? handleManualSignUp : handleWebsiteAuth} className="space-y-4">
+              {showVerificationSent ? (
+                <div className="py-8 text-center space-y-6 animate-in fade-in zoom-in duration-500">
+                  <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                    <Mail className="w-10 h-10 text-primary animate-bounce-subtle" />
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-black uppercase tracking-widest text-primary">Verify Your Email</h4>
+                    <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                      We've sent a confirmation link to <span className="text-foreground font-bold">{loginEmail}</span>.
+                      Please check your inbox and click the link to activate your account.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowVerificationSent(false);
+                      setIsSignUpMode(false);
+                    }}
+                    className="w-full py-4 rounded-xl border border-border hover:bg-accent font-black uppercase tracking-widest text-[10px] transition-all"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {isSignUpMode && (
                 <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-4">
                   <input
                     type="text"
@@ -432,6 +470,8 @@ const Navbar = () => {
                 <i className="ri-google-fill text-xl text-primary group-hover:scale-110 transition-transform"></i>
                 <span className="text-xs font-black uppercase tracking-widest">Continue with Google</span>
               </button>
+              </>
+              )}
             </form>
           </div>
         </div>

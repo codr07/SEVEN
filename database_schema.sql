@@ -328,30 +328,37 @@ USING (auth.uid() = author_id OR public.is_admin());
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-    INSERT INTO public.profiles (id, username, full_name, avatar_url, phone, social_links, role)
-    VALUES (
-        new.id,
-        new.raw_user_meta_data->>'username',
-        new.raw_user_meta_data->>'full_name',
-        new.raw_user_meta_data->>'avatar_url',
-        new.raw_user_meta_data->>'phone',
-        COALESCE((new.raw_user_meta_data->'social_links')::jsonb, '[]'::jsonb),
-        'student'
-    )
-    ON CONFLICT (id) DO UPDATE SET
-        username = EXCLUDED.username,
-        full_name = EXCLUDED.full_name,
-        avatar_url = EXCLUDED.avatar_url,
-        phone = EXCLUDED.phone,
-        social_links = EXCLUDED.social_links,
-        updated_at = NOW();
+    -- Only create the profile row if the user is confirmed (Email confirmed or Social Login)
+    -- This prevents ghost profiles for unverified users. 
+    IF (new.email_confirmed_at IS NOT NULL) THEN
+        INSERT INTO public.profiles (id, username, full_name, avatar_url, phone, social_links, role)
+        VALUES (
+            new.id,
+            new.raw_user_meta_data->>'username',
+            new.raw_user_meta_data->>'full_name',
+            new.raw_user_meta_data->>'avatar_url',
+            new.raw_user_meta_data->>'phone',
+            COALESCE((new.raw_user_meta_data->'social_links')::jsonb, '[]'::jsonb),
+            'student'
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            username = COALESCE(EXCLUDED.username, profiles.username),
+            full_name = COALESCE(EXCLUDED.full_name, profiles.full_name),
+            avatar_url = COALESCE(EXCLUDED.avatar_url, profiles.avatar_url),
+            phone = COALESCE(EXCLUDED.phone, profiles.phone),
+            social_links = COALESCE(EXCLUDED.social_links, profiles.social_links),
+            updated_at = NOW();
+    END IF;
 
     RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- To enable automatic profile creation:
--- CREATE TRIGGER ON_AUTH_USER_CREATED AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+-- Trigger handles both new signups (Social Login) and confirmation updates (Email Login)
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created 
+  AFTER INSERT OR UPDATE ON auth.users 
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ==============================================================================
 -- MIGRATION: ENHANCED PROFILES & STORAGE
