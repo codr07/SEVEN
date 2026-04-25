@@ -170,48 +170,38 @@ const Services = () => {
             <Link 
               to={`/services/${service.id}`} 
               key={service.id} 
-              className="group relative overflow-hidden backdrop-blur-2xl bg-white/5 border border-white/10 rounded-[40px] p-10 shadow-[0_8px_32px_rgba(0,0,0,0.2)] hover:bg-white/10 hover:border-primary/30 hover:-translate-y-2 hover:shadow-[0_8px_32px_rgba(var(--primary),0.2)] transition-all duration-500 flex flex-col justify-between"
+              className="group institution-card flex flex-col justify-between"
             >
-              {/* Liquid Shine Effect */}
-              <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none z-20" />
-              
               <div className="relative z-10 flex-1 flex flex-col">
-                <div className="w-full h-48 relative rounded-[24px] overflow-hidden mb-8 border border-white/10 group-hover:border-primary/30 transition-colors duration-500">
-                  <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors duration-500 z-10"></div>
+                <div className="w-full h-44 relative rounded-2xl overflow-hidden mb-6 border border-border">
                   <img 
                     src={service.thumbnail || service.image_url || service.cover_image || 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=800&auto=format&fit=crop'} 
                     alt={service.title}
-                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" 
+                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" 
                   />
-                  <div className="absolute top-4 left-4 z-20">
-                    <div className="text-[10px] font-black text-primary uppercase tracking-widest bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/20 shadow-lg">
+                  <div className="absolute top-3 left-3">
+                    <div className="text-[10px] font-black text-primary uppercase tracking-widest bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-primary/20 shadow-sm">
                       {service.category}
-                    </div>
-                  </div>
-                  <div className="absolute bottom-4 right-4 z-20">
-                    <div className="w-12 h-12 bg-black/80 backdrop-blur-md border border-primary/20 rounded-xl flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground group-hover:-rotate-12 group-hover:scale-110 transition-all duration-500 shadow-xl">
-                      <Zap size={20} />
                     </div>
                   </div>
                 </div>
 
-                <h3 className="text-2xl font-black uppercase tracking-widest mb-4 min-h-[4rem] flex items-center group-hover:text-primary transition-colors">{service.title}</h3>
-                <p className="text-xl font-bold opacity-80 mb-6 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                <h3 className="text-xl font-black uppercase tracking-widest mb-3 group-hover:text-primary transition-colors">{service.title}</h3>
+                <p className="text-sm font-black text-primary mb-6 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
                   {service.price}
                 </p>
-                <div className="text-sm font-medium opacity-70 leading-relaxed transition-colors space-y-3 mb-8">
-                  {service.description?.slice(0, 2).map((point, idx) => (
-                    <p key={idx} className="flex gap-3">
-                      <span className="text-primary mt-1 opacity-70">•</span>
-                      <span className="line-clamp-2">{point}</span>
-                    </p>
-                  ))}
+                <div className="text-sm text-muted-foreground leading-relaxed space-y-2 mb-8">
+                  {Array.isArray(service.description) ? service.description.slice(0, 2).map((point, idx) => (
+                    <p key={idx} className="line-clamp-2">• {point}</p>
+                  )) : (
+                    <p className="line-clamp-3">{service.description}</p>
+                  )}
                 </div>
               </div>
               
-              <div className="w-full py-4 text-xs bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-2 font-black uppercase tracking-widest group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:text-primary transition-all duration-300 relative z-10">
-                <span>View Full Package</span>
+              <div className="cool-button w-full text-center">
+                Explore Details
               </div>
             </Link>
           ))}

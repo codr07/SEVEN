@@ -1,56 +1,71 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase, withTimeout, filterVisible } from '../lib/supabase';
-import { Loader2, Code, Rocket, Brain, Cpu, Sparkles, BookOpen, GraduationCap, Laptop, Book as BookIcon } from 'lucide-react';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { Loader2, Code, Rocket, Brain, Cpu, Sparkles, BookOpen, GraduationCap, Laptop, Book as BookIcon, Zap } from 'lucide-react';
+import { motion, useMotionValue, useSpring, useTransform, useScroll } from 'framer-motion';
 import sevenLogo from '../assets/seven_dark.svg';
 import ProfileModal from '../components/ProfileModal';
 import TiltCard from '../components/TiltCard';
 
-const PopOutIcon = ({ icon: Icon, delay = 0, x = 0, y = 0, rotate = 0, color = "var(--color-primary)" }) => (
+const ScrollAnimatedSection = ({ children, className = "" }) => {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"]
+  });
+
+  const scale = useTransform(scrollYProgress, [0, 0.4, 0.6, 1], [0.9, 1, 1, 0.9]);
+  const rotateX = useTransform(scrollYProgress, [0, 0.4, 0.6, 1], [10, 0, 0, -10]);
+  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
+
+  return (
+    <motion.div
+      ref={ref}
+      style={{
+        scale,
+        rotateX,
+        opacity,
+        perspective: 1200,
+        transformStyle: "preserve-3d",
+        willChange: "transform, opacity"
+      }}
+      className={`relative ${className}`}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+const PopOutIcon = ({ icon: Icon, x, y, rotate, delay, color }) => (
   <motion.div
-    initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
-    animate={{
-      opacity: 0.4,
-      scale: 1,
-      x: `${x}vw`,
-      y: `${y}vh`,
-      rotate: [rotate, rotate + 5, rotate - 5, rotate]
-    }}
-    transition={{
-      opacity: { duration: 0.5, delay: delay + 0.5 },
-      scale: { type: "spring", stiffness: 100, damping: 10, delay: delay + 0.5 },
-      x: { duration: 0.8, delay: delay + 0.5 },
-      y: { duration: 0.8, delay: delay + 0.5 },
-      rotate: { duration: 6, repeat: Infinity, ease: "easeInOut" }
-    }}
-    className="absolute pointer-events-none z-[-1]"
-    style={{ color, left: '50%', top: '50%' }}
+    initial={{ opacity: 0, scale: 0 }}
+    animate={{ opacity: 1, scale: 1, x: `${x}vw`, y: `${y}vh`, rotate }}
+    transition={{ delay, duration: 1, type: "spring", bounce: 0.4 }}
+    className="absolute pointer-events-none z-0"
+    style={{ color }}
   >
-    <Icon size={64} strokeWidth={1} className="filter drop-shadow-[0_0_20px_rgba(0,0,0,0.15)] opacity-60" />
+    <Icon size={40} className="opacity-20" />
   </motion.div>
 );
 
-const FloatingIcon = ({ icon: Icon, delay = 0, x = 0, y = 0, color = "var(--color-primary)" }) => (
+const FloatingIcon = ({ icon: Icon, x, y, delay, color }) => (
   <motion.div
-    initial={{ opacity: 0, scale: 0 }}
-    animate={{
-      opacity: [0.1, 0.2, 0.1],
-      scale: [1, 1.2, 1],
-      x: [x - 10, x + 10, x - 10],
-      y: [y - 10, y + 10, y - 10],
-      rotate: [0, 10, 0]
+    initial={{ opacity: 0 }}
+    animate={{ 
+      opacity: [0.1, 0.3, 0.1],
+      y: [`${y}vh`, `${y-4}vh`, `${y}vh`],
+      x: [`${x}vw`, `${x+2}vw`, `${x}vw`]
     }}
-    transition={{
-      duration: 5,
-      delay,
+    transition={{ 
+      delay, 
+      duration: 6 + Math.random() * 4, 
       repeat: Infinity,
-      ease: "easeInOut"
+      ease: "easeInOut" 
     }}
-    className="absolute pointer-events-none hidden md:block"
-    style={{ left: `${50 + x}%`, top: `${40 + y}%`, transform: 'translate(-50%, -50%)', color }}
+    className="absolute pointer-events-none z-0"
+    style={{ left: '50%', top: '50%', color }}
   >
-    <Icon className="w-12 h-12 opacity-30 fill-current" />
+    <Icon size={28} className="opacity-10" />
   </motion.div>
 );
 
@@ -61,20 +76,20 @@ const Hero3DAsset = ({ icon: Icon, x = 0, y = 0, color = "var(--color-primary)",
   useEffect(() => {
     const handleMouseMove = (e) => {
       const { innerWidth, innerHeight } = window;
-      const xPct = (e.clientX / innerWidth - 0.5) * 40;
-      const yPct = (e.clientY / innerHeight - 0.5) * 40;
+      const xPct = (e.clientX / innerWidth - 0.5) * 30;
+      const yPct = (e.clientY / innerHeight - 0.5) * 30;
       mouseX.set(xPct);
       mouseY.set(yPct);
     };
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  }, [mouseX, mouseY]);
 
-  const springX = useSpring(mouseX, { stiffness: 100, damping: 30 });
-  const springY = useSpring(mouseY, { stiffness: 100, damping: 30 });
+  const springX = useSpring(mouseX, { stiffness: 60, damping: 20 });
+  const springY = useSpring(mouseY, { stiffness: 60, damping: 20 });
 
-  const rotateX = useTransform(springY, [-20, 20], [20, -20]);
-  const rotateY = useTransform(springX, [-20, 20], [-20, 20]);
+  const rotateX = useTransform(springY, [-15, 15], [15, -15]);
+  const rotateY = useTransform(springX, [-15, 15], [-15, 15]);
 
   return (
     <motion.div
@@ -82,8 +97,8 @@ const Hero3DAsset = ({ icon: Icon, x = 0, y = 0, color = "var(--color-primary)",
       animate={{ opacity: 1, scale: 1, x: `${x}px`, y: `${y}px` }}
       transition={{
         type: "spring",
-        stiffness: 100,
-        damping: 15,
+        stiffness: 80,
+        damping: 12,
         delay
       }}
       style={{
@@ -94,14 +109,15 @@ const Hero3DAsset = ({ icon: Icon, x = 0, y = 0, color = "var(--color-primary)",
         position: 'absolute',
         top: '50%',
         left: '50%',
+        willChange: "transform, opacity"
       }}
       className="hidden md:block pointer-events-none z-[5]"
     >
       <div
-        className="p-8 rounded-3xl bg-white/5 backdrop-blur-2xl border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center justify-center group"
-        style={{ transform: "translateZ(80px)" }}
+        className="p-8 rounded-3xl bg-white/30 backdrop-blur-xl border border-white/20 shadow-2xl flex items-center justify-center group"
+        style={{ transform: "translateZ(60px)" }}
       >
-        <Icon size={72} color={color} className="filter drop-shadow-[0_15px_30px_rgba(0,0,0,0.4)] group-hover:scale-110 transition-transform" />
+        <Icon size={64} color={color} className="filter drop-shadow-2xl group-hover:scale-110 transition-transform" />
       </div>
     </motion.div>
   );
@@ -116,14 +132,13 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [profileType, setProfileType] = useState(null);
-
   const [loadError, setLoadError] = useState('');
 
   const fetchData = async () => {
     setLoading(true);
     setLoadError('');
     try {
-      const [facultiesRes, foundersRes, academicsRes, coursesRes, servicesRes] = await withTimeout(
+      const results = await withTimeout(
         Promise.all([
           supabase.from('faculty').select('*'),
           supabase.from('founders').select('*'),
@@ -131,24 +146,20 @@ const Home = () => {
           supabase.from('courses').select('*'),
           supabase.from('services').select('*')
         ]),
-        12000,
-        'Connection timed out. Please check your internet and try again.'
+        15000,
+        'Server is taking too long to respond.'
       );
 
-      if (facultiesRes.error) throw facultiesRes.error;
-      if (foundersRes.error) throw foundersRes.error;
-      if (academicsRes.error) throw academicsRes.error;
-      if (coursesRes.error) throw coursesRes.error;
-      if (servicesRes.error) throw servicesRes.error;
+      const [fac, fnd, aca, crs, srv] = results;
 
-      setFaculties(filterVisible(facultiesRes.data));
-      setFounders(filterVisible(foundersRes.data));
-      setAcademics(filterVisible(academicsRes.data));
-      setCourses(filterVisible(coursesRes.data));
-      setServices(filterVisible(servicesRes.data));
+      setFaculties(filterVisible(fac.data || []));
+      setFounders(filterVisible(fnd.data || []));
+      setAcademics(filterVisible(aca.data || []));
+      setCourses(filterVisible(crs.data || []));
+      setServices(filterVisible(srv.data || []));
     } catch (err) {
-      console.error('Error fetching home data:', err);
-      setLoadError(err.message || String(err));
+      console.error('Data Fetch Error:', err);
+      setLoadError(err.message || 'Connection error.');
     } finally {
       setLoading(false);
     }
@@ -158,77 +169,50 @@ const Home = () => {
     fetchData();
   }, []);
 
+  const categories = [...new Set(courses.map(c => c.category || 'General'))].slice(0, 4);
+
   return (
-    <div className="relative w-full overflow-hidden flex flex-col bg-background text-foreground">
-      {/* Background Graphic */}
+    <div className="relative w-full overflow-hidden flex flex-col bg-background text-foreground selection:bg-primary/20">
+      {/* Background */}
       <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background opacity-60"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,hsl(var(--background))_100%)] opacity-40"></div>
+        <div className="absolute top-0 left-0 w-full h-[50vh] bg-gradient-to-b from-primary/5 to-transparent"></div>
+        <div className="absolute bottom-0 left-0 w-full h-[50vh] bg-gradient-to-t from-secondary/5 to-transparent"></div>
       </div>
 
       {/* Hero Section */}
-      <div className="relative z-10 w-full h-screen flex flex-col items-center justify-center px-4 md:px-8 max-w-7xl mx-auto overflow-visible">
+      <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-4 md:px-12 max-w-7xl mx-auto py-20 md:py-0">
+        <Hero3DAsset icon={BookOpen} x={-380} y={-180} color="var(--color-primary)" delay={1} />
+        <Hero3DAsset icon={GraduationCap} x={340} y={-220} color="var(--color-secondary)" delay={1.2} />
+        <Hero3DAsset icon={Laptop} x={-420} y={120} color="var(--color-accent)" delay={1.4} />
+        <Hero3DAsset icon={BookIcon} x={380} y={180} color="var(--color-primary)" delay={1.6} />
 
-        {/* 3D Interactive Assets */}
-        <Hero3DAsset icon={BookOpen} x={-350} y={-150} color="var(--color-primary)" delay={1.2} />
-        <Hero3DAsset icon={GraduationCap} x={300} y={-200} color="var(--color-secondary)" delay={1.4} />
-        <Hero3DAsset icon={Laptop} x={-400} y={100} color="var(--color-accent)" delay={1.6} />
-        <Hero3DAsset icon={BookIcon} x={350} y={150} color="var(--color-primary)" delay={1.8} />
-
-        {/* Pop-out Decorations */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
-          <PopOutIcon icon={Code} x={-25} y={-22} rotate={-15} delay={0.2} color="var(--color-primary)" />
-          <PopOutIcon icon={Rocket} x={28} y={-18} rotate={20} delay={0.4} color="var(--color-secondary)" />
-          <PopOutIcon icon={Brain} x={-32} y={15} rotate={-10} delay={0.6} color="var(--color-accent)" />
-          <PopOutIcon icon={Cpu} x={35} y={25} rotate={15} delay={0.8} color="var(--color-primary)" />
-          {/* Study Icons */}
-          <PopOutIcon icon={Sparkles} x={10} y={-35} rotate={30} delay={0.3} color="var(--color-secondary)" />
-          <PopOutIcon icon={Sparkles} x={-15} y={30} rotate={-20} delay={0.7} color="var(--color-accent)" />
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <FloatingIcon icon={Code} x={-40} y={-30} delay={0} color="var(--color-primary)" />
+          <FloatingIcon icon={Rocket} x={35} y={-20} delay={1} color="var(--color-secondary)" />
+          <FloatingIcon icon={Brain} x={-30} y={20} delay={2} color="var(--color-accent)" />
+          <FloatingIcon icon={Cpu} x={40} y={30} delay={1.5} color="var(--color-primary)" />
         </div>
 
-        {/* Floating Hero Decorations */}
-        <FloatingIcon icon={Code} x={-42} y={-25} delay={0} color="var(--color-primary)" />
-        <FloatingIcon icon={Rocket} x={38} y={-10} delay={1} color="var(--color-secondary)" />
-        <FloatingIcon icon={Brain} x={-35} y={15} delay={2} color="var(--color-accent)" />
-        <FloatingIcon icon={Cpu} x={45} y={20} delay={1.5} color="var(--color-primary)" />
-        <FloatingIcon icon={Sparkles} x={0} y={-35} delay={0.5} color="var(--color-secondary)" />
-
-        {/* Hero Content */}
-        <section className="flex flex-col items-center justify-center gap-8 w-full text-center relative z-20">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <h1 className="text-5xl md:text-6xl lg:text-8xl text-black font-black tracking-tighter leading-none mb-6 flex flex-col items-center gap-4">
-              <span className="flex items-center gap-4 text-xl md:text-2xl font-bold text-black uppercase tracking-[0.4em]">
-                Welcome to
+        <section className="flex flex-col items-center justify-center gap-6 md:gap-10 w-full text-center relative z-20">
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1 }}>
+            <h1 className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.9] mb-4 md:mb-8">
+              <span className="block text-sm md:text-2xl font-bold text-muted-foreground uppercase tracking-[0.4em] mb-2 md:mb-4">
+                Redefining
               </span>
-              <span className="relative inline-block">
-                <span className="text-animate-gradient drop-shadow-[0_0_30px_rgba(hsl(var(--primary)),0.2)] p-2">5EVEN</span>
-                <Sparkles className="absolute -top-4 -right-8 w-10 h-10 text-secondary opacity-70 animate-pulse" />
+              <span className="relative inline-block text-animate-gradient drop-shadow-sm">
+                5EVEN
+                <Sparkles className="absolute -top-4 -right-8 md:-top-6 md:-right-10 w-8 h-8 md:w-12 md:h-12 text-secondary opacity-50 animate-pulse" />
               </span>
             </h1>
           </motion.div>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-lg md:text-2xl text-muted-foreground w-full max-w-3xl mx-auto font-medium"
-          >
-            Boost your academia in a completely new way. <br className="hidden md:block" />
-            Where innovation meets education, and your potential knows no bounds.
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="text-lg md:text-2xl text-muted-foreground max-w-2xl mx-auto font-medium leading-relaxed px-4">
+            Empowering the next generation with divine balance and innovation.
           </motion.p>
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="flex items-center justify-center gap-4 flex-wrap mt-4"
-          >
-            {[...new Set(courses.map(c => c.category))].slice(0, 4).map((badge) => (
-              <span key={badge} className="px-6 py-2.5 rounded-full border border-primary/20 bg-primary/5 text-primary text-xs font-black tracking-widest uppercase backdrop-blur-md shadow-sm hover:bg-primary/10 transition-colors">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="flex items-center justify-center gap-2 md:gap-3 flex-wrap mt-4">
+            {categories.map((badge) => (
+              <span key={badge} className="px-3 py-1.5 md:px-5 md:py-2 rounded-lg md:rounded-xl border border-primary/10 bg-primary/5 text-primary text-[8px] md:text-[10px] font-black tracking-widest uppercase backdrop-blur-md">
                 {badge}
               </span>
             ))}
@@ -236,259 +220,142 @@ const Home = () => {
         </section>
       </div>
 
-      {/* Main Content Areas */}
-
-      <div className="relative z-10 w-full flex flex-col gap-24 px-4 md:px-8 max-w-7xl mx-auto pb-20">
-
-        {/* Services Grid */}
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
-          <div className="flex flex-col gap-8">
-            <TiltCard className="h-full">
-              <div className="flex flex-col gap-5 p-10 rounded-4xl border border-border bg-card/40 backdrop-blur-2xl shadow-xl hover:border-primary/30 transition-all h-full justify-between group">
+      {/* Content */}
+      <div className="relative z-10 w-full flex flex-col gap-24 md:gap-32 px-4 md:px-12 max-w-7xl mx-auto pb-32">
+        
+        {/* Services */}
+        <ScrollAnimatedSection>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 w-full">
+            <TiltCard>
+              <div className="institution-card p-6 md:p-10 h-full flex flex-col justify-between group">
                 <div>
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 text-primary group-hover:scale-110 transition-transform">
-                    <i className="ri-school-line text-3xl"></i>
+                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-primary/10 flex items-center justify-center mb-6 md:mb-8 text-primary">
+                    <GraduationCap size={28} />
                   </div>
-                  <p className="text-3xl font-black mb-4">School Academics</p>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    {academics.slice(0, 3).map(item => (
-                      <div key={item.title} className="px-4 py-1.5 bg-muted/50 border border-border rounded-xl text-xs font-bold text-foreground">
-                        {item.title}
-                      </div>
+                  <h3 className="text-2xl md:text-3xl font-black mb-3 md:mb-4">Academic Excellence</h3>
+                  <p className="text-sm md:text-base text-muted-foreground leading-relaxed mb-6 md:mb-8">Structured learning programs for schools and universities.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {academics.slice(0, 3).map(aca => (
+                      <span key={aca.id} className="px-2 py-1 bg-muted/50 rounded-md text-[8px] md:text-[10px] font-bold uppercase tracking-wider">{aca.title}</span>
                     ))}
-                    {academics.length === 0 && <span className="text-xs text-muted-foreground uppercase tracking-widest font-black opacity-50">Programs coming soon</span>}
                   </div>
                 </div>
-                <div className="flex items-center gap-4 mt-8 w-full">
-                  <Link to="/academics" className="flex-1 bg-primary text-white font-black py-4 flex items-center justify-center gap-2 rounded-2xl hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest text-xs shadow-lg shadow-primary/20 shadow-primary/20">
-                    <i className="ri-graduation-cap-fill text-lg"></i>
-                    Academics
-                  </Link>
-                  <Link to="/notes" className="flex-1 bg-transparent border-2 border-primary/50 text-foreground font-black py-4 flex items-center justify-center gap-2 rounded-2xl hover:bg-primary/5 transition-all uppercase tracking-widest text-xs">
-                    <i className="ri-booklet-line text-lg"></i>
-                    View Notes
-                  </Link>
+                <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mt-8 md:mt-12">
+                  <Link to="/academics" className="w-full sm:flex-1 cool-button h-12 md:h-14">Learn More</Link>
+                  <Link to="/notes" className="w-full sm:flex-1 cool-button-secondary h-12 md:h-14">Notes</Link>
                 </div>
               </div>
             </TiltCard>
 
-            <TiltCard className="h-full">
-              <div className="flex flex-col gap-5 p-10 rounded-4xl border border-border bg-card/40 backdrop-blur-2xl shadow-xl hover:border-secondary/30 transition-all h-full justify-between group">
+            <TiltCard>
+              <div className="institution-card p-6 md:p-10 h-full flex flex-col justify-between group">
                 <div>
-                  <div className="w-14 h-14 rounded-2xl bg-secondary/10 flex items-center justify-center mb-6 text-secondary group-hover:scale-110 transition-transform">
-                    <i className="ri-award-line text-3xl"></i>
+                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-xl md:rounded-2xl bg-secondary/10 flex items-center justify-center mb-6 md:mb-8 text-secondary">
+                    <Zap size={28} />
                   </div>
-                  <p className="text-3xl font-black mb-4">Courses & Certs</p>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    {courses.slice(0, 3).map(item => (
-                      <div key={item.name} className="px-4 py-1.5 bg-muted/50 border border-border rounded-xl text-xs font-bold text-foreground flex items-center gap-2">
-                        <i className="ri-checkbox-circle-fill text-secondary/60"></i>
-                        {item.name}
-                      </div>
+                  <h3 className="text-2xl md:text-3xl font-black mb-3 md:mb-4">Professional Services</h3>
+                  <p className="text-sm md:text-base text-muted-foreground leading-relaxed mb-6 md:mb-8">Digital solutions and commercial support for students.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {services.slice(0, 3).map(srv => (
+                      <span key={srv.id} className="px-2 py-1 bg-muted/50 rounded-md text-[8px] md:text-[10px] font-bold uppercase tracking-wider">{srv.title}</span>
                     ))}
-                    {courses.length === 0 && <span className="text-xs text-muted-foreground uppercase tracking-widest font-black opacity-50">Courses coming soon</span>}
                   </div>
                 </div>
-                <Link to="/courses" className="mt-8 w-full bg-secondary text-white font-black py-4 flex items-center justify-center gap-2 rounded-2xl hover:bg-secondary/90 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest text-xs shadow-lg shadow-secondary/20 shadow-secondary/20">
-                  <i className="ri-play-circle-fill text-lg"></i>
-                  View Courses
-                </Link>
+                <div className="flex mt-8 md:mt-12">
+                  <Link to="/services" className="w-full cool-button h-12 md:h-14">Explore Services</Link>
+                </div>
               </div>
             </TiltCard>
           </div>
+        </ScrollAnimatedSection>
 
-          <TiltCard className="h-full">
-            <div className="flex flex-col gap-5 p-10 rounded-4xl border border-border bg-card/40 backdrop-blur-2xl shadow-xl hover:border-accent/30 transition-all justify-between h-full group">
-              <div>
-                <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-6 text-accent group-hover:scale-110 transition-transform">
-                  <i className="ri-flask-line text-3xl"></i>
-                </div>
-                <p className="text-3xl font-black mb-4">IT & MISC Services</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {services.slice(0, 4).map(service => (
-                    <div key={service.title} className="p-4 rounded-2xl bg-background/50 border border-border flex items-center gap-3 group/item hover:border-accent/40 transition-colors">
-                      <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
-                        <i className="ri-rocket-line text-lg"></i>
-                      </div>
-                      <span className="text-sm font-bold text-muted-foreground group-hover/item:text-foreground transition-colors">{service.title}</span>
-                    </div>
-                  ))}
-                  {services.length === 0 && <p className="text-xs text-muted-foreground uppercase tracking-widest font-black opacity-50 col-span-2">Services coming soon</p>}
-                </div>
-              </div>
-              <Link to="/services" className="mt-8 w-full bg-accent text-white font-black py-4 flex items-center justify-center gap-2 rounded-2xl hover:bg-accent/90 hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest text-xs shadow-lg shadow-accent/20 shadow-accent/20">
-                <i className="ri-rocket-2-fill text-lg"></i>
-                Explore Services
-              </Link>
-            </div>
-          </TiltCard>
-        </section>
-
-        {/* About 5EVEN */}
-        <section className="flex flex-col gap-12 w-full mt-10 border-t border-border pt-20">
-          <div className="flex flex-col items-center justify-center gap-6 w-full">
-            <h2 className="text-4xl md:text-5xl font-black text-center tracking-tight text-animate-gradient">About 5EVEN</h2>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-4xl text-center leading-relaxed font-medium">
-              5EVEN is a premium educational institution dedicated to transforming academic excellence through innovative learning methodologies. We combine cutting-edge technology with expert mentorship to empower students across Data Science, Machine Learning, AI, and Full Stack Development.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-10 w-full bg-card p-8 md:p-12 rounded-3xl shadow-xl border border-border mt-10">
-            <h3 className="text-3xl flex items-center gap-3 font-bold">
-              <span className="text-primary text-4xl">*</span> Why the Name 5EVEN?
-            </h3>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              The name <strong className="text-foreground tracking-wide font-black">5EVEN</strong> is inspired by a timeless balance: the <strong>5 great elements</strong> of Indian philosophy and the <strong>7 chakras</strong> of the human body. Together, they represent harmony between body, mind, energy, and awareness.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-              <div className="flex flex-col items-center text-center gap-4 p-10 rounded-4xl bg-background border border-border hover:border-primary/30 transition-colors group relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-primary/20"></div>
-                <div className="relative">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/The_Earth_seen_from_Apollo_17.jpg" alt="5 Elements" className="w-28 h-28 object-cover rounded-full shadow-2xl border-4 border-primary/20 group-hover:scale-110 transition-transform duration-500" />
-                </div>
-                <p className="font-black text-2xl tracking-tight mt-2">5 Elements</p>
-                <p className="text-sm font-bold text-muted-foreground leading-relaxed uppercase tracking-widest opacity-70">Pancha Mahabhuta</p>
-                <p className="text-sm text-muted-foreground px-4">Foundation, flow, energy, movement, and space.</p>
-              </div>
-
-              <div className="flex flex-col items-center text-center gap-4 p-10 rounded-4xl bg-background border border-border hover:border-secondary/30 transition-colors group relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-secondary/20"></div>
-                <div className="relative">
-                  <img src="https://i.pinimg.com/736x/82/b0/d9/82b0d91458e8291ddf1529f14c171c1d.jpg" alt="7 Chakras" className="w-28 h-28 object-cover object-center rounded-full shadow-2xl border-4 border-secondary/20 group-hover:scale-110 transition-transform duration-500" />
-                </div>
-                <p className="font-black text-2xl tracking-tight mt-2">7 Chakras</p>
-                <p className="text-sm font-bold text-muted-foreground leading-relaxed uppercase tracking-widest opacity-70">Energy Centers</p>
-                <p className="text-sm text-muted-foreground px-4">Aligning your energy from root to crown.</p>
-              </div>
-
-              <div className="flex flex-col items-center text-center gap-4 p-10 rounded-4xl bg-background border border-border hover:border-accent/30 transition-colors group relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-accent/20"></div>
-                <div className="relative">
-                  <img src={sevenLogo} alt="5EVEN emblem" className="w-28 h-28 object-contain rounded-full shadow-2xl border-4 border-accent/20 p-4 bg-white/50 backdrop-blur-sm group-hover:scale-110 transition-transform duration-500" />
-                </div>
-                <p className="font-black text-2xl tracking-tight mt-2">Divine Balance</p>
-                <p className="text-sm font-bold text-muted-foreground leading-relaxed uppercase tracking-widest opacity-70">The Unity of 5 & 7</p>
-                <p className="text-sm text-muted-foreground px-4">Where philosophy meets modern education.</p>
-              </div>
+        {/* Philosophy */}
+        <ScrollAnimatedSection>
+          <div className="flex flex-col items-center text-center gap-10 md:gap-16 w-full">
+            <div className="flex flex-col gap-2 md:gap-4">
+              <h2 className="text-3xl md:text-6xl font-black tracking-tight">The 5EVEN Philosophy</h2>
+              <p className="text-sm md:text-base text-muted-foreground max-w-2xl font-medium px-4">Ancient wisdom meets modern technology.</p>
             </div>
 
-            <div className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 p-8 rounded-2xl text-center font-black text-2xl tracking-widest text-foreground mt-4 shadow-inner border border-border/50">
-              <span className="text-primary text-3xl">5</span> ELEMENTS <span className="mx-4 font-normal text-muted-foreground">+</span> <span className="text-secondary text-3xl">7</span> CHAKRAS <span className="mx-4 font-normal text-muted-foreground">=</span> <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent text-4xl">5EVEN</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 w-full">
+              {[
+                { img: "https://i.pinimg.com/736x/8a/7c/41/8a7c4155828456485e94b2103f628f24.jpg", title: "5 Elements", desc: "Foundation of everything." },
+                { img: "https://i.pinimg.com/736x/82/b0/d9/82b0d91458e8291ddf1529f14c171c1d.jpg", title: "7 Chakras", desc: "Aligning energy centers." },
+                { img: sevenLogo, title: "Divine Union", desc: "Synergy of 5 and 7." }
+              ].map((item, idx) => (
+                <div key={idx} className="institution-card p-6 md:p-10 flex flex-col items-center gap-4 md:gap-6 group">
+                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-muted/20 p-4 group-hover:scale-105 transition-transform">
+                    <img src={item.img} className="w-full h-full object-cover rounded-full" alt={item.title} />
+                  </div>
+                  <h4 className="text-xl md:text-2xl font-black">{item.title}</h4>
+                  <p className="text-xs md:text-sm text-muted-foreground px-2">{item.desc}</p>
+                </div>
+              ))}
             </div>
           </div>
-        </section>
+        </ScrollAnimatedSection>
 
-        {/* Dynamic Founders and Faculty Section */}
-        <section className="flex flex-col gap-24 w-full pt-10">
+        {/* Founders & Faculty */}
+        <section className="flex flex-col gap-16 md:gap-24 w-full">
           {loading ? (
-            <div className="h-64 flex items-center justify-center w-full">
-              <Loader2 className="w-12 h-12 animate-spin text-primary" />
-            </div>
+            <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" size={40} /></div>
           ) : loadError ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-6 text-destructive">
-              <div className="text-xl font-bold uppercase tracking-widest text-animate-gradient">Connection Issue</div>
-              <div className="text-sm opacity-80 max-w-xl text-center px-4 mb-4">{loadError}</div>
-              <button onClick={fetchData} className="px-8 py-3 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20">
-                Retry Connection
-              </button>
+            <div className="text-center py-10 bg-muted/10 rounded-2xl border border-border">
+              <p className="text-xs text-destructive font-bold mb-4">{loadError}</p>
+              <button onClick={fetchData} className="cool-button px-6 py-3 text-[10px]">Retry</button>
             </div>
           ) : (
             <>
-              {/* Founders Section */}
-              <div className="flex flex-col gap-10 w-full">
-                <h3 className="text-4xl font-black text-center tracking-tight text-animate-gradient">Meet Our Founders</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto w-full">
-                  {founders.length === 0 && (
-                    <div className="col-span-full py-10 text-center text-muted-foreground font-bold uppercase tracking-widest opacity-60">
-                      No founders found. Check back soon!
-                    </div>
-                  )}
-                  {founders.map((founder) => (
-                    <TiltCard key={founder.id} className="h-full">
-                      <div className="flex flex-col rounded-3xl overflow-hidden border border-border bg-card/40 backdrop-blur-xl shadow-lg hover:shadow-2xl transition-all duration-500 p-8 pt-10 h-full group">
-                        <div className="w-full flex justify-center mb-6">
-                          <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-background overflow-hidden shadow-lg bg-muted flex-shrink-0 group-hover:scale-105 transition-transform duration-500">
-                            {founder.cover_image ? (
-                              <img src={founder.cover_image} alt={founder.name} className="w-full h-full object-cover object-top" />
-                            ) : (
-                              <div className="w-full h-full flex flex-col items-center justify-center bg-primary/5 text-primary opacity-50">
-                                <span className="text-5xl font-black">{founder.name?.charAt(0)}</span>
-                              </div>
-                            )}
+              <ScrollAnimatedSection>
+                <div className="flex flex-col gap-8 md:gap-12">
+                  <h2 className="text-3xl md:text-4xl font-black text-center text-animate-gradient">Our Visionaries</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 max-w-5xl mx-auto w-full">
+                    {founders.map(founder => (
+                      <TiltCard key={founder.id}>
+                        <div className="institution-card p-6 md:p-8 flex flex-col items-center text-center group h-full">
+                          <div className="w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-white shadow-lg mb-6">
+                            <img src={founder.cover_image || 'https://via.placeholder.com/150'} alt={founder.name} className="w-full h-full object-cover" />
                           </div>
+                          <h4 className="text-xl md:text-2xl font-black mb-1">{founder.name}</h4>
+                          <p className="text-[8px] md:text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-4 md:mb-6">{founder.role}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground italic mb-6 md:mb-8 px-2">"{founder.bio}"</p>
+                          <button onClick={() => { setSelectedProfile(founder); setProfileType('founder'); }} className="w-full h-12 md:h-14 cool-button mt-auto">View Story</button>
                         </div>
-                        <div className="flex flex-col items-center text-center h-full">
-                          <h4 className="text-3xl font-black mb-1 text-foreground">{founder.name}</h4>
-                          <p className="text-xs font-black text-secondary uppercase tracking-widest mb-6 opacity-80">{founder.role}</p>
-                          <p className="text-muted-foreground text-base flex-grow mb-8 leading-relaxed italic">
-                            "{founder.bio}"
-                          </p>
-                          <div className="grid grid-cols-2 gap-3 w-full mt-auto">
-                            <button onClick={() => { setSelectedProfile(founder); setProfileType('founder'); }} className="col-span-2 w-full text-center bg-foreground text-background py-4 rounded-2xl font-black tracking-widest uppercase text-xs hover:bg-primary hover:text-white transition-all shadow-md active:scale-[0.98]">View Profile</button>
-                            <a href={founder.linkedin_url && founder.linkedin_url !== '#' ? founder.linkedin_url : ''} target="_blank" rel="noreferrer" className={`${founder.portfolio_url && founder.portfolio_url !== '#' ? 'col-span-1' : 'col-span-2'} w-full flex items-center justify-center bg-[#0A66C2]/10 text-[#0A66C2] py-4 rounded-2xl font-black tracking-widest uppercase text-xs hover:bg-[#0A66C2] hover:text-white transition-all border border-[#0A66C2]/20`}>LinkedIn</a>
-                            {founder.portfolio_url && founder.portfolio_url !== '#' && (
-                              <a href={founder.portfolio_url} target="_blank" rel="noreferrer" className="col-span-1 w-full flex items-center justify-center bg-transparent border-2 border-border text-foreground py-4 rounded-2xl font-black tracking-widest uppercase text-xs hover:bg-secondary hover:border-secondary hover:text-secondary-foreground transition-all">Portfolio</a>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </TiltCard>
-                  ))}
+                      </TiltCard>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </ScrollAnimatedSection>
 
-              {/* Faculty Section */}
-              <div className="flex flex-col gap-10 w-full">
-                <h3 className="text-4xl font-black text-center tracking-tight text-animate-gradient">Our Expert Faculties</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {faculties.length === 0 && (
-                    <div className="col-span-full py-10 text-center text-muted-foreground font-bold uppercase tracking-widest opacity-60">
-                      No faculties found. Check back soon!
-                    </div>
-                  )}
-                  {faculties.map((faculty) => (
-                    <TiltCard key={faculty.id} className="h-full">
-                      <div className="flex flex-col rounded-3xl overflow-hidden border border-border bg-card/40 backdrop-blur-xl shadow-lg hover:shadow-2xl transition-all duration-500 p-8 pt-10 h-full group text-center">
-                        <div className="w-full flex justify-center mb-6">
-                          <div className="w-32 h-32 md:w-36 md:h-36 rounded-full border-4 border-background overflow-hidden shadow-lg bg-muted flex-shrink-0 group-hover:scale-105 transition-transform duration-500">
-                            {faculty.cover_image ? (
-                              <img src={faculty.cover_image} alt={faculty.name} className="w-full h-full object-cover object-top" />
-                            ) : (
-                              <div className="w-full h-full flex flex-col items-center justify-center bg-primary/5 text-primary opacity-50">
-                                <span className="text-5xl font-black">{faculty.name?.charAt(0)}</span>
-                              </div>
-                            )}
+              <ScrollAnimatedSection>
+                <div className="flex flex-col gap-8 md:gap-12 w-full overflow-hidden">
+                  <div className="flex flex-col items-center gap-2">
+                    <h2 className="text-3xl md:text-4xl font-black text-animate-gradient">Expert Mentors</h2>
+                    <p className="text-[8px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest">&larr; Swipe &rarr;</p>
+                  </div>
+                  <div className="flex gap-6 md:gap-8 overflow-x-auto pb-6 md:pb-10 snap-x snap-mandatory no-scrollbar px-2">
+                    {faculties.map(fac => (
+                      <div key={fac.id} className="min-w-[280px] md:min-w-[420px] snap-center">
+                        <div className="institution-card p-6 md:p-8 flex flex-col items-center text-center h-full">
+                          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-4 border-white shadow-md mb-6">
+                            <img src={fac.cover_image || 'https://via.placeholder.com/150'} alt={fac.name} className="w-full h-full object-cover" />
                           </div>
-                        </div>
-                        <div className="flex flex-col items-center text-center h-full">
-                          <h4 className="text-2xl font-black mb-1 text-foreground">{faculty.name}</h4>
-                          <p className="text-xs font-black text-primary uppercase tracking-widest mb-6 opacity-80">{faculty.topic}</p>
-                          <p className="text-muted-foreground text-sm flex-grow mb-8 leading-relaxed italic">
-                            "{faculty.description}"
-                          </p>
-                          <div className="grid grid-cols-2 gap-3 w-full mt-auto">
-                            <button onClick={() => { setSelectedProfile(faculty); setProfileType('faculty'); }} className="col-span-2 w-full text-center bg-foreground text-background py-4 rounded-2xl font-black tracking-widest uppercase text-xs hover:bg-primary hover:text-white transition-all shadow-md active:scale-[0.98]">View Profile</button>
-                            {faculty.link && faculty.link !== '#' && (
-                              <a href={faculty.link} target="_blank" rel="noreferrer" className="col-span-2 w-full flex items-center justify-center bg-[#0A66C2]/10 text-[#0A66C2] py-4 rounded-2xl font-black tracking-widest uppercase text-xs hover:bg-[#0A66C2] hover:text-white transition-all border border-[#0A66C2]/20">LinkedIn</a>
-                            )}
-                          </div>
+                          <h4 className="text-lg md:text-xl font-black mb-1">{fac.name}</h4>
+                          <p className="text-[8px] md:text-[10px] font-black text-primary uppercase tracking-widest mb-4 md:mb-6">{fac.topic || fac.department}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground line-clamp-3 mb-6 md:mb-8 italic">"{fac.bio || fac.description}"</p>
+                          <button onClick={() => { setSelectedProfile(fac); setProfileType('faculty'); }} className="w-full h-12 md:h-14 cool-button-secondary mt-auto">Details</button>
                         </div>
                       </div>
-                    </TiltCard>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </ScrollAnimatedSection>
             </>
           )}
         </section>
       </div>
 
-      <ProfileModal
-        profile={selectedProfile}
-        type={profileType}
-        onClose={() => { setSelectedProfile(null); setProfileType(null); }}
-      />
+      <ProfileModal profile={selectedProfile} type={profileType} onClose={() => { setSelectedProfile(null); setProfileType(null); }} />
     </div>
   );
 };

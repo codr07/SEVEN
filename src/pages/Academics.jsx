@@ -76,27 +76,30 @@ const Academics = () => {
               String(item.description || '').toLowerCase().includes(searchLower)
             );
           }).map((item) => (
-            <div key={item.id} className="flex flex-col bg-card/60 backdrop-blur-md rounded-3xl border border-border overflow-hidden hover-glow transition-all duration-300">
-               <div className="h-48 w-full bg-muted relative flex items-center justify-center">
+            <div key={item.id} className="institution-card flex flex-col h-full group">
+               <div className="h-44 w-full bg-muted relative rounded-2xl overflow-hidden border border-border mb-6">
                   {item.cover_image ? (
-                    <img src={item.cover_image} alt={item.title} className="w-full h-full object-cover" />
+                    <img src={item.cover_image} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   ) : (
-                    <GraduationCap size={64} className="text-primary opacity-20" />
+                    <GraduationCap size={48} className="text-primary opacity-20" />
                   )}
-                  <div className="absolute top-4 left-4 bg-primary px-3 py-1 text-xs font-bold uppercase tracking-widest text-primary-foreground rounded-full shadow-md">
+                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-primary rounded-xl border border-primary/20 shadow-sm">
                      Academic
                   </div>
                </div>
                
-               <div className="p-6 md:p-8 flex flex-col flex-1">
-                  <h3 className="text-xl font-bold mb-3 text-foreground">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed flex-grow line-clamp-3">
+               <div className="flex flex-col flex-1">
+                  <h3 className="text-xl font-black mb-3 text-foreground group-hover:text-primary transition-colors">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed flex-grow line-clamp-3 mb-8">
                      {item.description}
                   </p>
                   
-                  <div className="border-t border-border mt-6 pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                     <span className="text-lg font-black text-foreground">{item.price || "Contact Us"}</span>
-                     <Link to={`/academics/${item.id}`} className="px-5 py-2 rounded-xl bg-foreground text-background font-bold text-sm tracking-wide hover:bg-primary transition-colors text-center">
+                  <div className="mt-auto flex flex-col gap-4">
+                     <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Starting from</span>
+                        <span className="text-xl font-black text-foreground">{item.price || "Contact"}</span>
+                     </div>
+                     <Link to={`/academics/${item.id}`} className="cool-button w-full text-center">
                         View Details
                      </Link>
                   </div>

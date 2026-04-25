@@ -8,44 +8,41 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
 import logoLight from '../assets/seven_dark.svg';
-import logoDark from '../assets/seven.svg';
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
+const navItems = [
+  { name: 'Home', path: '/', icon: Home },
+  { name: 'Academics', path: '/academics', icon: BookOpen },
+  { name: 'Courses', path: '/courses', icon: GraduationCap },
+  { name: 'Notes', path: '/notes', icon: FileText },
+  { name: 'Services', path: '/services', icon: Briefcase },
+  { name: 'Stars', path: '/stars', icon: Star },
+  { name: 'Contact', path: '/contact', icon: Mail },
+  { name: 'Student Zone', path: '/student-zone', icon: UserCircle },
+];
+
 const Navbar = () => {
-  const { theme } = useTheme();
-  const { user, profile, logout, login, signup, role, signInWithGoogle, signInWithFirebase } = useAuth();
+  const { user, profile, logout, login, signup, role, signInWithGoogle } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
-  
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [signupUsername, setSignupUsername] = useState('');
   const [signupFullName, setSignupFullName] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoginBusy, setIsLoginBusy] = useState(false);
   const [showVerificationSent, setShowVerificationSent] = useState(false);
+  
   const avatarMenuRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!avatarMenuRef.current) return;
-      if (!avatarMenuRef.current.contains(event.target)) {
-        setIsAvatarMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   useEffect(() => {
     setIsAvatarMenuOpen(false);
@@ -53,26 +50,35 @@ const Navbar = () => {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (user) {
-      setIsLoginOpen(false);
-      setLoginEmail('');
-      setLoginPassword('');
-      setSignupFullName('');
-      setSignupPhone('');
-      setLoginError('');
-      setShowVerificationSent(false);
-    }
-  }, [user, isLoginOpen]);
+    const handleClickOutside = (event) => {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(event.target)) {
+        setIsAvatarMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-  const handleWebsiteAuth = async (event) => {
-    event.preventDefault();
+  const handleSignOut = async () => {
+    try {
+      setIsAvatarMenuOpen(false);
+      setIsMobileMenuOpen(false);
+      await logout();
+      navigate('/', { replace: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const handleWebsiteAuth = async (e) => {
+    e.preventDefault();
     setLoginError('');
     setIsLoginBusy(true);
-
     try {
       await login(loginEmail, loginPassword);
+      setIsLoginOpen(false);
     } catch (error) {
-      setLoginError(error.message || 'Authentication failed. Please try again.');
+      setLoginError(error.message || 'Auth failed');
     } finally {
       setIsLoginBusy(false);
     }
@@ -82,435 +88,247 @@ const Navbar = () => {
     e.preventDefault();
     setLoginError('');
     setIsLoginBusy(true);
-
     try {
-      if (!signupUsername || !signupFullName || !loginEmail || !loginPassword) {
-        throw new Error("Username, Full Name, Email, and Password are required.");
-      }
-
-      // Pre-check for Uniqueness (Username & Phone)
-      // This provides a better UX than waiting for the DB trigger to fail
-      const { data: existingUser, error: checkError } = await supabase
-        .from('profiles')
-        .select('username, phone')
-        .or(`username.eq.${signupUsername}${signupPhone ? `,phone.eq.${signupPhone}` : ''}`)
-        .maybeSingle();
-
-      if (checkError) console.warn("Uniqueness check error:", checkError);
-      
-      if (existingUser) {
-        if (existingUser.username === signupUsername) {
-          throw new Error("This username is already taken. Please choose another.");
-        }
-        if (signupPhone && existingUser.phone === signupPhone) {
-          throw new Error("This phone number is already registered.");
-        }
-      }
-
       await signup(loginEmail, loginPassword, {
         username: signupUsername,
         fullName: signupFullName,
         phone: signupPhone
       });
-      // If we get here, signup was successful (Supabase didn't throw)
       setShowVerificationSent(true);
     } catch (error) {
-      setLoginError(error.message || 'Signup failed. Please try again.');
+      setLoginError(error.message || 'Signup failed');
     } finally {
       setIsLoginBusy(false);
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setLoginError('');
-    setIsLoginBusy(true);
-    try {
-      await signInWithGoogle();
-    } catch (error) {
-      setLoginError(error.message || 'Google Sign In failed.');
-      setIsLoginBusy(false);
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      // Close all interactive UI elements first to prevent ghost clicks
-      setIsAvatarMenuOpen(false);
-      setIsMobileMenuOpen(false);
-      
-      await logout();
-      
-      // Navigate to home to ensure fresh state load
-      navigate('/', { replace: true });
-    } catch (error) {
-      console.error('Failed to sign out:', error);
-      // Fallback: reload page if cleanup is hanging
-      window.location.reload();
-    }
-  };
-
-  const navItems = [
-    { name: 'Home', path: '/', icon: Home },
-    { name: 'Academics', path: '/academics', icon: BookOpen },
-    { name: 'Courses', path: '/courses', icon: GraduationCap },
-    { name: 'Notes', path: '/notes', icon: FileText },
-    { name: 'Services', path: '/services', icon: Briefcase },
-    { name: 'Stars', path: '/stars', icon: Star },
-    { name: 'Contact', path: '/contact', icon: Mail },
-    { name: 'Student Zone', path: '/student-zone', icon: UserCircle },
-  ];
-
-  const SidebarContent = ({ forceExpanded = false }) => {
-    const collapsed = !forceExpanded && isDesktopCollapsed;
-
-    return (
-      <div className="flex flex-col h-full w-full">
-        <div className={cn("flex items-center gap-4 py-8 relative transition-all duration-300", collapsed ? "px-0 justify-center" : "px-6")}>
-          <img
-            src={theme === 'dark' ? logoDark : logoLight}
-            alt="5EVEN Logo"
-            className="h-10 w-auto object-contain drop-shadow-xl shrink-0"
-          />
-          {!collapsed && (
-            <span className="font-bold text-2xl uppercase tracking-widest hidden sm:block pointer-events-none mt-1 whitespace-nowrap">
-              5EVEN
-            </span>
-          )}
-          
-          {/* Toggle Collapse Button (PC Only) */}
-          {!forceExpanded && (
-            <button
-              onClick={() => setIsDesktopCollapsed(!isDesktopCollapsed)}
-              className="absolute top-10 -right-3.5 p-1 rounded-full border border-border bg-card shadow-md hover:bg-accent hover:text-primary transition-colors z-[5100]"
-            >
-              {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-            </button>
-          )}
-        </div>
-
-        <div className="flex-1 flex flex-col gap-2 overflow-y-auto w-full px-3 lenis-prevent">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.name}
-                to={item.path}
-                title={collapsed ? item.name : undefined}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center rounded-xl text-sm font-bold uppercase tracking-widest transition-colors group overflow-hidden shrink-0",
-                    isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-                    collapsed ? "py-4 justify-center" : "px-4 py-3 gap-3"
-                  )
-                }
-              >
-                <Icon size={collapsed ? 22 : 18} className="shrink-0 group-hover:scale-110 transition-transform" />
-                {!collapsed && <span className="whitespace-nowrap">{item.name}</span>}
-              </NavLink>
-            );
-          })}
-        </div>
-
-        <div className={cn("p-4 mt-auto border-t border-border w-full", collapsed ? "flex justify-center flex-col gap-2 items-center" : "")}>
-          {user ? (
-            <div className={cn("relative w-full", collapsed ? "flex justify-center" : "")} ref={avatarMenuRef}>
-              <button
-                type="button"
-                onClick={() => setIsAvatarMenuOpen((v) => !v)}
-                className={cn(
-                  "flex items-center rounded-xl border border-border bg-card hover:bg-accent transition-colors w-full",
-                  collapsed ? "p-1.5 justify-center border-none shadow-none bg-transparent" : "p-2 justify-between"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <span className={cn(
-                    "rounded-full overflow-hidden flex items-center justify-center shrink-0",
-                    collapsed ? "w-10 h-10 border border-primary/20 bg-card shadow-sm" : "w-8 h-8 bg-primary/10"
-                  )}>
-                    {profile?.avatar_url ? (
-                      <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className={cn("font-black text-primary", collapsed ? "text-base" : "text-xs")}>
-                        {(profile?.full_name || user?.email || 'U').charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </span>
-                  {!collapsed && (
-                    <span className="truncate text-xs font-bold text-left max-w-[100px]">
-                      {profile?.full_name || user?.email || 'User'}
-                    </span>
-                  )}
-                </div>
-                {!collapsed && <ChevronDown size={14} className="text-muted-foreground shrink-0" />}
-              </button>
-
-              {isAvatarMenuOpen && (
-                <div className={cn(
-                  "absolute bottom-full mb-4 rounded-2xl border border-border bg-card shadow-2xl p-2 z-50",
-                  collapsed ? "left-full ml-4 w-44" : "left-0 w-full"
-                )}>
-                  {profile?.username && (
-                    <NavLink
-                      to={`/profile/${profile.username}`}
-                      className="block w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/20 mb-1"
-                    >
-                      My Profile
-                    </NavLink>
-                  )}
-                  <NavLink
-                    to="/student-zone?tab=settings"
-                    className="block w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-accent"
-                  >
-                    Account Settings
-                  </NavLink>
-                  <NavLink
-                    to="/student-zone?tab=dashboard"
-                    className="block w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-accent"
-                  >
-                    Dashboard
-                  </NavLink>
-                  {role === 'admin' && (
-                    <NavLink
-                      to="/seven-mod"
-                      className="block w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-primary hover:bg-primary/10"
-                    >
-                      Admin Panel
-                    </NavLink>
-                  )}
-                  <button
-                    type="button"
-                    onClick={handleSignOut}
-                    className="block w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-destructive hover:bg-destructive/10"
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setIsLoginOpen(true)}
-              title={collapsed ? "Sign In" : undefined}
-              className={cn(
-                "flex items-center justify-center rounded-xl transition-colors w-full",
-                collapsed 
-                  ? "p-3 hover:bg-primary/20 text-muted-foreground hover:text-primary" 
-                  : "px-4 py-3 bg-primary text-primary-foreground font-black uppercase tracking-widest text-xs"
-              )}
-            >
-              {collapsed ? <LogIn size={20} /> : "Sign In"}
-            </button>
-          )}
-        </div>
+  const SidebarContent = ({ collapsed }) => (
+    <div className="flex flex-col h-full w-full">
+      <div className={cn("flex items-center gap-4 py-8 transition-all duration-300", collapsed ? "px-0 justify-center" : "px-6")}>
+        <img src={logoLight} alt="5EVEN" className="h-10 w-auto" />
+        {!collapsed && <span className="font-bold text-2xl uppercase tracking-widest mt-1">5EVEN</span>}
       </div>
-    );
-  };
+
+      <div className="flex-1 flex flex-col gap-1 overflow-y-auto w-full px-3 no-scrollbar">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.name}
+              to={item.path}
+              className={({ isActive }) => cn(
+                "flex items-center rounded-xl text-sm font-black uppercase tracking-widest transition-all",
+                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                collapsed ? "py-4 justify-center" : "px-4 py-3 gap-3"
+              )}
+            >
+              <Icon size={collapsed ? 24 : 18} />
+              {!collapsed && <span>{item.name}</span>}
+            </NavLink>
+          );
+        })}
+      </div>
+
+      <div className={cn("p-4 border-t border-border w-full", collapsed ? "flex flex-col items-center" : "")}>
+        {user ? (
+          <div className="relative w-full" ref={avatarMenuRef}>
+            <button onClick={() => setIsAvatarMenuOpen(!isAvatarMenuOpen)} className="flex items-center justify-between w-full p-2 rounded-xl bg-muted/50 hover:bg-muted transition-all">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black text-[10px]">
+                  {user.email?.charAt(0).toUpperCase()}
+                </div>
+                {!collapsed && <span className="text-[10px] font-black uppercase truncate max-w-[100px]">{profile?.full_name || user.email}</span>}
+              </div>
+              {!collapsed && <ChevronDown size={14} />}
+            </button>
+            {isAvatarMenuOpen && (
+              <div className={cn("absolute bottom-full mb-2 w-full bg-card border border-border rounded-xl p-2 shadow-2xl z-[100]", collapsed ? "left-12 bottom-0" : "left-0")}>
+                <button onClick={handleSignOut} className="w-full text-left px-3 py-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10 rounded-lg">Sign Out</button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button onClick={() => setIsLoginOpen(true)} className="w-full py-3 bg-primary text-white rounded-xl font-black uppercase tracking-widest text-[10px]">
+            {collapsed ? <LogIn size={20} /> : "Sign In"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <>
-      {/* Desktop Persistent Sidebar */}
-      <aside 
-        className={cn(
-          "hidden md:flex sticky top-0 h-screen border-r border-border bg-card/80 backdrop-blur-3xl shrink-0 z-[5000] shadow-2xl",
-          // CSS Transition purely for layout expansion pushing App.jsx content over gracefully
-          "transition-[width] duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)]",
-          isDesktopCollapsed ? "w-20" : "w-[260px]"
-        )}
-      >
-        <SidebarContent />
+      {/* Desktop Sidebar */}
+      <aside className={cn("hidden md:flex sticky top-0 h-screen border-r border-border bg-white z-50 transition-all duration-300", isDesktopCollapsed ? "w-20" : "w-64")}>
+        <SidebarContent collapsed={isDesktopCollapsed} />
+        <button onClick={() => setIsDesktopCollapsed(!isDesktopCollapsed)} className="absolute top-10 -right-4 w-8 h-8 rounded-full border border-border bg-white shadow-md flex items-center justify-center hover:bg-primary hover:text-white transition-all">
+          {isDesktopCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
       </aside>
 
       {/* Mobile Topbar */}
-      <div className="md:hidden sticky top-0 left-0 right-0 h-20 bg-background/80 backdrop-blur-md border-b border-border z-[4000] flex items-center justify-between px-6 shadow-sm">
-        <div className="flex items-center gap-4">
-          <img
-            src={theme === 'dark' ? logoDark : logoLight}
-            alt="5EVEN Logo"
-            className="h-8 w-auto object-contain"
-          />
-          <span className="font-bold text-xl uppercase tracking-widest mt-1">
-            5EVEN
-          </span>
+      <div className="md:hidden sticky top-0 h-20 bg-white/80 backdrop-blur-md border-b border-border z-[100] flex items-center justify-between px-6">
+        <div className="flex items-center gap-3">
+          <img src={logoLight} alt="Logo" className="h-8 w-auto" />
+          <span className="font-bold text-xl uppercase mt-1">5EVEN</span>
         </div>
-        
-        <button
-          className="p-2 rounded-full border border-border bg-card shadow-sm hover:bg-accent transition-colors relative"
-          onClick={() => setIsMobileMenuOpen(true)}
-        >
-          <Menu size={24} />
-        </button>
+        {/* Menu trigger removed from here, now in FAB */}
       </div>
 
-      {/* Mobile Sidebar */}
+      {/* Floating Mobile Menu Button */}
+      <div className="relative">
+        <motion.button
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="md:hidden fixed bottom-8 right-8 z-[10000] w-16 h-16 bg-primary text-white rounded-full shadow-[0_15px_35px_hsl(var(--primary)/0.4)] flex items-center justify-center border-4 border-white"
+        >
+          <AnimatePresence mode="wait">
+            {isMobileMenuOpen ? (
+              <motion.div
+                key="close"
+                initial={{ rotate: -90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: 90, opacity: 0 }}
+              >
+                <X size={28} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="menu"
+                initial={{ rotate: 90, opacity: 0 }}
+                animate={{ rotate: 0, opacity: 1 }}
+                exit={{ rotate: -90, opacity: 0 }}
+              >
+                <Menu size={28} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.button>
+      </div>
+
+      {/* Mobile Menu Overlay */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[5400]"
-            />
-            <motion.aside
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-              className="md:hidden fixed top-0 left-0 h-dvh w-[80vw] max-w-[320px] bg-card border-r border-border z-[5500] flex flex-col shadow-2xl"
-            >
-              <SidebarContent forceExpanded={true} />
-            </motion.aside>
-          </>
+          <motion.div 
+            initial={{ x: "100%" }} 
+            animate={{ x: 0 }} 
+            exit={{ x: "100%" }} 
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[9000] bg-white flex flex-col"
+          >
+            <div className="flex flex-col h-full p-6 pt-12">
+              <div className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-3">
+                  <img src={logoLight} alt="Logo" className="h-8 w-auto" />
+                  <span className="font-black text-xl uppercase mt-1">5EVEN</span>
+                </div>
+                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-muted rounded-full hover:bg-muted/80 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Mobile Profile Section */}
+              {user && (
+                <div className="mb-6 p-5 rounded-2xl bg-muted/30 border border-border flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black text-lg border-2 border-white shadow-sm overflow-hidden">
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      (profile?.full_name || user.email || 'U').charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div className="flex flex-col overflow-hidden">
+                    <span className="text-base font-black uppercase truncate">{profile?.full_name || 'User'}</span>
+                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60">
+                      {role === 'admin' ? 'Administrator' : 'Student Account'}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-1 overflow-y-auto no-scrollbar flex-grow">
+                {navItems.map(item => (
+                  <NavLink 
+                    key={item.name} 
+                    to={item.path} 
+                    onClick={() => setIsMobileMenuOpen(false)} 
+                    className={({ isActive }) => cn(
+                      "flex items-center gap-5 p-4 rounded-xl text-lg font-black uppercase tracking-widest transition-all",
+                      isActive ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                    )}
+                  >
+                    <item.icon size={22} />
+                    {item.name}
+                  </NavLink>
+                ))}
+              </div>
+
+              <div className="mt-auto border-t border-border pt-6 pb-6">
+                {!user ? (
+                  <button onClick={() => { setIsLoginOpen(true); setIsMobileMenuOpen(false); }} className="cool-button w-full py-5 text-sm">
+                    Portal Access
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {profile?.username && (
+                      <NavLink 
+                        to={`/profile/${profile.username}`} 
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="w-full py-4 rounded-xl bg-primary/10 text-primary font-black uppercase tracking-widest text-center text-[10px]"
+                      >
+                        View My Profile
+                      </NavLink>
+                    )}
+                    {role === 'admin' && (
+                      <NavLink 
+                        to="/seven-mod" 
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="w-full py-4 rounded-xl bg-accent/10 text-accent font-black uppercase tracking-widest text-center text-[10px]"
+                      >
+                        Admin Control Panel
+                      </NavLink>
+                    )}
+                    <button onClick={handleSignOut} className="w-full py-4 bg-muted rounded-xl font-black uppercase tracking-widest text-destructive text-[10px] hover:bg-destructive/5 transition-colors">
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Login Modal */}
-      {!user && isLoginOpen && (
-        <div className="fixed inset-0 z-[6000] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md rounded-3xl border border-border bg-card shadow-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-black uppercase tracking-widest">Website Login</h3>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsLoginOpen(false);
-                  setIsSignUpMode(false);
-                }}
-                className="px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest border border-border hover:bg-accent"
-              >
-                Close
-              </button>
-            </div>
-
-            <div className="flex items-center gap-4 mb-6">
-              <button
-                type="button"
-                onClick={() => setIsSignUpMode(false)}
-                className={cn(
-                  "flex-1 pb-3 text-sm font-black uppercase tracking-widest text-center border-b-2 transition-colors",
-                  !isSignUpMode ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsSignUpMode(true)}
-                className={cn(
-                  "flex-1 pb-3 text-sm font-black uppercase tracking-widest text-center border-b-2 transition-colors",
-                  isSignUpMode ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Create Account
-              </button>
-            </div>
-
-            <form onSubmit={isSignUpMode ? handleManualSignUp : handleWebsiteAuth} className="space-y-4">
-              {showVerificationSent ? (
-                <div className="py-8 text-center space-y-6 animate-in fade-in zoom-in duration-500">
-                  <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto shadow-inner">
-                    <Mail className="w-10 h-10 text-primary animate-bounce-subtle" />
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-black uppercase tracking-widest text-primary">Verify Your Email</h4>
-                    <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                      We've sent a confirmation link to <span className="text-foreground font-bold">{loginEmail}</span>.
-                      Please check your inbox and click the link to activate your account.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowVerificationSent(false);
-                      setIsSignUpMode(false);
-                    }}
-                    className="w-full py-4 rounded-xl border border-border hover:bg-accent font-black uppercase tracking-widest text-[10px] transition-all"
-                  >
-                    Back to Sign In
-                  </button>
-                </div>
-              ) : (
+      {/* Auth Modal */}
+      {isLoginOpen && (
+        <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl relative">
+            <button onClick={() => setIsLoginOpen(false)} className="absolute top-4 right-4 p-2 hover:bg-muted rounded-full"><X size={20} /></button>
+            <h2 className="text-2xl font-black uppercase tracking-widest mb-8">{isSignUpMode ? 'Create Account' : 'Welcome Back'}</h2>
+            
+            <form onSubmit={isSignUpMode ? handleManualSignUp : handleWebsiteAuth} className="flex flex-col gap-4">
+              {isSignUpMode && (
                 <>
-                  {isSignUpMode && (
-                <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-4">
-                  <input
-                    type="text"
-                    required
-                    value={signupFullName}
-                    onChange={(e) => setSignupFullName(e.target.value)}
-                    placeholder="Full Name"
-                    className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                  />
-                  <input
-                    type="text"
-                    required
-                    value={signupUsername}
-                    onChange={(e) => setSignupUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                    placeholder="Username (e.g. john_doe)"
-                    className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                  />
-                  <input
-                    type="tel"
-                    value={signupPhone}
-                    onChange={(e) => setSignupPhone(e.target.value)}
-                    placeholder="Phone Number (Optional)"
-                    className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                  />
-                </div>
+                  <input type="text" placeholder="Full Name" value={signupFullName} onChange={e => setSignupFullName(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
+                  <input type="text" placeholder="Username" value={signupUsername} onChange={e => setSignupUsername(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
+                </>
               )}
+              <input type="email" placeholder="Email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
+              <input type="password" placeholder="Password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
               
-              <input
-                type="email"
-                required
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                placeholder="Email Address"
-                className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-              />
-              <input
-                type="password"
-                required
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="Password"
-                className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-              />
-
-              {loginError && <p className="text-sm text-destructive break-words font-medium p-3 bg-destructive/10 rounded-xl">{loginError}</p>}
-
-              <button
-                type="submit"
-                disabled={isLoginBusy}
-                className="w-full py-4 mt-2 rounded-xl bg-primary text-white font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
-              >
-                {isLoginBusy 
-                  ? (isSignUpMode ? 'Creating Account...' : 'Signing In...') 
-                  : (isSignUpMode ? 'Create Account' : 'Sign In')}
+              {loginError && <p className="text-destructive text-xs font-bold">{loginError}</p>}
+              
+              <button type="submit" disabled={isLoginBusy} className="w-full py-4 bg-primary text-white rounded-xl font-black uppercase tracking-widest mt-2 hover:scale-[1.02] transition-all disabled:opacity-50">
+                {isLoginBusy ? 'Processing...' : (isSignUpMode ? 'Register' : 'Login')}
               </button>
-
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border"></div>
-                </div>
-                <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest">
-                  <span className="bg-card px-3 text-muted-foreground">OR</span>
-                </div>
-              </div>
-
-                <button
-                  type="button"
-                  disabled={isLoginBusy}
-                  onClick={handleGoogleLogin}
-                  className="w-full py-4 flex items-center justify-center gap-3 rounded-xl border border-border bg-background hover:bg-accent transition-all group shadow-sm active:scale-[0.98]"
-                >
-                  <i className="ri-google-fill text-xl text-primary group-hover:scale-110 transition-transform"></i>
-                  <span className="text-xs font-black uppercase tracking-widest">Continue with Google</span>
-                </button>
-              </>
-            )}
             </form>
+            
+            <button onClick={() => setIsSignUpMode(!isSignUpMode)} className="w-full mt-6 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
+              {isSignUpMode ? 'Already have an account? Login' : 'New here? Create account'}
+            </button>
           </div>
         </div>
       )}

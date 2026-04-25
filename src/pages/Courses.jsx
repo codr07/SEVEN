@@ -119,21 +119,17 @@ const Courses = () => {
             <Link 
               to={`/courses/${course.id}`} 
               key={course.id} 
-              className="group relative overflow-hidden backdrop-blur-2xl bg-white/5 border border-white/10 rounded-3xl p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)] hover:bg-white/10 hover:border-primary/30 hover:-translate-y-2 hover:shadow-[0_8px_32px_rgba(var(--primary),0.2)] transition-all duration-500 flex flex-col justify-between"
+              className="group institution-card flex flex-col justify-between"
             >
-              {/* Liquid Shine Effect */}
-              <div className="absolute inset-0 w-[200%] h-full bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out pointer-events-none z-20" />
-              
               <div className="flex-1 flex flex-col relative z-10">
-                <div className="w-full h-48 relative rounded-2xl overflow-hidden mb-6 border border-white/10 group-hover:border-primary/30 transition-colors duration-500">
-                  <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors duration-500 z-10"></div>
+                <div className="w-full h-44 relative rounded-2xl overflow-hidden mb-6 border border-border">
                   <img 
                     src={course.thumbnail || course.image_url || course.cover_image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop'} 
                     alt={course.name}
-                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700" 
+                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" 
                   />
-                  <div className="absolute top-3 left-3 z-20">
-                    <div className="text-[10px] font-black text-primary uppercase tracking-widest bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-primary/20 shadow-lg">
+                  <div className="absolute top-3 left-3">
+                    <div className="text-[10px] font-black text-primary uppercase tracking-widest bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-primary/20 shadow-sm">
                       {course.category}
                     </div>
                   </div>
@@ -142,28 +138,24 @@ const Courses = () => {
                 <h3 className="text-xl font-black uppercase tracking-widest mb-4 leading-tight min-h-[4rem] text-balance group-hover:text-primary transition-colors duration-300">
                   {course.name}
                 </h3>
-                <p className="text-sm font-medium opacity-70 mb-6 line-clamp-2 min-h-[2.5rem] leading-relaxed">
+                <p className="text-sm font-medium text-muted-foreground mb-6 line-clamp-2 min-h-[2.5rem] leading-relaxed">
                   {course.short_desc}
                 </p>
                 
-                <div className="space-y-3 mb-8 opacity-60 group-hover:opacity-100 transition-opacity duration-300 bg-background/30 p-4 rounded-2xl border border-white/5">
-                  <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest">
-                    <Clock size={14} className="text-primary" /> <span>{course.duration}</span>
+                <div className="space-y-3 mb-8 bg-muted/30 p-4 rounded-2xl border border-border">
+                  <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    <Clock size={14} className="text-primary" />
+                    <span>{course.duration || 'Flexible'}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest">
-                    <IndianRupee size={14} className="text-primary" /> <span>{course.price}</span>
+                  <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-primary">
+                    <IndianRupee size={14} />
+                    <span>{course.price > 0 ? `₹${course.price}` : 'Free Access'}</span>
                   </div>
-                  {course.extra_details?.certification_available && (
-                    <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-widest text-amber-400">
-                      <Star size={14} fill="currentColor" /> <span>Certified</span>
-                    </div>
-                  )}
                 </div>
               </div>
 
-              <div className="w-full py-4 bg-primary/10 border border-primary/20 text-primary rounded-2xl flex items-center justify-center gap-2 font-black uppercase tracking-widest group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-[0_0_20px_rgba(var(--primary),0.4)] transition-all duration-300">
-                <PlayCircle size={18} />
-                <span>Explore Detail</span>
+              <div className="cool-button w-full text-center">
+                Explore Course
               </div>
             </Link>
           ))}

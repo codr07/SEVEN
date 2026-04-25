@@ -62,7 +62,6 @@ const AppContent = ({ loading, setLoading }) => {
   return (
     <>
       {isAppLoading && <LoadingScreen onLoadingComplete={() => setLoading(false)} />}
-      <CustomCursor />
       {!isAppLoading && (
         <div className="min-h-screen bg-background transition-colors duration-300 flex flex-col md:flex-row">
           {!isAdminPage && <Navbar />}
@@ -98,12 +97,8 @@ const AppContent = ({ loading, setLoading }) => {
   );
 };
 
-import { useMagneticHover } from './hooks/useMagneticHover';
-
 const App = () => {
   const [loading, setLoading] = useState(false);
-
-  useMagneticHover();
 
   useLayoutEffect(() => {
     console.log('App: Initializing smooth scroll (Lenis)');
