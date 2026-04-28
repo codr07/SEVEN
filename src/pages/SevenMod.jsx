@@ -868,13 +868,13 @@ const AdminImageField = ({ value, onChange, label }) => {
       const filePath = `admin/${fileName}`;
 
       const { error: uploadError } = await adminSupabase.storage
-        .from('content')
+        .from('avatars')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = adminSupabase.storage
-        .from('content')
+        .from('avatars')
         .getPublicUrl(filePath);
 
       onChange(publicUrl);
