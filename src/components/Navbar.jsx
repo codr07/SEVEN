@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { ChevronDown, Menu, X, Home, BookOpen, GraduationCap, FileText, Briefcase, Star, Mail, UserCircle, ChevronLeft, ChevronRight, LogIn } from 'lucide-react';
+import { ChevronDown, Menu, X, Home, BookOpen, GraduationCap, FileText, Briefcase, Star, Mail, UserCircle, ChevronLeft, ChevronRight, LogIn, Settings } from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -118,7 +118,7 @@ const Navbar = () => {
               to={item.path}
               className={({ isActive }) => cn(
                 "flex items-center rounded-xl text-sm font-black uppercase tracking-widest transition-all",
-                isActive ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                isActive ? "bg-foreground text-background shadow-lg shadow-foreground/10" : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 collapsed ? "py-4 justify-center" : "px-4 py-3 gap-3"
               )}
             >
@@ -134,16 +134,33 @@ const Navbar = () => {
           <div className="relative w-full" ref={avatarMenuRef}>
             <button onClick={() => setIsAvatarMenuOpen(!isAvatarMenuOpen)} className="flex items-center justify-between w-full p-2 rounded-xl bg-muted/50 hover:bg-muted transition-all">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black text-[10px]">
-                  {user.email?.charAt(0).toUpperCase()}
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black text-[10px] overflow-hidden">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    (profile?.full_name || user.email || 'U').charAt(0).toUpperCase()
+                  )}
                 </div>
                 {!collapsed && <span className="text-[10px] font-black uppercase truncate max-w-[100px]">{profile?.full_name || user.email}</span>}
               </div>
               {!collapsed && <ChevronDown size={14} />}
             </button>
             {isAvatarMenuOpen && (
-              <div className={cn("absolute bottom-full mb-2 w-full bg-card border border-border rounded-xl p-2 shadow-2xl z-[100]", collapsed ? "left-12 bottom-0" : "left-0")}>
-                <button onClick={handleSignOut} className="w-full text-left px-3 py-2 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10 rounded-lg">Sign Out</button>
+              <div className={cn("absolute bottom-full mb-2 w-48 bg-card border border-border rounded-xl p-2 shadow-2xl z-[100] flex flex-col gap-1", collapsed ? "left-12 bottom-0" : "left-0")}>
+                {profile?.username && (
+                  <button onClick={() => { setIsAvatarMenuOpen(false); navigate(`/profile/${profile.username}`); }} className="w-full text-left px-3 py-2.5 text-[10px] font-black uppercase text-primary hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-2">
+                    <UserCircle size={14} /> View My Profile
+                  </button>
+                )}
+                {role === 'admin' && (
+                  <button onClick={() => { setIsAvatarMenuOpen(false); navigate('/seven-mod'); }} className="w-full text-left px-3 py-2.5 text-[10px] font-black uppercase text-accent hover:bg-accent/5 rounded-lg transition-colors flex items-center gap-2">
+                    <Settings size={14} /> Admin Control Panel
+                  </button>
+                )}
+                <div className="h-px bg-border my-1 mx-1" />
+                <button onClick={handleSignOut} className="w-full text-left px-3 py-2.5 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10 rounded-lg transition-colors flex items-center gap-2">
+                  <LogIn size={14} className="rotate-180" /> Sign Out
+                </button>
               </div>
             )}
           </div>
@@ -257,7 +274,7 @@ const Navbar = () => {
                     onClick={() => setIsMobileMenuOpen(false)} 
                     className={({ isActive }) => cn(
                       "flex items-center gap-5 p-4 rounded-xl text-lg font-black uppercase tracking-widest transition-all",
-                      isActive ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                      isActive ? "bg-foreground text-background shadow-xl shadow-foreground/20" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                     )}
                   >
                     <item.icon size={22} />

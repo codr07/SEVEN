@@ -51,16 +51,16 @@ const PopOutIcon = ({ icon: Icon, x, y, rotate, delay, color }) => (
 const FloatingIcon = ({ icon: Icon, x, y, delay, color }) => (
   <motion.div
     initial={{ opacity: 0 }}
-    animate={{ 
+    animate={{
       opacity: [0.1, 0.3, 0.1],
-      y: [`${y}vh`, `${y-4}vh`, `${y}vh`],
-      x: [`${x}vw`, `${x+2}vw`, `${x}vw`]
+      y: [`${y}vh`, `${y - 4}vh`, `${y}vh`],
+      x: [`${x}vw`, `${x + 2}vw`, `${x}vw`]
     }}
-    transition={{ 
-      delay, 
-      duration: 6 + Math.random() * 4, 
+    transition={{
+      delay,
+      duration: 6 + Math.random() * 4,
       repeat: Infinity,
-      ease: "easeInOut" 
+      ease: "easeInOut"
     }}
     className="absolute pointer-events-none z-0"
     style={{ left: '50%', top: '50%', color }}
@@ -180,17 +180,19 @@ const Home = () => {
       </div>
 
       {/* Hero Section */}
-      <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-4 md:px-12 max-w-7xl mx-auto py-20 md:py-0">
-        <Hero3DAsset icon={BookOpen} x={-380} y={-180} color="var(--color-primary)" delay={1} />
-        <Hero3DAsset icon={GraduationCap} x={340} y={-220} color="var(--color-secondary)" delay={1.2} />
-        <Hero3DAsset icon={Laptop} x={-420} y={120} color="var(--color-accent)" delay={1.4} />
-        <Hero3DAsset icon={BookIcon} x={380} y={180} color="var(--color-primary)" delay={1.6} />
+      <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-4 md:px-12 max-w-7xl mx-auto py-20 md:py-0 overflow-hidden">
+        <div className="hidden md:block">
+          <Hero3DAsset icon={BookOpen} x={-380} y={-180} color="var(--color-primary)" delay={1} />
+          <Hero3DAsset icon={GraduationCap} x={340} y={-220} color="var(--color-secondary)" delay={1.2} />
+          <Hero3DAsset icon={Laptop} x={-420} y={120} color="var(--color-accent)" delay={1.4} />
+          <Hero3DAsset icon={BookIcon} x={380} y={180} color="var(--color-primary)" delay={1.6} />
 
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <FloatingIcon icon={Code} x={-40} y={-30} delay={0} color="var(--color-primary)" />
-          <FloatingIcon icon={Rocket} x={35} y={-20} delay={1} color="var(--color-secondary)" />
-          <FloatingIcon icon={Brain} x={-30} y={20} delay={2} color="var(--color-accent)" />
-          <FloatingIcon icon={Cpu} x={40} y={30} delay={1.5} color="var(--color-primary)" />
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <FloatingIcon icon={Code} x={-40} y={-30} delay={0} color="var(--color-primary)" />
+            <FloatingIcon icon={Rocket} x={35} y={-20} delay={1} color="var(--color-secondary)" />
+            <FloatingIcon icon={Brain} x={-30} y={20} delay={2} color="var(--color-accent)" />
+            <FloatingIcon icon={Cpu} x={40} y={30} delay={1.5} color="var(--color-primary)" />
+          </div>
         </div>
 
         <section className="flex flex-col items-center justify-center gap-6 md:gap-10 w-full text-center relative z-20">
@@ -222,7 +224,7 @@ const Home = () => {
 
       {/* Content */}
       <div className="relative z-10 w-full flex flex-col gap-24 md:gap-32 px-4 md:px-12 max-w-7xl mx-auto pb-32">
-        
+
         {/* Services */}
         <ScrollAnimatedSection>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10 w-full">
@@ -279,7 +281,7 @@ const Home = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 w-full">
               {[
-                { img: "https://i.pinimg.com/736x/8a/7c/41/8a7c4155828456485e94b2103f628f24.jpg", title: "5 Elements", desc: "Foundation of everything." },
+                { img: "https://pngimg.com/uploads/globe/globe_PNG100087.png", title: "5 Elements", desc: "Foundation of everything." },
                 { img: "https://i.pinimg.com/736x/82/b0/d9/82b0d91458e8291ddf1529f14c171c1d.jpg", title: "7 Chakras", desc: "Aligning energy centers." },
                 { img: sevenLogo, title: "Divine Union", desc: "Synergy of 5 and 7." }
               ].map((item, idx) => (
@@ -333,20 +335,29 @@ const Home = () => {
                     <h2 className="text-3xl md:text-4xl font-black text-animate-gradient">Expert Mentors</h2>
                     <p className="text-[8px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest">&larr; Swipe &rarr;</p>
                   </div>
-                  <div className="flex gap-6 md:gap-8 overflow-x-auto pb-6 md:pb-10 snap-x snap-mandatory no-scrollbar px-2">
-                    {faculties.map(fac => (
-                      <div key={fac.id} className="min-w-[280px] md:min-w-[420px] snap-center">
-                        <div className="institution-card p-6 md:p-8 flex flex-col items-center text-center h-full">
-                          <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-4 border-white shadow-md mb-6">
-                            <img src={fac.cover_image || 'https://via.placeholder.com/150'} alt={fac.name} className="w-full h-full object-cover" />
+                  
+                  <div className="relative w-full marquee-container">
+                    {/* Fades */}
+                    <div className="absolute inset-y-0 left-0 w-12 md:w-32 bg-gradient-to-r from-background to-transparent z-20 pointer-events-none"></div>
+                    <div className="absolute inset-y-0 right-0 w-12 md:w-32 bg-gradient-to-l from-background to-transparent z-20 pointer-events-none"></div>
+                    
+                    <div className="overflow-x-auto no-scrollbar scroll-smooth">
+                      <div className="marquee-track px-4 md:px-32">
+                        {[...faculties, ...faculties].map((fac, idx) => (
+                          <div key={`${fac.id}-${idx}`} className="min-w-[280px] md:min-w-[420px]">
+                            <div className="institution-card p-6 md:p-8 flex flex-col items-center text-center h-full">
+                              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-4 border-white shadow-md mb-6">
+                                <img src={fac.cover_image || 'https://via.placeholder.com/150'} alt={fac.name} className="w-full h-full object-cover" />
+                              </div>
+                              <h4 className="text-lg md:text-xl font-black mb-1">{fac.name}</h4>
+                              <p className="text-[8px] md:text-[10px] font-black text-primary uppercase tracking-widest mb-4 md:mb-6">{fac.topic || fac.department}</p>
+                              <p className="text-xs md:text-sm text-muted-foreground line-clamp-3 mb-6 md:mb-8 italic">"{fac.bio || fac.description}"</p>
+                              <button onClick={() => { setSelectedProfile(fac); setProfileType('faculty'); }} className="w-full h-12 md:h-14 cool-button-secondary mt-auto">Details</button>
+                            </div>
                           </div>
-                          <h4 className="text-lg md:text-xl font-black mb-1">{fac.name}</h4>
-                          <p className="text-[8px] md:text-[10px] font-black text-primary uppercase tracking-widest mb-4 md:mb-6">{fac.topic || fac.department}</p>
-                          <p className="text-xs md:text-sm text-muted-foreground line-clamp-3 mb-6 md:mb-8 italic">"{fac.bio || fac.description}"</p>
-                          <button onClick={() => { setSelectedProfile(fac); setProfileType('faculty'); }} className="w-full h-12 md:h-14 cool-button-secondary mt-auto">Details</button>
-                        </div>
+                        ))}
                       </div>
-                    ))}
+                    </div>
                   </div>
                 </div>
               </ScrollAnimatedSection>

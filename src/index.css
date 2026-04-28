@@ -91,6 +91,10 @@
     letter-spacing: -0.025em;
     font-weight: 900;
   }
+
+  button, a, [role="button"], select {
+    cursor: pointer;
+  }
 }
 
 @layer utilities {
@@ -111,12 +115,19 @@
   .institution-card {
     background: white;
     border: 1px solid hsl(var(--border));
-    border-radius: 2rem;
-    padding: 1.5rem;
+    border-radius: 1.5rem;
+    padding: 1.25rem;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
     transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     position: relative;
     overflow: hidden;
+  }
+
+  @media (min-width: 768px) {
+    .institution-card {
+      border-radius: 2rem;
+      padding: 1.5rem;
+    }
   }
 
   .institution-card:hover {
@@ -188,6 +199,27 @@
     color: transparent;
     animation: gradient-x 3s linear infinite;
     display: inline-block;
+  }
+
+  .marquee-container {
+    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  }
+
+  .marquee-track {
+    display: flex;
+    gap: 1.5rem;
+    width: fit-content;
+    animation: marquee 40s linear infinite;
+  }
+
+  .marquee-track:hover {
+    animation-play-state: paused;
+  }
+
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
   }
 }
 

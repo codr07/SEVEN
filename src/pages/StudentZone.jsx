@@ -678,7 +678,7 @@ const StudentZone = () => {
                       <button
                         type="submit"
                         disabled={isBusy}
-                        className="px-6 py-3 rounded-xl bg-primary text-white font-black uppercase tracking-widest text-xs flex items-center gap-2"
+                        className="w-full md:w-auto px-6 py-3 rounded-xl bg-foreground text-background font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:-translate-y-1 hover:shadow-lg transition-all"
                       >
                         {isBusy ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} Save Profile
                       </button>
@@ -785,7 +785,7 @@ const StudentZone = () => {
 const TabButton = ({ icon: Icon, active, onClick, children }) => (
   <button
     onClick={onClick}
-    className={`flex items-center gap-3 px-5 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${active ? 'bg-primary text-white' : 'hover:bg-card text-muted-foreground border border-border'
+    className={`flex items-center gap-3 px-5 py-3 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${active ? 'bg-foreground text-background shadow-lg shadow-foreground/10' : 'hover:bg-card text-muted-foreground border border-border'
       }`}
   >
     <Icon size={16} />

@@ -63,7 +63,7 @@ const CourseDetail = () => {
         </div>
 
         {/* Hero Card */}
-        <section className="overflow-hidden rounded-3xl border-2 border-border bg-card shadow-2xl hover-glow transition-all duration-500">
+        <section className="overflow-hidden rounded-2xl md:rounded-3xl border-2 border-border bg-card shadow-2xl hover-glow transition-all duration-500">
           <div className="relative h-64 w-full sm:h-80 lg:h-96 bg-muted">
             <img
               src={coverUrl}

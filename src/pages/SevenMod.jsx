@@ -1181,9 +1181,9 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
         <button
           type="submit"
           disabled={loading}
-          className="px-5 py-3 rounded-xl bg-foreground text-background font-black uppercase tracking-widest text-xs flex items-center gap-2 shadow-xl shadow-foreground/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          className="w-full md:w-auto px-5 py-3 rounded-xl bg-foreground text-background font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:-translate-y-1 transition-all"
         >
-          {loading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save
+          {loading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save Changes
         </button>
       </div>
     </form>

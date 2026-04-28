@@ -3,7 +3,7 @@ import { Mail, Phone, MapPin, Send } from 'lucide-react';
 
 const Contact = () => {
   return (
-    <div className="pt-32 pb-20 px-6 max-w-7xl mx-auto">
+    <div className="pt-24 md:pt-32 pb-12 md:pb-20 px-4 md:px-6 max-w-7xl mx-auto">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
         <div className="space-y-12 animate-in slide-in-from-left-20 duration-1000">
           <div>
@@ -35,7 +35,7 @@ const Contact = () => {
           </div>
         </div>
 
-        <div className="p-12 glass rounded-[60px] border border-white/20 animate-in slide-in-from-right-20 duration-1000 shadow-2xl">
+        <div className="p-8 md:p-12 glass rounded-[40px] md:rounded-[60px] border border-white/20 animate-in slide-in-from-right-20 duration-1000 shadow-2xl">
           <h2 className="text-4xl font-black uppercase italic tracking-tighter mb-10">Send a Mission</h2>
           <form className="space-y-8">
             <InputField label="Full Name" type="text" placeholder="John Doe" />
@@ -49,7 +49,7 @@ const Contact = () => {
               />
             </div>
             <button
-              className="w-full py-5 bg-primary text-primary-foreground rounded-3xl font-bold uppercase tracking-widest flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl"
+              className="w-full py-5 bg-foreground text-background rounded-2xl md:rounded-3xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:-translate-y-1 active:scale-[0.98] transition-all shadow-xl"
             >
               <Send size={20} />
               <span>Send Message</span>
