@@ -800,6 +800,7 @@ const SevenMod = () => {
                   fetchTable(activeTab);
                   fetchStats();
                 }}
+                adminId={adminUser?.id}
               />
             </div>
           </motion.div>
@@ -854,7 +855,7 @@ const JSONFieldEditor = ({ value, onChange, label }) => {
   );
 };
 
-const AdminImageField = ({ value, onChange, label }) => {
+const AdminImageField = ({ value, onChange, label, adminId }) => {
   const [uploading, setUploading] = useState(false);
 
   const onFileChange = async (e) => {
@@ -865,7 +866,7 @@ const AdminImageField = ({ value, onChange, label }) => {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).slice(2)}_${Date.now()}.${fileExt}`;
-      const filePath = `admin/${fileName}`;
+      const filePath = adminId ? `${adminId}/admin/${fileName}` : `admin/${fileName}`;
 
       const { error: uploadError } = await adminSupabase.storage
         .from('avatars')
@@ -964,7 +965,7 @@ const StatusBadge = ({ pushed, status }) => (
   </span>
 );
 
-const AdminForm = ({ table, initialData, onSuccess, onCancel }) => {
+const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
   const [formData, setFormData] = useState(initialData || {});
   const [loading, setLoading] = useState(false);
 
@@ -1123,6 +1124,7 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel }) => {
                 label={field.label}
                 value={getValue(field.name)}
                 onChange={(val) => setValue(field.name, val)}
+                adminId={adminId}
               />
             ) : field.type === 'textarea' ? (
               <textarea
