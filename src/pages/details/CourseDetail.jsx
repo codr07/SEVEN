@@ -65,28 +65,30 @@ const CourseDetail = () => {
         {/* Hero Card */}
         <section className="overflow-hidden rounded-3xl border-2 border-border bg-card shadow-2xl hover-glow transition-all duration-500">
           <div className="relative h-64 w-full sm:h-80 lg:h-96 bg-muted">
-            <img 
-              src={coverUrl} 
-              alt={course.name} 
-              className="h-full w-full object-cover" 
+            <img
+              src={coverUrl}
+              alt={course.name}
+              className="h-full w-full object-cover"
               onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop'; }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
-            <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10">
-              <span className="mb-4 inline-flex items-center rounded-full bg-primary px-4 py-1.5 text-xs font-extrabold uppercase tracking-widest text-primary-foreground shadow-lg">
+            <div className="absolute top-6 left-6 z-10">
+              <span className="inline-flex items-center rounded-xl bg-white/90 backdrop-blur-md px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary border border-primary/20 shadow-sm">
                 {course.category}
               </span>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10">
               <h1 className="text-3xl font-black sm:text-5xl lg:text-6xl drop-shadow-md text-animate-gradient">
                 {view.title || course.name}
               </h1>
-              <p className="mt-4 max-w-3xl text-base text-white/90 sm:text-lg font-medium drop-shadow">
+              <p className="mt-4 max-w-3xl text-white/90 text-base sm:text-lg font-medium drop-shadow leading-relaxed">
                 {view.short_desc || course.short_desc}
               </p>
             </div>
           </div>
 
           <div className="grid gap-8 p-6 sm:p-10 lg:grid-cols-3 bg-card">
-            
+
             {/* Left Content Area */}
             <div className="space-y-8 lg:col-span-2">
               <div className="rounded-2xl border border-border bg-background p-6 lg:p-8 shadow-sm">
@@ -111,7 +113,7 @@ const CourseDetail = () => {
               <div className="rounded-2xl border border-border bg-background p-6 lg:p-8 shadow-sm">
                 <h2 className="text-2xl font-bold text-foreground border-b border-border pb-4 mb-6">Student Review</h2>
                 <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 italic text-muted-foreground relative">
-                   "{view.public_review || "Learners love the practical structure and expert mentor support."}"
+                  "{view.public_review || "Learners love the practical structure and expert mentor support."}"
                 </div>
               </div>
             </div>
@@ -125,7 +127,7 @@ const CourseDetail = () => {
 
               <div className="rounded-2xl border border-primary bg-primary/5 p-6 shadow-md relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10">
-                   <div className="text-6xl font-black">$</div>
+                  <div className="text-6xl font-black">$</div>
                 </div>
                 <p className="text-xs font-bold uppercase tracking-widest text-primary">Total Price</p>
                 <p className="mt-2 text-4xl font-black text-foreground">{course.price}</p>
@@ -133,24 +135,24 @@ const CourseDetail = () => {
 
               <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                   <p className="text-sm font-bold text-foreground">Certification</p>
-                   {view.certification_available ? (
-                      <span className="flex items-center gap-1 text-secondary text-sm font-bold bg-secondary/10 px-2 py-1 rounded-md"><CheckCircle2 size={16}/> YES</span>
-                   ) : (
-                      <span className="flex items-center gap-1 text-destructive text-sm font-bold bg-destructive/10 px-2 py-1 rounded-md"><XCircle size={16}/> NO</span>
-                   )}
+                  <p className="text-sm font-bold text-foreground">Certification</p>
+                  {view.certification_available ? (
+                    <span className="flex items-center gap-1 text-secondary text-sm font-bold bg-secondary/10 px-2 py-1 rounded-md"><CheckCircle2 size={16} /> YES</span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-destructive text-sm font-bold bg-destructive/10 px-2 py-1 rounded-md"><XCircle size={16} /> NO</span>
+                  )}
                 </div>
                 <div className="pt-4 border-t border-border flex justify-between items-center">
-                   <p className="text-sm font-medium text-muted-foreground">Exam Cost</p>
-                   <p className="font-bold text-foreground">{view.certification_cost || "N/A"}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Exam Cost</p>
+                  <p className="font-bold text-foreground">{view.certification_cost || "N/A"}</p>
                 </div>
               </div>
 
-              <a 
-                href={course.link || "#"} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="inline-flex w-full items-center justify-center rounded-xl bg-foreground px-6 py-5 text-base font-black uppercase tracking-widest text-background shadow-lg hover:-translate-y-1 hover:bg-primary transition-all duration-300"
+              <a
+                href={course.link || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-full items-center justify-center rounded-xl bg-green-600 px-6 py-5 text-base font-black uppercase tracking-widest text-white shadow-xl shadow-primary/20 hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
               >
                 Enroll Now
               </a>
