@@ -22,6 +22,7 @@ import {
   EyeOff,
   Search
 } from 'lucide-react';
+import { useAlert } from '../context/AlertContext';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -118,6 +119,7 @@ const LoginScreen = ({ onLogin }) => {
 };
 
 const SevenMod = () => {
+  const { showAlert, showConfirm } = useAlert();
   const [expandedId, setExpandedId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [adminUser, setAdminUser] = useState(null);
@@ -225,7 +227,7 @@ const SevenMod = () => {
   const handleLogout = async () => {
     const { error } = await adminSupabase.auth.signOut();
     if (error) {
-      alert(error.message || 'Failed to sign out. Please try again.');
+      showAlert(error.message || 'Failed to sign out. Please try again.', 'error');
       return;
     }
     setAdminUser(null);
@@ -339,23 +341,23 @@ const SevenMod = () => {
   };
 
   const removeItem = async (tableName, id) => {
-    if (!window.confirm('Delete this item?')) return;
+    showConfirm('Delete this item?', async () => {
+      const { error } = await adminSupabase.from(tableName).delete().eq('id', id);
+      if (error) {
+        showAlert(error.message, 'error');
+        return;
+      }
 
-    const { error } = await adminSupabase.from(tableName).delete().eq('id', id);
-    if (error) {
-      alert(error.message);
-      return;
-    }
+      if (tableName === 'student_submissions') {
+        fetchSubmissions();
+      } else if (tableName === 'profiles') {
+        fetchUsers();
+      } else {
+        fetchTable(tableName);
+      }
 
-    if (tableName === 'student_submissions') {
-      fetchSubmissions();
-    } else if (tableName === 'profiles') {
-      fetchUsers();
-    } else {
-      fetchTable(tableName);
-    }
-
-    fetchStats();
+      fetchStats();
+    });
   };
 
   const toggleVisibility = async (tableName, item) => {
@@ -375,7 +377,7 @@ const SevenMod = () => {
       .eq('id', item.id);
       
     if (error) {
-      alert(error.message);
+      showAlert(error.message, 'error');
       return;
     }
     
@@ -389,7 +391,7 @@ const SevenMod = () => {
       .eq('id', id);
 
     if (error) {
-      alert(error.message);
+      showAlert(error.message, 'error');
       return;
     }
 
@@ -408,7 +410,7 @@ const SevenMod = () => {
       .eq('id', item.id);
 
     if (error) {
-      alert(error.message);
+      showAlert(error.message, 'error');
       return;
     }
 
@@ -856,6 +858,7 @@ const JSONFieldEditor = ({ value, onChange, label }) => {
 };
 
 const AdminImageField = ({ value, onChange, label, adminId }) => {
+  const { showAlert } = useAlert();
   const [uploading, setUploading] = useState(false);
 
   const onFileChange = async (e) => {
@@ -880,7 +883,7 @@ const AdminImageField = ({ value, onChange, label, adminId }) => {
 
       onChange(publicUrl);
     } catch (err) {
-      alert('Upload failed: ' + err.message);
+      showAlert('Upload failed: ' + err.message, 'error');
     } finally {
       setUploading(false);
     }
@@ -966,6 +969,7 @@ const StatusBadge = ({ pushed, status }) => (
 );
 
 const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
+  const { showAlert } = useAlert();
   const [formData, setFormData] = useState(initialData || {});
   const [loading, setLoading] = useState(false);
 
@@ -1098,7 +1102,7 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
 
       onSuccess();
     } catch (err) {
-      alert(err.message || 'Save failed');
+      showAlert(err.message || 'Save failed', 'error');
     } finally {
       setLoading(false);
     }

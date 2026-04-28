@@ -22,6 +22,7 @@ import OAuthConsent from './pages/OAuthConsent';
 import DeveloperDocs from './pages/DeveloperDocs';
 import Footer from './components/Footer';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { AlertProvider } from './context/AlertContext';
 
 const SevenMod = lazy(() => import('./pages/SevenMod'));
 
@@ -129,13 +130,15 @@ const App = () => {
   }, []);
 
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <Router>
-          <AppContent loading={loading} setLoading={setLoading} />
-        </Router>
-      </ThemeProvider>
-    </AuthProvider>
+    <AlertProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <Router>
+            <AppContent loading={loading} setLoading={setLoading} />
+          </Router>
+        </ThemeProvider>
+      </AuthProvider>
+    </AlertProvider>
   );
 };
 

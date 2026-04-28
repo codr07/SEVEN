@@ -22,6 +22,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useAlert } from '../context/AlertContext';
 import { supabase, withTimeout } from '../lib/supabase';
 
 const INITIAL_SIGNUP = {
@@ -44,6 +45,7 @@ const INITIAL_POST = {
 
 const StudentZone = () => {
   const [searchParams] = useSearchParams();
+  const { showAlert, showConfirm } = useAlert();
   const { user, login, signup, logout, role, profile, refreshProfile, loading: authLoading, resetPassword, deleteAccount } = useAuth();
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -373,16 +375,19 @@ const StudentZone = () => {
   };
 
   const handleDeleteAccount = async () => {
-    if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone and will permanently erase your profile.")) return;
-    
-    setIsBusy(true);
-    try {
-      await deleteAccount();
-      // On success, the user is logged out globally and redirected or UI updates
-    } catch (error) {
-      setMessage({ type: 'error', text: error.message || 'Failed to delete account. You may need an admin to do this.' });
-      setIsBusy(false);
-    }
+    showConfirm(
+      "Are you sure you want to delete your account? This action cannot be undone and will permanently erase your profile.",
+      async () => {
+        setIsBusy(true);
+        try {
+          await deleteAccount();
+        } catch (err) {
+          showAlert(err.message, "error");
+        } finally {
+          setIsBusy(false);
+        }
+      }
+    );
   };
 
   const stats = useMemo(() => {

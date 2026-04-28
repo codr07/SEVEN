@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { PlayCircle, Clock, BookOpen, Star, Loader2, IndianRupee, Search, Filter } from 'lucide-react';
+import { PlayCircle, Clock, BookOpen, Star, Loader2, IndianRupee, Search, Filter, Share2 } from 'lucide-react';
 import { supabase, withTimeout, filterVisible } from '../lib/supabase';
 import { Link } from 'react-router-dom';
+import { useAlert } from '../context/AlertContext';
 
 const Courses = () => {
+  const { showAlert } = useAlert();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -65,7 +67,7 @@ const Courses = () => {
             {isFilterOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)}></div>
-                <div className="absolute right-0 top-full mt-2 w-56 bg-card border border-border rounded-2xl shadow-2xl p-2 z-50">
+                <div className="absolute right-0 top-full mt-2 w-56 bg-card/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
                   <div className="px-3 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground opacity-70 mb-1">Filter by Category</div>
                   <button 
                     onClick={() => { setSelectedCategory(''); setIsFilterOpen(false); }} 
@@ -129,9 +131,23 @@ const Courses = () => {
                     className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" 
                   />
                   <div className="absolute top-3 left-3">
-                    <div className="text-[10px] font-black text-primary uppercase tracking-widest bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-primary/20 shadow-sm">
+                    <div className="text-[10px] font-black text-background uppercase tracking-widest bg-foreground px-3 py-1.5 rounded-full shadow-xl">
                       {course.category}
                     </div>
+                  </div>
+                  <div className="absolute top-3 right-3 z-30">
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const url = `${window.location.origin}/courses/${course.id}`;
+                        navigator.clipboard.writeText(url);
+                        showAlert("Link copied to clipboard!", "success");
+                      }}
+                      className="p-2 bg-black/40 backdrop-blur-md border border-white/20 hover:bg-primary hover:text-white rounded-full transition-all duration-300 shadow-lg text-white"
+                    >
+                      <Share2 size={14} />
+                    </button>
                   </div>
                 </div>
                 
@@ -149,7 +165,13 @@ const Courses = () => {
                   </div>
                   <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-primary">
                     <IndianRupee size={14} />
-                    <span>{course.price > 0 ? `₹${course.price}` : 'Free Access'}</span>
+                    <span>
+                      {course.price 
+                        ? (['free', '0'].includes(String(course.price).toLowerCase().trim()) 
+                            ? 'Free Access' 
+                            : `₹${course.price}`) 
+                        : 'Free Access'}
+                    </span>
                   </div>
                 </div>
               </div>

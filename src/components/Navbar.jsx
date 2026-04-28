@@ -146,7 +146,7 @@ const Navbar = () => {
               {!collapsed && <ChevronDown size={14} />}
             </button>
             {isAvatarMenuOpen && (
-              <div className={cn("absolute bottom-full mb-2 w-48 bg-card border border-border rounded-xl p-2 shadow-2xl z-[100] flex flex-col gap-1", collapsed ? "left-12 bottom-0" : "left-0")}>
+              <div className={cn("absolute bottom-full mb-2 w-48 bg-card/95 backdrop-blur-xl border border-white/10 rounded-xl p-2 shadow-2xl z-[100] flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-2 duration-200", collapsed ? "left-12 bottom-0" : "left-0")}>
                 {profile?.username && (
                   <button onClick={() => { setIsAvatarMenuOpen(false); navigate(`/profile/${profile.username}`); }} className="w-full text-left px-3 py-2.5 text-[10px] font-black uppercase text-primary hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-2">
                     <UserCircle size={14} /> View My Profile

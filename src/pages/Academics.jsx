@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAlert } from '../context/AlertContext';
 import { supabase, withTimeout, filterVisible } from '../lib/supabase';
-import { Loader2, GraduationCap, Search } from 'lucide-react';
+import { Loader2, GraduationCap, Search, Share2 } from 'lucide-react';
 
 const Academics = () => {
+  const { showAlert } = useAlert();
   const [academics, setAcademics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
@@ -83,8 +85,22 @@ const Academics = () => {
                   ) : (
                     <GraduationCap size={48} className="text-primary opacity-20" />
                   )}
-                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-primary rounded-xl border border-primary/20 shadow-sm">
+                  <div className="absolute top-3 left-3 bg-foreground px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white rounded-full shadow-xl">
                      Academic
+                  </div>
+                  <div className="absolute top-3 right-3 z-30">
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const url = `${window.location.origin}/academics/${item.id}`;
+                        navigator.clipboard.writeText(url);
+                        showAlert("Link copied to clipboard!", "success");
+                      }}
+                      className="p-2 bg-black/40 backdrop-blur-md border border-white/20 hover:bg-primary hover:text-white rounded-full transition-all duration-300 shadow-lg text-white"
+                    >
+                      <Share2 size={14} />
+                    </button>
                   </div>
                </div>
                

@@ -73,7 +73,7 @@ const CourseDetail = () => {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
             <div className="absolute top-6 left-6 z-10">
-              <span className="inline-flex items-center rounded-xl bg-white/90 backdrop-blur-md px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary border border-primary/20 shadow-sm">
+              <span className="inline-flex items-center rounded-full bg-foreground px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white shadow-xl">
                 {course.category}
               </span>
             </div>
@@ -127,7 +127,7 @@ const CourseDetail = () => {
 
               <div className="rounded-2xl border border-primary bg-primary/5 p-6 shadow-md relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10">
-                  <div className="text-6xl font-black">$</div>
+                  <div className="text-6xl font-black">₹</div>
                 </div>
                 <p className="text-xs font-bold uppercase tracking-widest text-primary">Total Price</p>
                 <p className="mt-2 text-4xl font-black text-foreground">{course.price}</p>

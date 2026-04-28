@@ -64,15 +64,15 @@ const ServiceDetail = () => {
         {/* Hero Card */}
         <section className="overflow-hidden rounded-3xl border-2 border-border bg-card shadow-2xl hover-glow transition-all duration-500">
           <div className="relative h-64 w-full sm:h-80 lg:h-96 bg-muted">
-            <img 
-              src={coverUrl} 
-              alt={service.title} 
-              className="h-full w-full object-cover" 
+            <img
+              src={coverUrl}
+              alt={service.title}
+              className="h-full w-full object-cover"
               onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1200&auto=format&fit=crop'; }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
             <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10">
-              <span className="mb-4 inline-flex items-center rounded-full bg-secondary px-4 py-1.5 text-xs font-extrabold uppercase tracking-widest text-secondary-foreground shadow-lg">
+              <span className="mb-4 inline-flex items-center rounded-full bg-foreground px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-white shadow-xl">
                 {service.category}
               </span>
               <h1 className="text-3xl font-black sm:text-5xl lg:text-6xl drop-shadow-md text-animate-gradient">
@@ -85,7 +85,7 @@ const ServiceDetail = () => {
           </div>
 
           <div className="grid gap-8 p-6 sm:p-10 lg:grid-cols-3 bg-card">
-            
+
             {/* Left Content Area */}
             <div className="space-y-8 lg:col-span-2">
               <div className="rounded-2xl border border-border bg-background p-6 lg:p-8 shadow-sm">
@@ -110,7 +110,7 @@ const ServiceDetail = () => {
               <div className="rounded-2xl border border-border bg-background p-6 lg:p-8 shadow-sm">
                 <h2 className="text-2xl font-bold text-foreground border-b border-border pb-4 mb-6">Client Review</h2>
                 <div className="bg-secondary/5 border border-secondary/20 rounded-xl p-5 italic text-muted-foreground relative">
-                   "{view.public_review || "Clients highly recommend this service for robust execution and quantifiable results."}"
+                  "{view.public_review || "Clients highly recommend this service for robust execution and quantifiable results."}"
                 </div>
               </div>
             </div>
@@ -119,19 +119,19 @@ const ServiceDetail = () => {
             <aside className="space-y-6">
               <div className="rounded-2xl border border-secondary bg-secondary/5 p-6 shadow-md relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-4 opacity-10">
-                   <div className="text-6xl font-black">$</div>
+                  <div className="text-6xl font-black">₹</div>
                 </div>
                 <p className="text-xs font-bold uppercase tracking-widest text-secondary">Starting At</p>
                 <p className="mt-2 text-3xl font-black text-foreground">{service.price}</p>
               </div>
 
               <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
-                 <p className="text-sm font-bold text-foreground">Delivery Terms</p>
-                 <p className="pt-2 text-sm font-medium text-muted-foreground">Standard deployment cycles vary between 2-12 weeks depending on tier selected. Reach out for custom enterprise quotes.</p>
+                <p className="text-sm font-bold text-foreground">Delivery Terms</p>
+                <p className="pt-2 text-sm font-medium text-muted-foreground">Standard deployment cycles vary between 2-12 weeks depending on tier selected. Reach out for custom enterprise quotes.</p>
               </div>
 
-              <Link 
-                to="/contact" 
+              <Link
+                to="/contact"
                 className="inline-flex w-full items-center justify-center rounded-xl bg-foreground px-6 py-5 text-base font-black uppercase tracking-widest text-background shadow-lg hover:-translate-y-1 hover:bg-secondary transition-all duration-300"
               >
                 Inquire Now

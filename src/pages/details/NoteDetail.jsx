@@ -80,10 +80,13 @@ const NoteDetail = () => {
                 </>
             )}
             
-            <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10">
-              <span className="mb-4 inline-flex items-center rounded-full bg-accent px-4 py-1.5 text-xs font-extrabold uppercase tracking-widest text-accent-foreground shadow-lg">
+            <div className="absolute top-6 left-6 z-10">
+              <span className="inline-flex items-center rounded-full bg-black/40 backdrop-blur-md border border-white/10 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white shadow-xl">
                 {note.category}
               </span>
+            </div>
+            
+            <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10">
               <h1 className="text-3xl font-black sm:text-5xl lg:text-6xl drop-shadow-md text-animate-gradient">
                 {view.title || note.title}
               </h1>
