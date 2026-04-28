@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* @tailwind theme */
-@theme {
+:root {
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
@@ -88,7 +88,8 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply tracking-tight font-black;
+    letter-spacing: -0.025em;
+    font-weight: 900;
   }
 }
 
@@ -111,6 +112,7 @@
     background: white;
     border: 1px solid hsl(var(--border));
     border-radius: 2rem;
+    padding: 1.5rem;
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
     transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     position: relative;

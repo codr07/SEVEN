@@ -596,18 +596,34 @@ const SevenMod = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                       {visibleTableData.map((item) => (
-                        <article key={item.id} className="p-5 rounded-2xl border border-border bg-card space-y-4">
-                          <div>
-                            <p className="font-black text-lg line-clamp-1">{item.name || item.title || item.role || 'Untitled'}</p>
-                            <p className="text-sm text-muted-foreground line-clamp-3 mt-2">
-                              {item.short_desc || item.description || item.bio || 'No description'}
-                            </p>
+                        <article key={item.id} className="p-6 rounded-3xl border border-border bg-card space-y-5 hover:shadow-xl hover:shadow-primary/5 transition-all">
+                          <div className="flex gap-4">
+                            {(item.cover_image || item.image_url || item.thumbnail || item.avatar_url) && (
+                              <div className="w-20 h-20 rounded-2xl overflow-hidden border border-border flex-shrink-0 bg-muted">
+                                <img 
+                                  src={item.cover_image || item.image_url || item.thumbnail || item.avatar_url} 
+                                  alt="thumbnail" 
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-black text-lg line-clamp-1">{item.name || item.title || item.role || 'Untitled'}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                                {item.short_desc || item.description || item.bio || 'No description'}
+                              </p>
+                              <div className="mt-2 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-lg bg-muted text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                  {item.category || item.topic || 'General'}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 pt-2">
                             <button
                               title={item.extra_details?.is_visible === false ? "Hidden on site. Click to show." : "Visible on site. Click to hide."}
                               onClick={() => toggleVisibility(activeTab, item)}
-                              className={`px-4 py-2 rounded-xl flex items-center justify-center transition-all ${
+                              className={`px-4 py-2.5 rounded-xl flex items-center justify-center transition-all ${
                                 item.extra_details?.is_visible === false
                                 ? 'border border-muted text-muted-foreground bg-muted/10'
                                 : 'border border-primary/40 text-primary bg-primary/5'
@@ -620,13 +636,13 @@ const SevenMod = () => {
                                 setEditingItem(item);
                                 setIsModalOpen(true);
                               }}
-                              className="flex-1 px-4 py-2 rounded-xl border border-border text-[10px] uppercase tracking-widest font-black flex items-center justify-center gap-2 hover:bg-background"
+                              className="flex-1 px-4 py-2.5 rounded-xl border border-border text-[10px] uppercase tracking-widest font-black flex items-center justify-center gap-2 hover:bg-background"
                             >
                               <Pencil size={12} /> Edit
                             </button>
                             <button
                               onClick={() => removeItem(activeTab, item.id)}
-                              className="px-4 py-2 rounded-xl border border-destructive/40 text-destructive hover:bg-destructive/10 transition-all"
+                              className="px-4 py-2.5 rounded-xl border border-destructive/40 text-destructive hover:bg-destructive/10 transition-all"
                             >
                               <Trash2 size={14} />
                             </button>
@@ -870,23 +886,37 @@ const AdminImageField = ({ value, onChange, label }) => {
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
         {label}
       </label>
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="Paste Image URL"
-          className="flex-1 px-4 py-2.5 rounded-xl bg-background border border-border focus:border-primary outline-none text-sm"
-        />
-        <label className={`cursor-pointer px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted transition-all flex items-center gap-2 text-xs font-bold ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
-          {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-          <span>{uploading ? '...' : 'Upload'}</span>
-          <input type="file" accept="image/*" onChange={onFileChange} className="hidden" />
-        </label>
+      <div className="flex flex-col gap-3">
+        {value && (
+          <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-border bg-muted group">
+            <img src={value} alt="Preview" className="w-full h-full object-cover" />
+            <button 
+              type="button"
+              onClick={() => onChange('')}
+              className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Paste Image URL"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-background border border-border focus:border-primary outline-none text-sm"
+          />
+          <label className={`cursor-pointer px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted transition-all flex items-center gap-2 text-xs font-bold ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+            {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+            <span>{uploading ? '...' : 'Upload'}</span>
+            <input type="file" accept="image/*" onChange={onFileChange} className="hidden" />
+          </label>
+        </div>
       </div>
     </div>
   );
