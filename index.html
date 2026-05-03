@@ -33,15 +33,14 @@
     <meta property="twitter:image" content="/assets/images/img/banner.png" />
     
     <meta name="theme-color" content="#0a0a0a" />
-    <link rel="manifest" href="/public/manifest.json" crossorigin="use-credentials" />
-    <link rel="manifest" href="/public/manifest.json" />
+    <link rel="manifest" href="/site.webmanifest" crossorigin="use-credentials" />
     
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="5EVEN" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
     
-    <meta name="keywords" content="5EVEN, Education, Academics, Courses, Mock Exams, Mock and Rock, Web Development, IT Services, Documentation" />
+    <meta name="keywords" content="5EVEN, 5EVEN Institution, Five Even, Premium Education, Academic Excellence, Professional Training, Skill Development, Online Learning Platform, Career Guidance, Institutional Tracks, Elite Curriculum, Web Development, IT Solutions, Software Engineering, Mobile App Development, Digital Transformation, Technical Documentation, Mock Exams, Mock and Rock, Exam Preparation, Test Series, Student Success, Innovative Learning, EdTech, West Bengal Education, Masalandapur IT Services, Coding Bootcamp, Web Design, Full Stack Development, ReactJS, Vite, Tailwind CSS, Educational Technology, Smart Learning, Study Materials, Professional Services, Corporate Training, Academic Support, Learning Management System, High Fidelity Education, Modern Pedagogy, Industry Ready Skills, Tech Education, Software Services, Web Application, Programming Courses, Computer Science, Data Science, AI Learning, Machine Learning, Digital Literacy, Future Skills, Career Growth, Certification Courses, Virtual Classroom, Interactive Learning, Personalized Education, Specialized Training, Enterprise Solutions, IT Consulting, System Architecture, UI/UX Design, User Experience, Cloud Computing, Cybersecurity, Backend Development, Frontend Engineering, Database Management, API Integration, DevOps, Agile Methodology, Project Management, Digital Marketing, SEO Services, Content Strategy, Educational Consulting, Institutional Support, E-learning, distance learning, blended learning, higher education, vocational training, STEM education, computer education, software development company, IT agency, web development agency, educational startup" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Montserrat:ital,wght@0,100;0,400;0,900;1,100;1,400;1,900&display=swap" rel="stylesheet">
@@ -175,7 +174,6 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     
-    <!-- Preloader Animation Script -->
     <script>
       (function() {
         const preloader = document.getElementById('global-preloader');
@@ -183,11 +181,10 @@
         const progressText = document.getElementById('progress-text');
         
         let progress = 0;
-        const duration = 2500; // 2.5 seconds artificial load time
+        const duration = 2500; 
         const intervalTime = 20;
         const increment = (100 / (duration / intervalTime));
 
-        // Ease-out function for smooth decelaration
         function easeOutCubic(x) {
           return 1 - Math.pow(1 - x, 3);
         }
