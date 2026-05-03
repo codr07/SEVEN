@@ -102,13 +102,13 @@ let globalSessionPromise = null;
       if (mounted) await handleSessionLoad(session);
     });
 
-    // Backup timeout: Force loading to false after 5 seconds
+    // Backup timeout: Force loading to false after 15 seconds
     const backupTimeout = setTimeout(() => {
       if (mounted && loading) {
-        console.warn('Auth initialization timed out after 5s. Forcing ready state.');
+        console.warn('Auth initialization timed out after 15s. Forcing ready state.');
         setLoading(false);
       }
-    }, 5000);
+    }, 15000);
 
     return () => {
       mounted = false;

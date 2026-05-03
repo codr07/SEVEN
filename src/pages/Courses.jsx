@@ -174,7 +174,7 @@ const Courses = () => {
                            <div className="absolute left-0 top-0 w-[390px] h-[520px] p-8 pl-16 flex flex-col pointer-events-auto">
                               <div className="relative w-full h-[180px] rounded-[24px] overflow-hidden mb-8 bg-white/5 border border-white/10 group-hover:border-primary/20 transition-colors">
                                  {course.cover_image ? (
-                                   <img src={course.cover_image} alt={course.name} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                                   <img src={course.cover_image} alt={course.name} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" loading="lazy" />
                                  ) : (
                                    <div className="w-full h-full flex items-center justify-center opacity-20"><BookOpen size={40} className="text-primary" /></div>
                                  )}
