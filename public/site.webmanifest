@@ -3,7 +3,7 @@
   "name": "5EVEN Institution",
   "description": "Premium educational experience and IT solutions platform.",
   "id": "/",
-  "start_url": "./?utm_source=pwa",
+  "start_url": "/?utm_source=pwa",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#0a0a0a",
