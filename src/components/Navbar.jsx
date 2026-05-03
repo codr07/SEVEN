@@ -189,42 +189,16 @@ const Navbar = () => {
           <img src={logoMain} alt="Logo" className="h-8 w-auto" />
           <span className="font-bold text-xl uppercase mt-1">5EVEN</span>
         </div>
-        {/* Menu trigger removed from here, now in FAB */}
+        
+        <button 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all active:scale-95"
+        >
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
       </div>
 
-      {/* Floating Mobile Menu Button */}
-      <div className="relative">
-        <motion.button
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="md:hidden fixed bottom-8 right-8 z-[10000] w-16 h-16 bg-primary text-white rounded-full shadow-[0_15px_35px_hsl(var(--primary)/0.4)] flex items-center justify-center border-4 border-white"
-        >
-          <AnimatePresence mode="wait">
-            {isMobileMenuOpen ? (
-              <motion.div
-                key="close"
-                initial={{ rotate: -90, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                exit={{ rotate: 90, opacity: 0 }}
-              >
-                <X size={28} />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="menu"
-                initial={{ rotate: 90, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                exit={{ rotate: -90, opacity: 0 }}
-              >
-                <Menu size={28} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.button>
-      </div>
+      {/* Floating Mobile Menu Button removed - now in Topbar */}
 
       {/* Mobile Menu Overlay */}
       <AnimatePresence>
