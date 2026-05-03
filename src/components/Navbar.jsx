@@ -234,9 +234,13 @@ const Navbar = () => {
             animate={{ x: 0 }} 
             exit={{ x: "100%" }} 
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[9000] bg-background flex flex-col"
+            className="fixed inset-0 z-[9000] bg-background/80 backdrop-blur-3xl flex flex-col overflow-hidden"
           >
-            <div className="flex flex-col h-full p-6 pt-12">
+            {/* Ambient Background Glows */}
+            <div className="absolute top-[-10%] right-[-20%] w-[70vw] h-[70vw] rounded-full bg-primary/30 blur-[80px] pointer-events-none" />
+            <div className="absolute bottom-[-10%] left-[-20%] w-[80vw] h-[80vw] rounded-full bg-accent/20 blur-[100px] pointer-events-none" />
+            
+            <div className="flex flex-col h-full p-6 pt-12 relative z-10">
               <div className="flex justify-between items-center mb-8">
                 <div className="flex items-center gap-3">
                   <img src={logoMain} alt="Logo" className="h-8 w-auto" />
