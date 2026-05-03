@@ -41,26 +41,26 @@
 
 @layer base {
   :root {
-    --background: 210 100% 98%;
-    --foreground: 220 80% 10%;
-    --card: 210 50% 95%; 
-    --card-foreground: 220 80% 10%;
-    --popover: 210 50% 95%;
-    --popover-foreground: 220 80% 10%;
-    --primary: 210 100% 50%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 45 100% 50%;
-    --secondary-foreground: 220 80% 10%;
-    --muted: 210 20% 90%;
-    --muted-foreground: 220 30% 40%;
-    --accent: 140 100% 40%;
-    --accent-foreground: 0 0% 100%;
+    --background: 220 30% 4%;
+    --foreground: 210 20% 98%;
+    --card: 220 25% 7%;
+    --card-foreground: 210 20% 98%;
+    --popover: 220 25% 7%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 260 100% 65%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 190 100% 50%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 220 20% 15%;
+    --muted-foreground: 220 10% 65%;
+    --accent: 320 100% 60%;
+    --accent-foreground: 210 20% 98%;
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 210 30% 85%;
-    --input: 210 30% 85%;
-    --ring: 210 100% 50%;
-    --radius: 0.75rem;
+    --destructive-foreground: 210 20% 98%;
+    --border: 260 40% 30%;
+    --input: 220 20% 15%;
+    --ring: 260 100% 65%;
+    --radius: 1.25rem;
   }
 
   * {
@@ -107,29 +107,56 @@
   }
 
   .badge-glass {
-    backdrop-filter: blur(12px) saturate(160%);
-    -webkit-backdrop-filter: blur(12px) saturate(160%);
-    background: rgba(150, 150, 150, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: black !important;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white !important;
     font-weight: 900;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
     display: inline-flex;
     align-items: center;
     justify-content: center;
   }
 
+  .institution-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1.5rem;
+    padding: 2rem;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .institution-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: hsl(var(--primary) / 0.5);
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.5);
+  }
+
+  .image-container {
+    position: relative;
+    width: 100%;
+    height: 12rem;
+    border-radius: 1rem;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+
   .cool-button {
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
     color: white;
     font-weight: 900;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.15em;
     padding: 1rem 2rem;
     border-radius: 1.25rem;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     border: none;
     cursor: pointer;
     display: inline-flex;
@@ -137,7 +164,7 @@
     justify-content: center;
     font-size: 0.75rem;
     min-height: 3.5rem;
-    box-shadow: 0 10px 25px -5px hsl(var(--primary) / 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    box-shadow: 0 15px 35px -5px rgba(var(--primary-rgb), 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
     position: relative;
     overflow: hidden;
   }
@@ -158,9 +185,9 @@
   }
 
   .cool-button:hover {
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 20px 35px -10px hsl(var(--primary) / 0.5);
-    filter: brightness(1.1);
+    transform: translateY(-6px) scale(1.03);
+    box-shadow: 0 25px 50px -10px rgba(var(--primary-rgb), 0.6);
+    filter: brightness(1.2);
   }
 
   .cool-button:active {
@@ -168,29 +195,31 @@
   }
 
   .cool-button-secondary {
-    background: white;
-    color: hsl(var(--foreground));
-    border: 1px solid hsl(var(--border));
+    background: rgba(255, 255, 255, 0.03);
+    color: hsl(var(--primary));
+    border: 1px solid rgba(var(--primary-rgb), 0.2);
     font-weight: 900;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.15em;
     padding: 1rem 2rem;
     border-radius: 1.25rem;
-    transition: all 0.3s ease;
+    transition: all 0.4s ease;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     font-size: 0.75rem;
     min-height: 3.5rem;
-    box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   }
 
   .cool-button-secondary:hover {
-    background: hsl(var(--muted) / 0.3);
-    border-color: hsl(var(--primary) / 0.4);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.1);
+    background: rgba(var(--primary-rgb), 0.08);
+    border-color: hsl(var(--primary));
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px -5px rgba(var(--primary-rgb), 0.3);
+    color: white;
   }
 
   .save-button {
@@ -238,15 +267,18 @@
   }
 
   .marquee-container {
-    mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-    -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+    mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    padding: 60px 0;
+    margin: -60px 0;
   }
 
   .marquee-track {
     display: flex;
-    gap: 1.5rem;
+    gap: 3rem;
     width: fit-content;
-    animation: marquee 40s linear infinite;
+    animation: marquee 50s linear infinite;
+    padding: 40px 0;
   }
 
   .marquee-track:hover {
@@ -280,4 +312,23 @@
 
 .animate-progress-shrink {
   animation: progress-shrink 4000ms linear forwards;
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  animation: gradient-shift 3s ease infinite;
+}
+
+.text-animate-gradient {
+  background: linear-gradient(to right, hsl(var(--primary)), hsl(var(--secondary)), hsl(var(--accent)), hsl(var(--primary)));
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gradient-shift 5s linear infinite;
 }

@@ -185,9 +185,10 @@ const PublicProfile = () => {
   return (
     <div className="min-h-screen bg-background pt-24 pb-16 px-4 sm:px-8 relative overflow-hidden flex flex-col items-center">
       {/* Background Decor */}
-      <div className="absolute top-0 inset-x-0 h-[500px] bg-gradient-to-b from-primary/10 via-background to-background pointer-events-none -z-10" />
+      <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-primary/20 blur-[120px] rounded-full pointer-events-none -z-10" />
+      <div className="absolute top-[20%] left-[-10%] w-[500px] h-[500px] bg-accent/10 blur-[100px] rounded-full pointer-events-none -z-10" />
 
-      <div className="w-full max-w-6xl mb-6 flex items-center justify-between z-10">
+      <div className="w-full max-w-6xl mb-6 flex items-center justify-between z-10 mt-10">
         <button 
           onClick={() => navigate(-1)} 
           className="flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
@@ -209,19 +210,24 @@ const PublicProfile = () => {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-6xl flex flex-col md:flex-row bg-card/60 backdrop-blur-3xl border border-border rounded-[2.5rem] shadow-2xl overflow-hidden z-10 ring-1 ring-white/5"
+        className="w-full max-w-6xl flex flex-col md:flex-row bg-white/[0.02] backdrop-blur-[40px] border border-white/10 rounded-[3rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] overflow-hidden z-10"
       >
         {/* Left Sidebar */}
-        <div className="w-full md:w-[400px] shrink-0 bg-gradient-to-b from-muted/50 to-background flex flex-col items-center p-10 md:p-12 border-b md:border-b-0 md:border-r border-border/50">
-          <div className="w-48 h-48 md:w-56 md:h-56 rounded-full border-[6px] border-background shadow-2xl overflow-hidden mb-8 relative group">
-            <div className="absolute inset-0 bg-primary/20 mix-blend-overlay group-hover:bg-transparent transition-all duration-500"></div>
-            {profile.cover_image ? (
-              <img src={profile.cover_image} alt={profile.name} className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-110" />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-primary/10 text-primary">
-                <span className="text-7xl font-black">{profile.name?.charAt(0)}</span>
-              </div>
-            )}
+        <div className="w-full md:w-[400px] shrink-0 bg-black/20 flex flex-col items-center p-10 md:p-12 border-b md:border-b-0 md:border-r border-white/10 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-primary/20 to-transparent pointer-events-none" />
+          
+          <div className="relative w-48 h-48 md:w-56 md:h-56 mb-10 group">
+            <div className="absolute -inset-1.5 rounded-full bg-gradient-to-tr from-primary via-accent to-secondary blur-md opacity-60 group-hover:opacity-100 transition duration-700"></div>
+            <div className="relative w-full h-full rounded-full border-4 border-background overflow-hidden shadow-2xl bg-card">
+              <div className="absolute inset-0 bg-primary/10 mix-blend-overlay group-hover:bg-transparent transition-all duration-500 z-10"></div>
+              {profile.cover_image ? (
+                <img src={profile.cover_image} alt={profile.name} className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-110" />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-primary/10 text-primary">
+                  <span className="text-7xl font-black">{profile.name?.charAt(0)}</span>
+                </div>
+              )}
+            </div>
           </div>
           
           <h2 className="text-3xl md:text-4xl font-black text-center text-foreground mb-2 tracking-tight">{profile.name}</h2>
@@ -241,16 +247,16 @@ const PublicProfile = () => {
             </div>
           )}
           
-          <div className="flex flex-col gap-4 w-full mt-auto">
+          <div className="flex flex-col gap-4 w-full mt-auto relative z-10">
             {profile.social_links?.map((link, idx) => (
                 link.url && link.url !== '#' && (
-                 <a key={idx} href={link.url} target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-2 bg-foreground text-background py-3.5 rounded-xl font-bold tracking-widest uppercase text-sm hover:scale-[1.02] transition-transform shadow-lg">
+                 <a key={idx} href={link.url} target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 border border-white/10 text-white py-4 rounded-2xl font-black tracking-widest uppercase text-xs hover:scale-[1.02] transition-all shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
                    {link.platform}
                  </a>
                 )
             ))}
             {profile.portfolio_url && profile.portfolio_url !== '#' && (
-               <a href={profile.portfolio_url} target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-2 text-foreground border-2 border-foreground py-3.5 rounded-xl font-bold tracking-widest uppercase text-sm hover:bg-foreground hover:text-background transition-colors">
+               <a href={profile.portfolio_url} target="_blank" rel="noreferrer" className="w-full flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 py-4 rounded-2xl font-black tracking-widest uppercase text-xs hover:scale-[1.02] transition-all">
                  <i className="ri-global-line text-lg"></i> Custom Portfolio
                </a>
             )}
@@ -258,7 +264,7 @@ const PublicProfile = () => {
         </div>
 
         {/* Right Content Area */}
-        <div className="flex-1 p-8 md:p-12 lg:p-16 relative bg-card/40">
+        <div className="flex-1 p-8 md:p-12 lg:p-16 relative bg-transparent">
           <div className="flex items-center gap-3 mb-10">
             <span className="h-10 w-2 rounded-full bg-primary block shadow-[0_0_15px_rgba(var(--primary),0.5)]"></span>
             <p className="text-2xl md:text-3xl font-black tracking-wide text-foreground uppercase">{headingLabel}</p>
@@ -276,16 +282,16 @@ const PublicProfile = () => {
             {/* Additional custom profile fields injected manually for robust DB display */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                {(profile.institution || profile.major) && (
-                 <div className="p-6 rounded-3xl bg-background border border-border shadow-sm">
-                   <span className="text-[10px] uppercase font-black text-muted-foreground tracking-widest mb-1 block">Education Background</span>
-                   {profile.institution && <p className="font-bold text-lg">{profile.institution}</p>}
-                   {profile.major && <p className="text-sm text-primary font-semibold mt-1">{profile.major}</p>}
+                 <div className="p-6 rounded-[2rem] bg-white/5 backdrop-blur-xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] group hover:bg-white/10 transition-colors">
+                   <span className="text-[10px] uppercase font-black text-primary/80 tracking-widest mb-2 block">Education Background</span>
+                   {profile.institution && <p className="font-black text-xl text-white group-hover:text-primary transition-colors">{profile.institution}</p>}
+                   {profile.major && <p className="text-sm text-muted-foreground font-bold mt-1">{profile.major}</p>}
                  </div>
                )}
                {profile.location && (
-                 <div className="p-6 rounded-3xl bg-background border border-border shadow-sm">
-                   <span className="text-[10px] uppercase font-black text-muted-foreground tracking-widest mb-1 block">Based In</span>
-                   <p className="font-bold text-lg">{profile.location}</p>
+                 <div className="p-6 rounded-[2rem] bg-white/5 backdrop-blur-xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] group hover:bg-white/10 transition-colors">
+                   <span className="text-[10px] uppercase font-black text-primary/80 tracking-widest mb-2 block">Based In</span>
+                   <p className="font-black text-xl text-white group-hover:text-accent transition-colors">{profile.location}</p>
                  </div>
                )}
             </div>
@@ -304,14 +310,14 @@ const PublicProfile = () => {
 
             {eduArr.length > 0 && (
               <div>
-                <span className="text-xs uppercase font-extrabold text-muted-foreground tracking-widest mb-5 block">Detailed Education</span>
+                <span className="text-xs uppercase font-black text-primary/80 tracking-widest mb-5 block">Detailed Education</span>
                 <ul className="flex flex-col gap-4">
                   {eduArr.map((edu, idx) => {
                     const isObject = typeof edu === 'object';
                     return (
-                      <li key={idx} className="flex items-start gap-5 p-5 rounded-2xl bg-muted/20 border border-border hover:border-primary/30 transition-colors">
-                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary shadow-inner">
-                          <i className="ri-graduation-cap-fill text-xl"></i>
+                      <li key={idx} className="flex items-start gap-5 p-6 rounded-[2rem] bg-white/5 backdrop-blur-xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] hover:bg-white/10 hover:border-primary/30 transition-all">
+                        <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 text-primary">
+                          <i className="ri-graduation-cap-fill text-2xl drop-shadow-[0_0_10px_rgba(var(--primary-rgb),0.5)]"></i>
                         </div>
                         <div className="flex flex-col mt-0.5">
                            {isObject ? (
@@ -332,10 +338,10 @@ const PublicProfile = () => {
 
             {expertiseArr.length > 0 && (
               <div>
-                <span className="text-xs uppercase font-extrabold text-muted-foreground tracking-widest mb-5 block">Domain Expertise</span>
+                <span className="text-xs uppercase font-black text-primary/80 tracking-widest mb-5 block">Domain Expertise</span>
                 <div className="flex flex-wrap gap-3">
                   {expertiseArr.map((skill, idx) => (
-                    <span key={idx} className="text-sm font-black uppercase tracking-wider px-6 py-3 rounded-xl bg-secondary/10 text-secondary border border-secondary/20 shadow-sm hover:scale-105 transition-transform">
+                    <span key={idx} className="text-xs font-black uppercase tracking-widest px-6 py-4 rounded-[1.5rem] bg-white/5 backdrop-blur-md text-white border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] hover:scale-105 hover:bg-secondary/20 hover:border-secondary/30 transition-all">
                       {skill}
                     </span>
                   ))}
@@ -345,13 +351,13 @@ const PublicProfile = () => {
 
             {gamesArr.length > 0 && (
               <div>
-                <span className="text-xs uppercase font-extrabold text-muted-foreground tracking-widest mb-5 block">Gaming Persona & Ranks</span>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                <span className="text-xs uppercase font-black text-primary/80 tracking-widest mb-5 block">Gaming Persona & Ranks</span>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                   {gamesArr.map((entry, idx) => (
-                    <div key={idx} className="bg-background/80 border border-border rounded-2xl p-6 hover:border-primary/50 transition-all group shadow-md hover:shadow-xl">
-                      <div className="flex items-start justify-between gap-3 mb-5">
+                    <div key={idx} className="bg-white/5 backdrop-blur-xl border border-white/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)] rounded-[2rem] p-6 hover:bg-white/10 hover:border-primary/40 transition-all group">
+                      <div className="flex items-start justify-between gap-3 mb-6">
                         <div className="flex items-center gap-4">
-                          <div className="w-16 h-16 rounded-xl bg-white border border-border flex items-center justify-center p-2 shadow-sm group-hover:scale-110 transition-transform">
+                          <div className="w-16 h-16 rounded-[1.25rem] bg-white/10 border border-white/20 flex items-center justify-center p-2 group-hover:scale-110 transition-transform shadow-lg">
                             <img src={entry.logoUrl || '/assets/images/img/thumb.png'} alt={entry.game} className="w-full h-full object-contain" />
                           </div>
                           <div>

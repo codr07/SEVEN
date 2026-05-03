@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase, withTimeout, filterVisible } from '../lib/supabase';
 import { Loader2, Code, Rocket, Brain, Cpu, Sparkles, BookOpen, GraduationCap, Laptop, Book as BookIcon, Zap } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform, useScroll } from 'framer-motion';
-import sevenLogo from '../assets/seven_dark.svg';
+import sevenLogo from '../assets/seven.svg';
 import ProfileModal from '../components/ProfileModal';
 import TiltCard from '../components/TiltCard';
 
@@ -67,6 +67,25 @@ const FloatingIcon = ({ icon: Icon, x, y, delay, color }) => (
   >
     <Icon size={28} className="opacity-10" />
   </motion.div>
+);
+
+const GlowingBlob = ({ color, className = "", delay = 0 }) => (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.8 }}
+    animate={{
+      opacity: [0.15, 0.3, 0.15],
+      scale: [1, 1.2, 1],
+      rotate: [0, 90, 0]
+    }}
+    transition={{
+      delay,
+      duration: 10,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }}
+    className={`absolute rounded-full blur-[60px] pointer-events-none z-0 will-change-[transform,opacity] ${className}`}
+    style={{ backgroundColor: color }}
+  />
 );
 
 const Hero3DAsset = ({ icon: Icon, x = 0, y = 0, color = "var(--color-primary)", delay = 1 }) => {
@@ -172,18 +191,12 @@ const Home = () => {
   const categories = [...new Set(courses.map(c => c.category || 'General'))].slice(0, 4);
 
   return (
-    <div className="relative w-full overflow-hidden flex flex-col bg-background text-foreground selection:bg-primary/20">
-      {/* Background */}
-      <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute top-0 left-0 w-full h-[50vh] bg-gradient-to-b from-primary/5 to-transparent"></div>
-        <div className="absolute bottom-0 left-0 w-full h-[50vh] bg-gradient-to-t from-secondary/5 to-transparent"></div>
-      </div>
-
+    <div className="relative w-full overflow-hidden flex flex-col text-foreground selection:bg-primary/20">
       {/* Hero Section */}
       <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-4 md:px-12 max-w-7xl mx-auto py-20 md:py-0 overflow-hidden">
         <div className="hidden md:block">
           <Hero3DAsset icon={BookOpen} x={-380} y={-180} color="var(--color-primary)" delay={1} />
-          <Hero3DAsset icon={GraduationCap} x={340} y={-220} color="var(--color-secondary)" delay={1.2} />
+          <Hero3DAsset icon={GraduationCap} x={340} y={-220} color="var(--color-accent)" delay={1.2} />
           <Hero3DAsset icon={Laptop} x={-420} y={120} color="var(--color-accent)" delay={1.4} />
           <Hero3DAsset icon={BookIcon} x={380} y={180} color="var(--color-primary)" delay={1.6} />
 
@@ -197,22 +210,27 @@ const Home = () => {
 
         <section className="flex flex-col items-center justify-center gap-6 md:gap-10 w-full text-center relative z-20">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1 }}>
-            <h1 className="text-5xl md:text-8xl font-black tracking-tighter leading-[0.9] mb-4 md:mb-8">
-              <span className="block text-sm md:text-2xl font-bold text-muted-foreground uppercase tracking-[0.4em] mb-2 md:mb-4">
+            <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-[0.9] mb-4 md:mb-8">
+              <span className="block text-sm md:text-xl font-bold text-muted-foreground uppercase tracking-[0.4em] mb-2 md:mb-4">
                 Redefining
               </span>
               <span className="relative inline-block text-animate-gradient drop-shadow-sm">
                 5EVEN
-                <Sparkles className="absolute -top-4 -right-8 md:-top-6 md:-right-10 w-8 h-8 md:w-12 md:h-12 text-secondary opacity-50 animate-pulse" />
+                <Sparkles className="absolute -top-4 -right-8 md:-top-6 md:-right-10 w-8 h-8 md:w-12 md:h-12 text-accent opacity-50 animate-pulse" />
               </span>
             </h1>
           </motion.div>
 
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="text-lg md:text-2xl text-muted-foreground max-w-2xl mx-auto font-medium leading-relaxed px-4">
+          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="text-base md:text-xl text-muted-foreground max-w-2xl mx-auto font-medium leading-relaxed px-4">
             Empowering the next generation with divine balance and innovation.
           </motion.p>
 
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="flex items-center justify-center gap-2 md:gap-3 flex-wrap mt-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-6 w-full">
+            <Link to="/courses" className="cool-button w-full sm:w-auto min-w-[180px] h-12 text-sm text-white">Explore Programs</Link>
+            <Link to="/contact" className="cool-button-secondary w-full sm:w-auto min-w-[180px] h-12 text-sm">Join Community</Link>
+          </motion.div>
+
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }} className="flex items-center justify-center gap-2 md:gap-3 flex-wrap mt-8">
             {categories.map((badge) => (
               <span key={badge} className="px-5 py-2 rounded-xl badge-glass text-[10px]">
                 {badge}
@@ -224,6 +242,8 @@ const Home = () => {
 
       {/* Content */}
       <div className="relative z-10 w-full flex flex-col gap-24 md:gap-32 px-4 md:px-12 max-w-7xl mx-auto pb-32">
+        <GlowingBlob color="hsl(var(--primary))" className="top-[40%] left-[-20%] w-[60%] h-[60%]" delay={1} />
+        <GlowingBlob color="hsl(var(--accent))" className="top-[60%] right-[-20%] w-[60%] h-[60%]" delay={3} />
 
         {/* Services */}
         <ScrollAnimatedSection>
@@ -236,15 +256,21 @@ const Home = () => {
                   </div>
                   <h3 className="text-2xl md:text-3xl font-black mb-3 md:mb-4">Academic Excellence</h3>
                   <p className="text-sm md:text-base text-muted-foreground leading-relaxed mb-6 md:mb-8">Structured learning programs for schools and universities.</p>
-                  <div className="flex flex-wrap gap-2">
-                    {academics.slice(0, 3).map(aca => (
-                      <span key={aca.id} className="px-3 py-1.5 rounded-lg badge-glass text-[9px]">{aca.title}</span>
-                    ))}
+                  <div className="relative pl-4 border-l-2 border-primary/30 flex flex-wrap gap-2">
+                    {academics.length > 0 ? (
+                      [...new Set(academics.map(aca => aca.title || aca.category))].slice(0, 6).map((topic, idx) => (
+                        <span key={idx} className="px-3 py-1.5 rounded-lg badge-glass text-[9px] hover:scale-105 transition-transform">{topic}</span>
+                      ))
+                    ) : (
+                      ['School Prep', 'University Support', 'Skill Mastery'].map((topic, idx) => (
+                        <span key={idx} className="px-3 py-1.5 rounded-lg badge-glass text-[9px]">{topic}</span>
+                      ))
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mt-8 md:mt-12">
-                  <Link to="/academics" className="w-full sm:flex-1 cool-button h-12 md:h-14">Learn More</Link>
-                  <Link to="/notes" className="w-full sm:flex-1 cool-button-secondary h-12 md:h-14">Notes</Link>
+                  <Link to="/academics" className="w-full sm:flex-1 cool-button h-12 md:h-14">Academic Path</Link>
+                  <Link to="/notes" className="w-full sm:flex-1 cool-button-secondary h-12 md:h-14">Study Desk</Link>
                 </div>
               </div>
             </TiltCard>
@@ -257,14 +283,20 @@ const Home = () => {
                   </div>
                   <h3 className="text-2xl md:text-3xl font-black mb-3 md:mb-4">Professional Services</h3>
                   <p className="text-sm md:text-base text-muted-foreground leading-relaxed mb-6 md:mb-8">Digital solutions and commercial support for students.</p>
-                  <div className="flex flex-wrap gap-2">
-                    {services.slice(0, 3).map(srv => (
-                      <span key={srv.id} className="px-3 py-1.5 rounded-lg badge-glass text-[9px]">{srv.title}</span>
-                    ))}
+                  <div className="relative pl-4 border-l-2 border-secondary/30 flex flex-wrap gap-2">
+                    {services.length > 0 ? (
+                      [...new Set(services.map(srv => srv.title || srv.category))].slice(0, 6).map((topic, idx) => (
+                        <span key={idx} className="px-3 py-1.5 rounded-lg badge-glass text-[9px] hover:scale-105 transition-transform">{topic}</span>
+                      ))
+                    ) : (
+                      ['Web Dev', 'IT Solutions', 'Digital Presence'].map((topic, idx) => (
+                        <span key={idx} className="px-3 py-1.5 rounded-lg badge-glass text-[8px] text-primary border-primary/20">{topic}</span>
+                      ))
+                    )}
                   </div>
                 </div>
                 <div className="flex mt-8 md:mt-12">
-                  <Link to="/services" className="w-full cool-button h-12 md:h-14">Explore Services</Link>
+                  <Link to="/services" className="w-full cool-button h-12 md:h-14">Explore Offerings</Link>
                 </div>
               </div>
             </TiltCard>
@@ -275,21 +307,21 @@ const Home = () => {
         <ScrollAnimatedSection>
           <div className="flex flex-col items-center text-center gap-10 md:gap-16 w-full">
             <div className="flex flex-col gap-2 md:gap-4">
-              <h2 className="text-3xl md:text-6xl font-black tracking-tight">The 5EVEN Philosophy</h2>
+              <h2 className="text-3xl md:text-4xl font-black tracking-tight">The 5EVEN Philosophy</h2>
               <p className="text-sm md:text-base text-muted-foreground max-w-2xl font-medium px-4">Ancient wisdom meets modern technology.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 w-full">
               {[
-                { img: "https://pngimg.com/uploads/globe/globe_PNG100087.png", title: "5 Elements", desc: "Foundation of everything." },
-                { img: "https://i.pinimg.com/736x/82/b0/d9/82b0d91458e8291ddf1529f14c171c1d.jpg", title: "7 Chakras", desc: "Aligning energy centers." },
-                { img: sevenLogo, title: "Divine Union", desc: "Synergy of 5 and 7." }
+                { img: "https://pngimg.com/uploads/globe/globe_PNG100087.png", title: "5 Elements", desc: "Foundation of everything.", color: "primary", border: "border-t-primary", bg: "bg-primary/10", text: "text-primary", innerBorder: "border-primary/20" },
+                { img: "https://i.pinimg.com/736x/82/b0/d9/82b0d91458e8291ddf1529f14c171c1d.jpg", title: "7 Chakras", desc: "Aligning energy centers.", color: "secondary", border: "border-t-secondary", bg: "bg-secondary/10", text: "text-secondary", innerBorder: "border-secondary/20" },
+                { img: sevenLogo, title: "Divine Union", desc: "Synergy of 5 and 7.", color: "accent", border: "border-t-accent", bg: "bg-accent/10", text: "text-accent", innerBorder: "border-accent/20" }
               ].map((item, idx) => (
-                <div key={idx} className="institution-card p-6 md:p-10 flex flex-col items-center gap-4 md:gap-6 group">
-                  <div className="w-20 h-20 md:w-24 md:h-24 rounded-full bg-muted/20 p-4 group-hover:scale-105 transition-transform">
-                    <img src={item.img} className="w-full h-full object-cover rounded-full" alt={item.title} />
+                <div key={idx} className={`institution-card p-6 md:p-10 flex flex-col items-center gap-4 md:gap-6 group border-t-4 ${item.border}`}>
+                  <div className={`w-20 h-20 md:w-24 md:h-24 rounded-full ${item.bg} p-4 group-hover:scale-105 transition-transform border ${item.innerBorder}`}>
+                    <img src={item.img} className="w-full h-full object-cover rounded-full" alt={item.title} loading="lazy" />
                   </div>
-                  <h4 className="text-xl md:text-2xl font-black">{item.title}</h4>
+                  <h4 className={`text-xl md:text-2xl font-black ${item.text}`}>{item.title}</h4>
                   <p className="text-xs md:text-sm text-muted-foreground px-2">{item.desc}</p>
                 </div>
               ))}
@@ -315,13 +347,13 @@ const Home = () => {
                     {founders.map(founder => (
                       <TiltCard key={founder.id}>
                         <div className="institution-card p-6 md:p-8 flex flex-col items-center text-center group h-full">
-                          <div className="w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-white shadow-lg mb-6">
-                            <img src={founder.cover_image || 'https://via.placeholder.com/150'} alt={founder.name} className="w-full h-full object-cover" />
+                          <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-white shadow-2xl mb-8 group-hover:scale-105 transition-transform duration-500">
+                            <img src={founder.cover_image || 'https://via.placeholder.com/150'} alt={founder.name} className="w-full h-full object-cover" loading="lazy" />
                           </div>
                           <h4 className="text-xl md:text-2xl font-black mb-1">{founder.name}</h4>
                           <p className="text-[8px] md:text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-4 md:mb-6">{founder.role}</p>
                           <p className="text-xs md:text-sm text-muted-foreground italic mb-6 md:mb-8 px-2">"{founder.bio}"</p>
-                          <button onClick={() => { setSelectedProfile(founder); setProfileType('founder'); }} className="w-full h-12 md:h-14 cool-button mt-auto">View Story</button>
+                          <button onClick={() => { setSelectedProfile(founder); setProfileType('founder'); }} className="w-full h-12 md:h-14 cool-button mt-auto">Read Journey</button>
                         </div>
                       </TiltCard>
                     ))}
@@ -333,27 +365,29 @@ const Home = () => {
                 <div className="flex flex-col gap-8 md:gap-12 w-full overflow-hidden">
                   <div className="flex flex-col items-center gap-2">
                     <h2 className="text-3xl md:text-4xl font-black text-animate-gradient">Expert Mentors</h2>
-                    <p className="text-[8px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest">&larr; Swipe &rarr;</p>
+                    <p className="text-[8px] md:text-[10px] font-black text-muted-foreground uppercase tracking-widest">Meet our expertise</p>
                   </div>
-                  
+
                   <div className="relative w-full marquee-container">
                     {/* Fades */}
                     <div className="absolute inset-y-0 left-0 w-12 md:w-32 bg-gradient-to-r from-background to-transparent z-20 pointer-events-none"></div>
                     <div className="absolute inset-y-0 right-0 w-12 md:w-32 bg-gradient-to-l from-background to-transparent z-20 pointer-events-none"></div>
-                    
-                    <div className="overflow-x-auto no-scrollbar scroll-smooth">
-                      <div className="marquee-track px-4 md:px-32">
+
+                    <div className="overflow-x-auto no-scrollbar scroll-smooth overflow-y-visible py-20">
+                      <div className="marquee-track px-4 md:px-32 flex gap-8">
                         {[...faculties, ...faculties].map((fac, idx) => (
                           <div key={`${fac.id}-${idx}`} className="min-w-[280px] md:min-w-[420px]">
-                            <div className="institution-card p-6 md:p-8 flex flex-col items-center text-center h-full">
-                              <div className="w-24 h-24 md:w-28 md:h-28 rounded-full overflow-hidden border-4 border-white shadow-md mb-6">
-                                <img src={fac.cover_image || 'https://via.placeholder.com/150'} alt={fac.name} className="w-full h-full object-cover" />
+                            <TiltCard>
+                              <div className="institution-card p-6 md:p-8 flex flex-col items-center text-center h-[450px] group">
+                                <div className="w-24 h-24 md:w-28 md:h-28 rounded-2xl overflow-hidden border-2 border-white/10 mb-6 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                                  <img src={fac.cover_image || 'https://via.placeholder.com/150'} alt={fac.name} className="w-full h-full object-cover" loading="lazy" />
+                                </div>
+                                <h4 className="text-lg md:text-xl font-black mb-1">{fac.name}</h4>
+                                <p className="text-[8px] md:text-[10px] font-black text-primary uppercase tracking-widest mb-4 md:mb-6">{fac.topic || fac.department}</p>
+                                <p className="text-xs md:text-sm text-muted-foreground line-clamp-3 mb-6 md:mb-8 italic opacity-60">"{fac.bio || fac.description}"</p>
+                                <button onClick={() => { setSelectedProfile(fac); setProfileType('faculty'); }} className="w-full h-12 md:h-14 cool-button-secondary mt-auto">Full Profile</button>
                               </div>
-                              <h4 className="text-lg md:text-xl font-black mb-1">{fac.name}</h4>
-                              <p className="text-[8px] md:text-[10px] font-black text-primary uppercase tracking-widest mb-4 md:mb-6">{fac.topic || fac.department}</p>
-                              <p className="text-xs md:text-sm text-muted-foreground line-clamp-3 mb-6 md:mb-8 italic">"{fac.bio || fac.description}"</p>
-                              <button onClick={() => { setSelectedProfile(fac); setProfileType('faculty'); }} className="w-full h-12 md:h-14 cool-button-secondary mt-auto">Details</button>
-                            </div>
+                            </TiltCard>
                           </div>
                         ))}
                       </div>

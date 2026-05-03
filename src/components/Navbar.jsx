@@ -7,7 +7,7 @@ import { ChevronDown, Menu, X, Home, BookOpen, GraduationCap, FileText, Briefcas
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
-import logoLight from '../assets/seven_dark.svg';
+import logoMain from '../assets/seven.svg';
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -105,7 +105,7 @@ const Navbar = () => {
   const SidebarContent = ({ collapsed }) => (
     <div className="flex flex-col h-full w-full">
       <div className={cn("flex items-center gap-4 py-8 transition-all duration-300", collapsed ? "px-0 justify-center" : "px-6")}>
-        <img src={logoLight} alt="5EVEN" className="h-10 w-auto" />
+        <img src={logoMain} alt="5EVEN" className="h-10 w-auto" />
         {!collapsed && <span className="font-bold text-2xl uppercase tracking-widest mt-1">5EVEN</span>}
       </div>
 
@@ -118,7 +118,7 @@ const Navbar = () => {
               to={item.path}
               className={({ isActive }) => cn(
                 "flex items-center rounded-xl text-sm font-black uppercase tracking-widest transition-all",
-                isActive ? "bg-foreground text-background shadow-lg shadow-foreground/10" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                isActive ? "bg-gradient-to-r from-primary to-accent text-white shadow-[0_8px_20px_-6px_rgba(var(--primary-rgb),0.6),inset_0_1px_1px_rgba(255,255,255,0.4)] border border-white/20" : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 collapsed ? "py-4 justify-center" : "px-4 py-3 gap-3"
               )}
             >
@@ -176,17 +176,17 @@ const Navbar = () => {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className={cn("hidden md:flex sticky top-0 h-screen border-r border-border bg-white z-50 transition-all duration-300", isDesktopCollapsed ? "w-20" : "w-64")}>
+      <aside className={cn("hidden md:flex sticky top-0 h-screen border-r border-border bg-card z-50 transition-all duration-300", isDesktopCollapsed ? "w-20" : "w-64")}>
         <SidebarContent collapsed={isDesktopCollapsed} />
-        <button onClick={() => setIsDesktopCollapsed(!isDesktopCollapsed)} className="absolute top-10 -right-4 w-8 h-8 rounded-full border border-border bg-white shadow-md flex items-center justify-center hover:bg-primary hover:text-white transition-all">
+        <button onClick={() => setIsDesktopCollapsed(!isDesktopCollapsed)} className="absolute top-10 -right-4 w-8 h-8 rounded-full border border-border bg-card shadow-md flex items-center justify-center hover:bg-primary hover:text-white transition-all">
           {isDesktopCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
       </aside>
 
       {/* Mobile Topbar */}
-      <div className="md:hidden sticky top-0 h-20 bg-white/80 backdrop-blur-md border-b border-border z-[100] flex items-center justify-between px-6">
+      <div className="md:hidden sticky top-0 h-20 bg-background/80 backdrop-blur-md border-b border-border z-[100] flex items-center justify-between px-6">
         <div className="flex items-center gap-3">
-          <img src={logoLight} alt="Logo" className="h-8 w-auto" />
+          <img src={logoMain} alt="Logo" className="h-8 w-auto" />
           <span className="font-bold text-xl uppercase mt-1">5EVEN</span>
         </div>
         {/* Menu trigger removed from here, now in FAB */}
@@ -234,12 +234,12 @@ const Navbar = () => {
             animate={{ x: 0 }} 
             exit={{ x: "100%" }} 
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[9000] bg-white flex flex-col"
+            className="fixed inset-0 z-[9000] bg-background flex flex-col"
           >
             <div className="flex flex-col h-full p-6 pt-12">
               <div className="flex justify-between items-center mb-8">
                 <div className="flex items-center gap-3">
-                  <img src={logoLight} alt="Logo" className="h-8 w-auto" />
+                  <img src={logoMain} alt="Logo" className="h-8 w-auto" />
                   <span className="font-black text-xl uppercase mt-1">5EVEN</span>
                 </div>
                 <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-muted rounded-full hover:bg-muted/80 transition-colors">
@@ -250,7 +250,7 @@ const Navbar = () => {
               {/* Mobile Profile Section */}
               {user && (
                 <div className="mb-6 p-5 rounded-2xl bg-muted/30 border border-border flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black text-lg border-2 border-white shadow-sm overflow-hidden">
+                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black text-lg border-2 border-border shadow-sm overflow-hidden">
                     {profile?.avatar_url ? (
                       <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
@@ -274,7 +274,7 @@ const Navbar = () => {
                     onClick={() => setIsMobileMenuOpen(false)} 
                     className={({ isActive }) => cn(
                       "flex items-center gap-5 p-4 rounded-xl text-lg font-black uppercase tracking-widest transition-all",
-                      isActive ? "bg-foreground text-background shadow-xl shadow-foreground/20" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                      isActive ? "bg-gradient-to-r from-primary to-accent text-white shadow-[0_10px_30px_-10px_rgba(var(--primary-rgb),0.7),inset_0_1px_1px_rgba(255,255,255,0.4)] border border-white/20" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                     )}
                   >
                     <item.icon size={22} />
@@ -321,8 +321,8 @@ const Navbar = () => {
 
       {/* Auth Modal */}
       {isLoginOpen && (
-        <div className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl relative">
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-md rounded-3xl p-8 shadow-2xl relative border border-border">
             <button onClick={() => setIsLoginOpen(false)} className="absolute top-4 right-4 p-2 hover:bg-muted rounded-full"><X size={20} /></button>
             <h2 className="text-2xl font-black uppercase tracking-widest mb-8">{isSignUpMode ? 'Create Account' : 'Welcome Back'}</h2>
             

@@ -20,8 +20,29 @@ import {
   X,
   Eye,
   EyeOff,
-  Search
+  Search,
+  Laptop,
+  Code,
+  Cpu,
+  Rocket
 } from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer, 
+  LineChart, 
+  Line,
+  PieChart, 
+  Pie, 
+  Cell, 
+  Legend,
+  AreaChart,
+  Area
+} from 'recharts';
 import { useAlert } from '../context/AlertContext';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -44,6 +65,12 @@ const CONTENT_TABLES = [
   { id: 'faculty', name: 'Faculty' },
   { id: 'notes', name: 'Notes' },
   { id: 'founders', name: 'Founders' },
+];
+
+const ALL_TABLES = [
+  ...CONTENT_TABLES,
+  { id: 'profiles', name: 'Users' },
+  { id: 'student_submissions', name: 'Submissions' }
 ];
 
 const ADMIN_TABS = [
@@ -131,6 +158,7 @@ const SevenMod = () => {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState([]);
+  const [graphTimeframes, setGraphTimeframes] = useState({});
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -257,19 +285,53 @@ const SevenMod = () => {
   }, [activeTab, adminUser, adminRole]);
 
   const fetchStats = async () => {
-    const countTargets = [...CONTENT_TABLES.map((t) => t.id), 'profiles', 'student_submissions'];
+    const now = new Date();
+    const oneDay = 24 * 60 * 60 * 1000;
+    const today = new Date(now.getTime() - oneDay);
+    const lastWeek = new Date(now.getTime() - 7 * oneDay);
+    const lastMonth = new Date(now.getTime() - 30 * oneDay);
+    const lastQuarter = new Date(now.getTime() - 90 * oneDay);
 
-    try {
-      const results = await Promise.all(
-        countTargets.map(async (tableName) => {
-          const { count } = await adminSupabase.from(tableName).select('*', { count: 'exact', head: true });
-          return { tableName, count: count || 0 };
-        })
-      );
-      setStats(results);
-    } catch (err) {
-      console.error('Failed to fetch stats:', err);
-    }
+    const tableStats = await Promise.all(
+      ALL_TABLES.map(async (table) => {
+        const { data, error } = await adminSupabase
+          .from(table.id)
+          .select('*');
+        
+        let subCategories = {};
+        let totalStats = { Daily: 0, Weekly: 0, Monthly: 0, Quarterly: 0, Lifetime: (data || []).length };
+
+        (data || []).forEach(item => {
+          const typeName = item.category || item.role || item.topic || item.type || item.submission_type || 'General';
+          if (!subCategories[typeName]) {
+            subCategories[typeName] = { Daily: 0, Weekly: 0, Monthly: 0, Quarterly: 0, Lifetime: 0 };
+          }
+          subCategories[typeName].Lifetime++;
+
+          if (!item.created_at) return;
+          const created = new Date(item.created_at);
+          
+          if (created >= today) { totalStats.Daily++; subCategories[typeName].Daily++; }
+          if (created >= lastWeek) { totalStats.Weekly++; subCategories[typeName].Weekly++; }
+          if (created >= lastMonth) { totalStats.Monthly++; subCategories[typeName].Monthly++; }
+          if (created >= lastQuarter) { totalStats.Quarterly++; subCategories[typeName].Quarterly++; }
+        });
+
+        const subCatArray = Object.keys(subCategories).map(key => ({
+          name: key,
+          ...subCategories[key]
+        }));
+
+        return { 
+          tableName: table.id, 
+          name: table.name,
+          count: totalStats.Lifetime,
+          ...totalStats,
+          subCategories: subCatArray
+        };
+      })
+    );
+    setStats(tableStats);
   };
 
   const fetchTable = async (tableName) => {
@@ -377,7 +439,11 @@ const SevenMod = () => {
       .eq('id', item.id);
 
     if (error) {
-      showAlert(error.message, 'error');
+      if (error.code === '42703') {
+        showAlert(`Visibility toggle not supported for ${tableName} (missing column)`, 'error');
+      } else {
+        showAlert(error.message, 'error');
+      }
       return;
     }
 
@@ -510,8 +576,7 @@ const SevenMod = () => {
             <p className="text-sm text-muted-foreground mt-1">Manage all data, users, and publishing workflow.</p>
           </div>
 
-          {CONTENT_TABLES.some((t) => t.id === activeTab) && (
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mt-4 sm:mt-0">
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mt-4 sm:mt-0">
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                 <input
@@ -521,32 +586,142 @@ const SevenMod = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-9 pr-4 py-3 md:py-3.5 rounded-2xl bg-card border border-border text-sm outline-none focus:border-primary transition-all"
                 />
-              </div>
+              </div>          <div className="flex items-center gap-4">
+            {(CONTENT_TABLES.some(t => t.id === activeTab) || activeTab === 'student_submissions') && (
               <button
                 onClick={() => {
                   setEditingItem(null);
                   setIsModalOpen(true);
                 }}
-                className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-black text-white font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-3 hover:-translate-y-1 hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-black/20 shrink-0 border border-white/10"
+                className="cool-button px-6 h-12 text-white flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
               >
-                <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
-                  <Plus size={16} />
-                </div>
-                Add New Entry
+                <Plus size={16} /> New Entry
               </button>
+            )}
+          </div>
             </div>
-          )}
         </header>
 
         {activeTab === 'dashboard' && (
-          <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            {stats.map((item) => (
-              <div key={item.tableName} className="p-5 rounded-2xl border border-border bg-card">
-                <p className="text-xs uppercase tracking-widest font-black text-muted-foreground">{item.tableName}</p>
-                <p className="text-3xl font-black mt-1">{item.count}</p>
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
+            {/* Stats Grid */}
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {stats.map((item, idx) => (
+                <motion.div 
+                  key={item.tableName}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="relative group overflow-hidden p-6 rounded-[32px] border border-white/10 bg-card hover:border-primary/50 transition-all shadow-xl"
+                >
+                  <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-all" />
+                  <p className="text-[10px] uppercase tracking-[0.3em] font-black text-muted-foreground mb-2">{item.tableName.replace('_', ' ')}</p>
+                  <div className="flex items-end justify-between">
+                    <p className="text-4xl font-black tracking-tighter">{item.count}</p>
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                      {idx % 4 === 0 ? <Package size={20} /> : idx % 4 === 1 ? <Users size={20} /> : idx % 4 === 2 ? <FileText size={20} /> : <Settings size={20} />}
+                    </div>
+                  </div>
+                  <div className="mt-4 h-1 w-full bg-muted/30 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min((item.count / 100) * 100, 100)}%` }}
+                      className="h-full bg-gradient-to-r from-primary to-accent"
+                    />
+                  </div>
+                </motion.div>
+              ))}
+            </section>
+
+            <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+              <div className="bg-card border border-white/5 p-8 rounded-[40px] shadow-2xl relative overflow-hidden group">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground mb-8 flex items-center gap-3">
+                  <div className="w-2 h-8 bg-primary rounded-full" />
+                  Product Distribution
+                </h3>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={stats.filter(s => CONTENT_TABLES.some(t => t.id === s.tableName))}
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="count"
+                        nameKey="tableName"
+                      >
+                        {stats.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={['#A855F7', '#EC4899', '#3B82F6', '#10B981'][index % 4]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px' }}
+                      />
+                      <Legend verticalAlign="bottom" height={36}/>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            ))}
-          </motion.section>
+
+              <div className="bg-card border border-white/5 p-8 rounded-[40px] shadow-2xl relative overflow-hidden group col-span-1 lg:col-span-2">
+                <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent pointer-events-none" />
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground mb-8 flex items-center gap-3">
+                  <div className="w-2 h-8 bg-accent rounded-full" />
+                  Growth Analytics
+                </h3>
+                <div className="grid grid-cols-1 gap-8">
+                  {stats.filter(s => CONTENT_TABLES.some(t => t.id === s.tableName) || s.tableName === 'profiles').map((stat, idx) => {
+                    const timeframe = graphTimeframes[stat.tableName] || 'Lifetime';
+                    const data = stat.subCategories || [];
+                    
+                    return (
+                      <div key={stat.tableName} className="h-[320px] w-full bg-black/5 dark:bg-white/5 rounded-3xl p-6 border border-black/5 dark:border-white/5 flex flex-col">
+                        <div className="flex items-center justify-between mb-4">
+                          <p className="text-sm font-black uppercase tracking-widest text-muted-foreground">{stat.name}</p>
+                          <p className="text-2xl font-black text-primary">{stat[timeframe]}</p>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-1 mb-6 bg-black/10 dark:bg-white/5 p-1 rounded-xl">
+                          {['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Lifetime'].map(tf => (
+                            <button
+                              key={tf}
+                              onClick={() => setGraphTimeframes(prev => ({...prev, [stat.tableName]: tf}))}
+                              className={`flex-1 py-1.5 px-1 sm:px-2 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider rounded-lg transition-all ${timeframe === tf ? 'bg-white dark:bg-white/10 shadow-sm text-primary' : 'text-muted-foreground hover:bg-white/5'}`}
+                            >
+                              {tf}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="flex-1 w-full relative">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700 }} />
+                              <YAxis axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} allowDecimals={false} />
+                              <Tooltip 
+                                contentStyle={{ backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', color: '#fff', fontSize: '12px' }}
+                                cursor={{ stroke: 'rgba(255,255,255,0.05)', strokeWidth: 2 }}
+                              />
+                              <Line 
+                                type="monotone" 
+                                dataKey={timeframe} 
+                                stroke={['#A855F7', '#EC4899', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'][idx % 6]} 
+                                strokeWidth={3} 
+                                dot={{ r: 4, strokeWidth: 2, fill: '#111' }} 
+                                activeDot={{ r: 6, strokeWidth: 0 }} 
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+          </motion.div>
         )}
 
         {CONTENT_TABLES.some((t) => t.id === activeTab) && (
@@ -599,8 +774,18 @@ const SevenMod = () => {
                       ))}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                      {visibleTableData.map((item) => (
-                        <article key={item.id} className="p-6 rounded-3xl border border-border bg-card space-y-5 hover:shadow-xl hover:shadow-primary/5 transition-all">
+                      {visibleTableData.map((item) => {
+                        const itemCategory = item.category || item.topic || item.role || item.submission_type || item.type || 'General';
+                        return (
+                          <article key={item.id} className="relative pl-12 p-6 rounded-3xl border border-primary/20 bg-card space-y-5 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all overflow-hidden h-full flex flex-col">
+                            {/* Vertical Category Line */}
+                            <div className="absolute left-0 top-0 bottom-0 w-10 flex flex-col items-center py-4 bg-primary/5 border-r border-primary/20">
+                              <div className="flex-1 w-px bg-gradient-to-b from-primary/50 to-transparent mb-4" />
+                              <div className="text-[8px] font-black text-primary rotate-180 uppercase tracking-[0.3em] [writing-mode:vertical-lr] whitespace-nowrap opacity-70">
+                                {itemCategory}
+                              </div>
+                              <div className="flex-1 w-px bg-gradient-to-t from-primary/50 to-transparent mt-4" />
+                            </div>
                           <div className="flex gap-4">
                             {(item.cover_image || item.image_url || item.thumbnail || item.avatar_url) && (
                               <div className="w-20 h-20 rounded-2xl overflow-hidden border border-border flex-shrink-0 bg-muted">
@@ -634,15 +819,15 @@ const SevenMod = () => {
                             >
                               {item.extra_details?.is_visible === false ? <EyeOff size={14} /> : <Eye size={14} />}
                             </button>
-                            <button
-                              onClick={() => {
-                                setEditingItem(item);
-                                setIsModalOpen(true);
-                              }}
-                              className="flex-1 px-4 py-2.5 rounded-xl border border-border text-[10px] uppercase tracking-widest font-black flex items-center justify-center gap-2 hover:bg-background"
-                            >
-                              <Pencil size={12} /> Edit
-                            </button>
+                                                  <button
+                      onClick={() => {
+                        setEditingItem(item);
+                        setIsModalOpen(true);
+                      }}
+                      className="flex-1 px-4 py-3 rounded-xl border-2 border-primary/30 text-[10px] uppercase tracking-widest font-black flex items-center justify-center gap-2 hover:bg-primary/10 transition-all text-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]"
+                    >
+                      <Pencil size={12} /> Edit Entry
+                    </button>
                             <button
                               onClick={() => removeItem(activeTab, item.id)}
                               className="px-4 py-2.5 rounded-xl border border-destructive/40 text-destructive hover:bg-destructive/10 transition-all"
@@ -650,8 +835,9 @@ const SevenMod = () => {
                               <Trash2 size={14} />
                             </button>
                           </div>
-                        </article>
-                      ))}
+                          </article>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -683,6 +869,16 @@ const SevenMod = () => {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingItem(item);
+                          setIsModalOpen(true);
+                        }}
+                        className="px-3 py-2 rounded-xl border border-border text-primary hover:bg-primary/10 transition-all"
+                        title="Edit profile"
+                      >
+                        <Pencil size={14} />
+                      </button>
                       <select
                         value={item.role || 'student'}
                         onChange={(e) => updateUserRole(item.id, e.target.value)}
@@ -732,6 +928,16 @@ const SevenMod = () => {
 
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
+                        onClick={() => {
+                          setEditingItem(item);
+                          setIsModalOpen(true);
+                        }}
+                        className="px-4 py-2 rounded-xl border border-border text-primary text-xs font-black uppercase tracking-widest hover:bg-primary/10 transition-all"
+                      >
+                        Edit
+                      </button>
+
+                      <button
                         onClick={() => togglePush(item)}
                         className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest ${item.is_pushed ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-green-500/10 text-green-600 dark:text-green-400'
                           }`}
@@ -765,7 +971,7 @@ const SevenMod = () => {
         )}
       </main>
 
-      {isModalOpen && CONTENT_TABLES.some((t) => t.id === activeTab) && (
+      {isModalOpen && (CONTENT_TABLES.some((t) => t.id === activeTab) || activeTab === 'users' || activeTab === 'student_submissions') && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
@@ -799,7 +1005,13 @@ const SevenMod = () => {
                 onCancel={() => setIsModalOpen(false)}
                 onSuccess={() => {
                   setIsModalOpen(false);
-                  fetchTable(activeTab);
+                  if (activeTab === 'users') {
+                    fetchUsers();
+                  } else if (activeTab === 'student_submissions') {
+                    fetchSubmissions();
+                  } else {
+                    fetchTable(activeTab);
+                  }
                   fetchStats();
                 }}
                 adminId={adminUser?.id}
@@ -968,7 +1180,24 @@ const StatusBadge = ({ pushed, status }) => (
 
 const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
   const { showAlert } = useAlert();
-  const [formData, setFormData] = useState(initialData || {});
+  const [formData, setFormData] = useState(() => {
+    if (!initialData) return {};
+    let normalized = { ...initialData };
+    // Ensure extra_details is an object if it comes back as a string
+    if (typeof normalized.extra_details === 'string') {
+      try { 
+        normalized.extra_details = JSON.parse(normalized.extra_details); 
+        if (typeof normalized.extra_details !== 'object' || normalized.extra_details === null) {
+          normalized.extra_details = {};
+        }
+      } catch { 
+        normalized.extra_details = {}; 
+      }
+    } else if (!normalized.extra_details) {
+      normalized.extra_details = {};
+    }
+    return normalized;
+  });
   const [loading, setLoading] = useState(false);
 
   const fields = useMemo(() => {
@@ -1052,6 +1281,24 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
           { name: 'extra_details.books', type: 'string_array', label: 'Written Books (Comma separated)' },
           { name: 'extra_details.gamesPlayed', type: 'json', label: 'Games Played JSON Profile' }
         ];
+      case 'users':
+      case 'profiles':
+      case 'profiles_edit':
+        return [
+          { name: 'username', type: 'text', label: 'Username', required: true },
+          { name: 'full_name', type: 'text', label: 'Full Name' },
+          { name: 'phone', type: 'text', label: 'Phone' },
+          { name: 'avatar_url', type: 'text', label: 'Avatar URL' },
+          { name: 'role', type: 'text', label: 'Role (admin/student)' },
+        ];
+      case 'student_submissions':
+        return [
+          { name: 'title', type: 'text', label: 'Title', required: true },
+          { name: 'submission_type', type: 'text', label: 'Type', required: true },
+          { name: 'summary', type: 'textarea', label: 'Summary' },
+          { name: 'content_url', type: 'text', label: 'Content/Project URL' },
+          { name: 'is_pushed', type: 'boolean', label: 'Push to Live?' },
+        ];
       default:
         return [];
     }
@@ -1085,21 +1332,47 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
     setLoading(true);
 
     try {
-      const payload = { ...formData };
+      // 1. Filter payload to ONLY include valid fields for this table
+      const validKeys = fields.map(f => f.name.split('.')[0]);
+      const uniqueKeys = [...new Set(validKeys)];
+      
+      const payload = {};
+      uniqueKeys.forEach(key => {
+        if (formData[key] !== undefined) {
+          // FORCEFUL FIX: If we are updating an existing entry, ONLY send keys that were returned from the database
+          if (initialData?.id && !(key in initialData)) {
+            console.warn(`Skipping key "${key}" because it does not exist in the original database row.`);
+            return;
+          }
+          // FORCEFUL FIX 2: Explicitly strip extra_details for academics because the DB column doesn't exist yet, which breaks Inserts
+          if (table === 'academics' && key === 'extra_details') {
+            return;
+          }
+          payload[key] = formData[key];
+        }
+      });
+
+      // 2. Remove metadata
       delete payload.id;
       delete payload.created_at;
       delete payload.updated_at;
 
-      if (initialData?.id) {
-        const { error } = await adminSupabase.from(table).update(payload).eq('id', initialData.id);
-        if (error) throw error;
-      } else {
-        const { error } = await adminSupabase.from(table).insert([payload]);
-        if (error) throw error;
+      const actualTable = (table === 'profiles_edit' || table === 'users') ? 'profiles' : table;
+      
+      const { data, error } = initialData?.id 
+        ? await adminSupabase.from(actualTable).update(payload).eq('id', initialData.id).select()
+        : await adminSupabase.from(actualTable).insert([payload]).select();
+
+      if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Update failed. You might not have permission (RLS blocked), or the record was not found.');
       }
+      
+      showAlert(initialData?.id ? 'Updated successfully' : 'Created successfully', 'success');
 
       onSuccess();
     } catch (err) {
+      console.error('Admin save error:', err);
       showAlert(err.message || 'Save failed', 'error');
     } finally {
       setLoading(false);
@@ -1186,7 +1459,7 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
           className="save-button w-full md:w-auto text-[11px]"
         >
           {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} 
-          <span>{editingItem ? 'Save Changes' : 'Create Entry'}</span>
+          <span>{initialData ? 'Save Changes' : 'Create Entry'}</span>
         </button>
       </div>
     </form>

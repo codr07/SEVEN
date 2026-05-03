@@ -24,6 +24,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
 import { supabase, withTimeout } from '../lib/supabase';
+import SignatureButton from '../components/SignatureButton';
 
 const INITIAL_SIGNUP = {
   username: '',
@@ -868,8 +869,14 @@ const PublicFeed = ({ loadingData, posts }) => (
                 By {item.author_profile?.full_name || item.author_profile?.username || 'Student'}
               </p>
               {item.content_url && (
-                <a href={item.content_url} target="_blank" rel="noreferrer" className="text-xs font-black uppercase tracking-widest text-primary hover:underline">
-                  Open
+                <a href={item.content_url} target="_blank" rel="noreferrer">
+                  <SignatureButton 
+                    label="Open" 
+                    size="w-10 h-10" 
+                    iconSize={14} 
+                    labelSize="text-[5px]" 
+                    translateY="translate-y-2.5" 
+                  />
                 </a>
               )}
             </div>

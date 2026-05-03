@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import sevenLogoLight from '../assets/seven_dark.svg';
-import sevenLogoDark from '../assets/seven_dark.svg';
+import sevenLogo from '../assets/seven.svg';
 import { useTheme } from '../context/ThemeContext';
 import { motion } from 'framer-motion';
 
@@ -17,7 +16,7 @@ const Footer = () => {
           <div className="col-span-1 md:col-span-2 flex flex-col gap-6">
             <Link to="/" className="flex items-center gap-3">
               <img
-                src={theme === 'dark' ? sevenLogoDark : sevenLogoLight}
+                src={sevenLogo}
                 alt="5EVEN Logo"
                 className="h-10 w-auto object-contain"
               />

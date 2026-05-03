@@ -1,8 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { useTheme } from '../context/ThemeContext';
-import logoLight from '../assets/seven.svg';
-import logoDark from '../assets/seven_dark.svg';
+import logoMain from '../assets/seven.svg';
 
 const LoadingScreen = ({ onLoadingComplete }) => {
   const { theme } = useTheme();
@@ -63,7 +62,7 @@ const LoadingScreen = ({ onLoadingComplete }) => {
         className="mb-12 flex items-center justify-center p-4 drop-shadow-2xl"
       >
         <img 
-          src={theme === 'dark' ? logoDark : logoLight} 
+          src={logoMain} 
           alt="5EVEN Logo" 
           className="w-40 h-auto object-contain" 
         />

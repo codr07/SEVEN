@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { PlayCircle, Clock, BookOpen, Star, Loader2, IndianRupee, Search, Filter, Share2 } from 'lucide-react';
 import { supabase, withTimeout, filterVisible } from '../lib/supabase';
+import { Loader2, BookOpen, Clock, Star, Share2, Search, Filter, ArrowRight, CheckCircle2, X, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useAlert } from '../context/AlertContext';
+import MergedShape from '../components/MergedShape';
+import SignatureButton from '../components/SignatureButton';
+import SignatureShareButton from '../components/SignatureShareButton';
 
 const Courses = () => {
   const { showAlert } = useAlert();
@@ -10,8 +14,8 @@ const Courses = () => {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const fetchCourses = async () => {
     setLoading(true);
@@ -20,12 +24,12 @@ const Courses = () => {
       const { data, error } = await withTimeout(
         supabase.from('courses').select('*').order('created_at', { ascending: false }),
         10000,
-        'Database connection timed out. Please check your network or try again.'
+        'Database connection timed out.'
       );
       if (error) throw error;
       setCourses(filterVisible(data));
     } catch (err) {
-      console.error('Supabase fetch error:', err);
+      console.error(err);
       setErrorMsg(err.message || String(err));
     } finally {
       setLoading(false);
@@ -36,150 +40,196 @@ const Courses = () => {
     fetchCourses();
   }, []);
 
+  const filteredCourses = courses.filter(course => {
+    const matchesSearch = !searchQuery || 
+      String(course.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+      String(course.short_desc || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = !selectedCategory || course.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const categories = [...new Set(courses.map(c => c.category))].filter(Boolean);
+
+  const groupedCourses = filteredCourses.reduce((acc, course) => {
+    const cat = course.category || 'General';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(course);
+    return acc;
+  }, {});
+
   return (
-    <div className="pt-32 pb-20 px-6 max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-8">
-        <div>
-          <h1 className="text-5xl md:text-8xl font-black italic uppercase tracking-tighter text-animate-gradient">Courses</h1>
-          <p className="max-w-md text-muted-foreground text-lg uppercase tracking-widest leading-relaxed mt-2">
-            Master the future with our industry-driven curriculum and hands-on projects.
+    <div className="pt-32 pb-32 px-6 max-w-7xl mx-auto min-h-screen relative z-10">
+      <div className="flex flex-col gap-8 mb-20">
+        <div className="max-w-3xl">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-2 text-primary font-black uppercase tracking-[0.4em] text-[8px] mb-4"
+          >
+            Institutional Pathways
+          </motion.div>
+          <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase mb-4 leading-none">
+            Selected <span className="text-animate-gradient">Programs</span>
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground font-medium leading-relaxed max-w-xl opacity-80">
+            Professional certifications and technical training modules designed for excellence.
           </p>
         </div>
-        <div className="flex items-center gap-4 w-full md:w-auto">
-          <div className="relative flex-1 md:w-80">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+
+        <div className="flex gap-4 items-center max-w-2xl">
+          <div className="relative flex-1">
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-primary" size={18} />
             <input
               type="text"
-              placeholder="Search courses..."
+              placeholder="Search curriculum..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-6 py-4 bg-card border border-border rounded-full outline-none focus:border-primary transition-all shadow-sm"
+              className="w-full pl-14 pr-8 py-4 bg-white/5 border border-white/10 rounded-[24px] outline-none focus:border-primary/50 transition-all text-sm backdrop-blur-xl shadow-2xl"
             />
           </div>
+          
           <div className="relative">
-            <button 
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className={`p-4 border rounded-full transition-colors shadow-sm ${selectedCategory ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent border-border"}`}
+              className={`w-14 h-14 rounded-[20px] flex items-center justify-center transition-all backdrop-blur-2xl border ${
+                selectedCategory 
+                ? "bg-accent border-accent text-white shadow-[0_0_20px_rgba(var(--accent-rgb),0.4)]" 
+                : "bg-white/5 border-white/10 text-primary hover:bg-white/10"
+              }`}
             >
               <Filter size={20} />
-            </button>
-            
-            {isFilterOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)}></div>
-                <div className="absolute right-0 top-full mt-2 w-56 bg-card/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-                  <div className="px-3 py-2 text-xs font-black uppercase tracking-widest text-muted-foreground opacity-70 mb-1">Filter by Category</div>
-                  <button 
-                    onClick={() => { setSelectedCategory(''); setIsFilterOpen(false); }} 
-                    className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-colors ${!selectedCategory ? "bg-primary/10 text-primary" : "hover:bg-accent"}`}
+            </motion.button>
+
+            <AnimatePresence>
+              {isFilterOpen && (
+                <>
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 top-full mt-4 w-64 bg-white/[0.03] border border-white/10 backdrop-blur-[40px] rounded-[30px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-4 z-50"
                   >
-                    All Courses
-                  </button>
-                  {[...new Set(courses.map(c => c.category))].filter(Boolean).map(cat => (
-                    <button 
-                      key={cat} 
-                      onClick={() => { setSelectedCategory(cat); setIsFilterOpen(false); }} 
-                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-colors ${selectedCategory === cat ? "bg-primary/10 text-primary" : "hover:bg-accent"}`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+                    <div className="relative z-10 flex flex-col gap-1">
+                      <button onClick={() => { setSelectedCategory(''); setIsFilterOpen(false); }} className={`w-full text-left px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest ${!selectedCategory ? "bg-accent text-white" : "hover:bg-white/5 text-muted-foreground"}`}>All Categories</button>
+                      {categories.map(cat => (
+                        <button key={cat} onClick={() => { setSelectedCategory(cat); setIsFilterOpen(false); }} className={`w-full text-left px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest ${selectedCategory === cat ? "bg-accent text-white" : "hover:bg-white/5 text-muted-foreground"}`}>{cat}</button>
+                      ))}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex justify-center items-center py-20">
-          <Loader2 className="animate-spin text-primary w-12 h-12" />
-        </div>
-      ) : errorMsg ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-6 text-destructive">
-          <div className="text-xl font-bold uppercase tracking-widest">Connection Issue</div>
-          <div className="text-sm opacity-80 max-w-xl text-center px-4 mb-4">{errorMsg}</div>
-          <button onClick={fetchCourses} className="px-8 py-3 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20">
-            Retry Connection
-          </button>
-        </div>
-      ) : courses.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
-          <div className="text-xl font-bold uppercase tracking-widest">No Courses Found</div>
-          <div className="text-sm opacity-80">We currently have no courses available. Check back soon!</div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex justify-center">
+              <div className="w-[410px] h-[520px] bg-white/5 animate-pulse rounded-[32px] border border-white/10" />
+            </div>
+          ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {courses.filter(course => {
-            const matchesSearch = !searchQuery || 
-              String(course.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
-              String(course.short_desc || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-              String(course.category || '').toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesCategory = !selectedCategory || course.category === selectedCategory;
-            return matchesSearch && matchesCategory;
-          }).map((course) => (
-            <Link 
-              to={`/courses/${course.id}`} 
-              key={course.id} 
-              className="group institution-card flex flex-col justify-between"
-            >
-              <div className="flex-1 flex flex-col relative z-10">
-                <div className="w-full h-44 relative rounded-2xl overflow-hidden mb-6 border border-border">
-                  <img 
-                    src={course.thumbnail || course.image_url || course.cover_image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop'} 
-                    alt={course.name}
-                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" 
-                  />
-                  <div className="absolute top-3 left-3">
-                    <div className="badge-glass px-3 py-1.5 rounded-full text-[10px]">
-                      {course.category}
-                    </div>
-                  </div>
-                  <div className="absolute top-3 right-3 z-30">
-                    <button 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const url = `${window.location.origin}/courses/${course.id}`;
-                        navigator.clipboard.writeText(url);
-                        showAlert("Link copied to clipboard!", "success");
-                      }}
-                      className="p-2 bg-black/40 backdrop-blur-md border border-white/20 hover:bg-primary hover:text-white rounded-full transition-all duration-300 shadow-lg text-white"
-                    >
-                      <Share2 size={14} />
-                    </button>
-                  </div>
-                </div>
-                
-                <h3 className="text-xl font-black uppercase tracking-widest mb-4 leading-tight min-h-[4rem] text-balance group-hover:text-primary transition-colors duration-300">
-                  {course.name}
-                </h3>
-                <p className="text-sm font-medium text-muted-foreground mb-6 line-clamp-2 min-h-[2.5rem] leading-relaxed">
-                  {course.short_desc}
-                </p>
-                
-                <div className="space-y-3 mb-8 bg-muted/30 p-4 rounded-2xl border border-border">
-                  <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                    <Clock size={14} className="text-primary" />
-                    <span>{course.duration || 'Flexible'}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-primary">
-                    <IndianRupee size={14} />
-                    <span>
-                      {course.price 
-                        ? (['free', '0'].includes(String(course.price).toLowerCase().trim()) 
-                            ? 'Free Access' 
-                            : `₹${course.price}`) 
-                        : 'Free Access'}
-                    </span>
-                  </div>
-                </div>
+        <div className="space-y-32">
+          {Object.entries(groupedCourses).map(([category, items]) => (
+            <div key={category} className="space-y-12">
+              <div className="flex items-center gap-4">
+                <h2 className="text-xl font-black uppercase tracking-[0.3em] text-accent drop-shadow-[0_0_10px_rgba(var(--accent-rgb),0.3)]">
+                  {category}
+                </h2>
+                <div className="flex-1 h-px bg-gradient-to-r from-accent/30 to-transparent" />
               </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24">
+                {items.map((course, idx) => {
+                  const details = Array.isArray(course.extra_details?.details) 
+                    ? course.extra_details.details 
+                    : (course.short_desc ? [course.short_desc] : []);
 
-              <div className="cool-button w-full text-center">
-                Explore Course
+                  return (
+                    <motion.div
+                      key={course.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.5, delay: idx * 0.1 }}
+                      className="flex justify-center"
+                    >
+                      <Link to={`/courses/${course.id}`} className="group relative block transition-all duration-500 hover:scale-[1.02]">
+                        <MergedShape height={520}>
+                           {/* Category Vertical Indicator (Left Side) */}
+                           <div className="absolute left-0 top-0 bottom-0 w-10 flex flex-col items-center py-8 bg-accent/5 border-r border-white/10 z-10 rounded-l-[32px]">
+                              <div className="flex-1 w-px bg-gradient-to-b from-accent/50 to-transparent mb-4" />
+                              <div className="text-[8px] font-black text-accent rotate-180 uppercase tracking-[0.4em] [writing-mode:vertical-lr] whitespace-nowrap drop-shadow-[0_0_8px_rgba(var(--accent-rgb),0.5)] opacity-80 group-hover:opacity-100 group-hover:text-primary transition-all">
+                                 {category}
+                              </div>
+                              <div className="flex-1 w-px bg-gradient-to-t from-accent/20 to-transparent mt-4" />
+                           </div>
+
+                           <div className="absolute left-0 top-0 w-[390px] h-[520px] p-8 pl-16 flex flex-col pointer-events-auto">
+                              <div className="relative w-full h-[180px] rounded-[24px] overflow-hidden mb-8 bg-white/5 border border-white/10 group-hover:border-primary/20 transition-colors">
+                                 {course.cover_image ? (
+                                   <img src={course.cover_image} alt={course.name} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                                 ) : (
+                                   <div className="w-full h-full flex items-center justify-center opacity-20"><BookOpen size={40} className="text-primary" /></div>
+                                 )}
+                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                 <div className="absolute bottom-4 left-4 flex items-center gap-2">
+                                   <div className="flex text-accent drop-shadow-[0_0_8px_rgba(var(--accent-rgb),0.5)]">
+                                     {[...Array(5)].map((_, i) => <Star key={i} size={8} fill={i < 4 ? "currentColor" : "none"} />)}
+                                   </div>
+                                   <span className="text-[7px] font-black uppercase tracking-widest text-white/60">Top Rated</span>
+                                 </div>
+                               </div>
+                               
+                               <h3 className="text-2xl font-black mb-6 leading-tight group-hover:text-primary transition-colors line-clamp-1 uppercase tracking-tighter">
+                                 {course.name}
+                               </h3>
+                               
+                               {/* Pointwise Details */}
+                               <div className="space-y-3 mb-8">
+                                 {details.slice(0, 3).map((detail, dIdx) => (
+                                   <div key={dIdx} className="flex items-start gap-3">
+                                     <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-accent group-hover:scale-125 transition-transform" />
+                                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest line-clamp-1">{detail}</span>
+                                   </div>
+                                 ))}
+                               </div>
+
+                               <div className="mt-auto flex items-end justify-between border-t border-white/5 pt-8">
+                                 <div className="flex flex-col gap-1">
+                                   <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary">
+                                     <Clock size={14} />
+                                     <span>{course.duration || '8 Weeks'}</span>
+                                   </div>
+                                   <span className="text-xl font-black text-white">{course.price || 'FREE'}</span>
+                                 </div>
+                                 <SignatureButton label="Enroll" />
+                               </div>
+                           </div>
+
+                           <div className="absolute left-[390px] top-[60px] w-[70px] h-[50px] flex items-center justify-center pointer-events-auto">
+                              <SignatureShareButton
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(`${window.location.origin}/courses/${course.id}`);
+                                  showAlert("Link copied!", "success");
+                                }}
+                              />
+                           </div>
+                        </MergedShape>
+                      </Link>
+                    </motion.div>
+                  );
+                })}
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}

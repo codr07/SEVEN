@@ -2,29 +2,29 @@ import React, { useState, useLayoutEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Lenis from 'lenis';
 import { ThemeProvider } from './context/ThemeContext';
-import CustomCursor from './components/CustomCursor';
 import LoadingScreen from './components/LoadingScreen';
 import Navbar from './components/Navbar';
-import Home from './pages/Home';
-import Academics from './pages/Academics';
-import Courses from './pages/Courses';
-import Notes from './pages/Notes';
-import Services from './pages/Services';
-import Stars from './pages/Stars';
-import Contact from './pages/Contact';
-import StudentZone from './pages/StudentZone';
-import CourseDetail from './pages/details/CourseDetail';
-import ServiceDetail from './pages/details/ServiceDetail';
-import NoteDetail from './pages/details/NoteDetail';
-import AcademicsDetail from './pages/details/AcademicsDetail';
-import PublicProfile from './pages/PublicProfile';
-import OAuthConsent from './pages/OAuthConsent';
-import DeveloperDocs from './pages/DeveloperDocs';
+const Home = lazy(() => import('./pages/Home'));
+const Academics = lazy(() => import('./pages/Academics'));
+const Courses = lazy(() => import('./pages/Courses'));
+const Notes = lazy(() => import('./pages/Notes'));
+const Services = lazy(() => import('./pages/Services'));
+const Stars = lazy(() => import('./pages/Stars'));
+const Contact = lazy(() => import('./pages/Contact'));
+const StudentZone = lazy(() => import('./pages/StudentZone'));
+const CourseDetail = lazy(() => import('./pages/details/CourseDetail'));
+const ServiceDetail = lazy(() => import('./pages/details/ServiceDetail'));
+const NoteDetail = lazy(() => import('./pages/details/NoteDetail'));
+const AcademicsDetail = lazy(() => import('./pages/details/AcademicsDetail'));
+const PublicProfile = lazy(() => import('./pages/PublicProfile'));
+const OAuthConsent = lazy(() => import('./pages/OAuthConsent'));
+const DeveloperDocs = lazy(() => import('./pages/DeveloperDocs'));
+const SevenMod = lazy(() => import('./pages/SevenMod'));
+
 import Footer from './components/Footer';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AlertProvider } from './context/AlertContext';
-
-const SevenMod = lazy(() => import('./pages/SevenMod'));
+import GlobalBackground from './components/GlobalBackground';
 
 const AppContent = ({ loading, setLoading }) => {
   const { loading: authLoading } = useAuth();
@@ -62,9 +62,10 @@ const AppContent = ({ loading, setLoading }) => {
 
   return (
     <>
+      <GlobalBackground />
       {isAppLoading && <LoadingScreen onLoadingComplete={() => setLoading(false)} />}
       {!isAppLoading && (
-        <div className="min-h-screen bg-background transition-colors duration-300 flex flex-col md:flex-row">
+        <div className="min-h-screen transition-colors duration-300 flex flex-col md:flex-row">
           {!isAdminPage && <Navbar />}
           <div className="flex-1 flex flex-col w-full min-w-0">
             <main className="flex-1">
