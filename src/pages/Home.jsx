@@ -36,19 +36,18 @@ const ScrollAnimatedSection = ({ children, className = "" }) => {
   );
 };
 
-const PopOutIcon = ({ icon: Icon, x, y, rotate, delay, color }) => (
+const PopOutIcon = ({ icon: Icon, x, y, rotate, delay, colorClass = "text-primary" }) => (
   <motion.div
     initial={{ opacity: 0, scale: 0 }}
     animate={{ opacity: 1, scale: 1, x: `${x}vw`, y: `${y}vh`, rotate }}
     transition={{ delay, duration: 1, type: "spring", bounce: 0.4 }}
-    className="absolute pointer-events-none z-0"
-    style={{ color }}
+    className={`absolute pointer-events-none z-0 ${colorClass}`}
   >
     <Icon size={40} className="opacity-20" />
   </motion.div>
 );
 
-const FloatingIcon = ({ icon: Icon, x, y, delay, color }) => (
+const FloatingIcon = ({ icon: Icon, x, y, delay, colorClass = "text-primary" }) => (
   <motion.div
     initial={{ opacity: 0 }}
     animate={{
@@ -62,10 +61,10 @@ const FloatingIcon = ({ icon: Icon, x, y, delay, color }) => (
       repeat: Infinity,
       ease: "easeInOut"
     }}
-    className="absolute pointer-events-none z-0"
-    style={{ left: '50%', top: '50%', color }}
+    className={`absolute pointer-events-none z-0 ${colorClass}`}
+    style={{ left: '50%', top: '50%' }}
   >
-    <Icon size={28} className="opacity-10" />
+    <Icon size={28} className="opacity-20 drop-shadow-[0_0_10px_currentColor]" />
   </motion.div>
 );
 
@@ -88,7 +87,7 @@ const GlowingBlob = ({ color, className = "", delay = 0 }) => (
   />
 );
 
-const Hero3DAsset = ({ icon: Icon, x = 0, y = 0, color = "var(--color-primary)", delay = 1 }) => {
+const Hero3DAsset = ({ icon: Icon, x = 0, y = 0, colorClass = "text-primary", delay = 1 }) => {
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
@@ -130,13 +129,14 @@ const Hero3DAsset = ({ icon: Icon, x = 0, y = 0, color = "var(--color-primary)",
         left: '50%',
         willChange: "transform, opacity"
       }}
-      className="hidden md:block pointer-events-none z-[5]"
+      className={`hidden md:block pointer-events-none z-[5] ${colorClass}`}
     >
       <div
-        className="p-8 rounded-3xl bg-white/30 backdrop-blur-xl border border-white/20 shadow-2xl flex items-center justify-center group"
-        style={{ transform: "translateZ(60px)" }}
+        className="p-8 rounded-[2.5rem] bg-gradient-to-br from-white/10 to-transparent backdrop-blur-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] flex items-center justify-center group relative overflow-hidden"
+        style={{ transform: "translateZ(60px)", boxShadow: "inset 0 1px 1px rgba(255,255,255,0.2)" }}
       >
-        <Icon size={64} color={color} className="filter drop-shadow-2xl group-hover:scale-110 transition-transform" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+        <Icon size={64} className="filter drop-shadow-[0_0_20px_currentColor] group-hover:scale-110 transition-transform duration-500 relative z-10" />
       </div>
     </motion.div>
   );
@@ -195,16 +195,16 @@ const Home = () => {
       {/* Hero Section */}
       <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-4 md:px-12 max-w-7xl mx-auto py-20 md:py-0 overflow-hidden">
         <div className="hidden md:block">
-          <Hero3DAsset icon={BookOpen} x={-380} y={-180} color="var(--color-primary)" delay={1} />
-          <Hero3DAsset icon={GraduationCap} x={340} y={-220} color="var(--color-accent)" delay={1.2} />
-          <Hero3DAsset icon={Laptop} x={-420} y={120} color="var(--color-accent)" delay={1.4} />
-          <Hero3DAsset icon={BookIcon} x={380} y={180} color="var(--color-primary)" delay={1.6} />
+          <Hero3DAsset icon={BookOpen} x={-380} y={-180} colorClass="text-primary" delay={1} />
+          <Hero3DAsset icon={GraduationCap} x={340} y={-220} colorClass="text-accent" delay={1.2} />
+          <Hero3DAsset icon={Laptop} x={-420} y={120} colorClass="text-secondary" delay={1.4} />
+          <Hero3DAsset icon={BookIcon} x={380} y={180} colorClass="text-primary" delay={1.6} />
 
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <FloatingIcon icon={Code} x={-40} y={-30} delay={0} color="var(--color-primary)" />
-            <FloatingIcon icon={Rocket} x={35} y={-20} delay={1} color="var(--color-secondary)" />
-            <FloatingIcon icon={Brain} x={-30} y={20} delay={2} color="var(--color-accent)" />
-            <FloatingIcon icon={Cpu} x={40} y={30} delay={1.5} color="var(--color-primary)" />
+            <FloatingIcon icon={Code} x={-40} y={-30} delay={0} colorClass="text-primary" />
+            <FloatingIcon icon={Rocket} x={35} y={-20} delay={1} colorClass="text-secondary" />
+            <FloatingIcon icon={Brain} x={-30} y={20} delay={2} colorClass="text-accent" />
+            <FloatingIcon icon={Cpu} x={40} y={30} delay={1.5} colorClass="text-primary" />
           </div>
         </div>
 
