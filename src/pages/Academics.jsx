@@ -85,7 +85,7 @@ const Academics = () => {
                   ) : (
                     <GraduationCap size={48} className="text-primary opacity-20" />
                   )}
-                  <div className="absolute top-3 left-3 bg-foreground px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white rounded-full shadow-xl">
+                  <div className="absolute top-3 left-3 badge-glass px-3 py-1.5 text-[10px] rounded-full">
                      Academic
                   </div>
                   <div className="absolute top-3 right-3 z-30">

@@ -144,7 +144,7 @@ const Notes = () => {
                     className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 filter grayscale group-hover:grayscale-0" 
                   />
                   <div className="absolute top-3 left-3 z-20">
-                    <div className="text-[10px] font-black text-white uppercase tracking-widest bg-black/40 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full shadow-xl">
+                    <div className="badge-glass px-3 py-1.5 rounded-full text-[10px]">
                       {note.category}
                     </div>
                   </div>

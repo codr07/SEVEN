@@ -214,7 +214,7 @@ const Home = () => {
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="flex items-center justify-center gap-2 md:gap-3 flex-wrap mt-4">
             {categories.map((badge) => (
-              <span key={badge} className="px-3 py-1.5 md:px-5 md:py-2 rounded-lg md:rounded-xl border border-primary/10 bg-primary/5 text-primary text-[8px] md:text-[10px] font-black tracking-widest uppercase backdrop-blur-md">
+              <span key={badge} className="px-5 py-2 rounded-xl badge-glass text-[10px]">
                 {badge}
               </span>
             ))}
@@ -238,7 +238,7 @@ const Home = () => {
                   <p className="text-sm md:text-base text-muted-foreground leading-relaxed mb-6 md:mb-8">Structured learning programs for schools and universities.</p>
                   <div className="flex flex-wrap gap-2">
                     {academics.slice(0, 3).map(aca => (
-                      <span key={aca.id} className="px-2 py-1 bg-muted/50 rounded-md text-[8px] md:text-[10px] font-bold uppercase tracking-wider">{aca.title}</span>
+                      <span key={aca.id} className="px-3 py-1.5 rounded-lg badge-glass text-[9px]">{aca.title}</span>
                     ))}
                   </div>
                 </div>
@@ -259,7 +259,7 @@ const Home = () => {
                   <p className="text-sm md:text-base text-muted-foreground leading-relaxed mb-6 md:mb-8">Digital solutions and commercial support for students.</p>
                   <div className="flex flex-wrap gap-2">
                     {services.slice(0, 3).map(srv => (
-                      <span key={srv.id} className="px-2 py-1 bg-muted/50 rounded-md text-[8px] md:text-[10px] font-bold uppercase tracking-wider">{srv.title}</span>
+                      <span key={srv.id} className="px-3 py-1.5 rounded-lg badge-glass text-[9px]">{srv.title}</span>
                     ))}
                   </div>
                 </div>

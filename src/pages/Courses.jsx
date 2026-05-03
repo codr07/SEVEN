@@ -131,7 +131,7 @@ const Courses = () => {
                     className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700" 
                   />
                   <div className="absolute top-3 left-3">
-                    <div className="text-[10px] font-black text-background uppercase tracking-widest bg-foreground px-3 py-1.5 rounded-full shadow-xl">
+                    <div className="badge-glass px-3 py-1.5 rounded-full text-[10px]">
                       {course.category}
                     </div>
                   </div>

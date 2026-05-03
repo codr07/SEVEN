@@ -363,24 +363,24 @@ const SevenMod = () => {
   const toggleVisibility = async (tableName, item) => {
     let currentDetails = {};
     if (typeof item.extra_details === 'string') {
-      try { currentDetails = JSON.parse(item.extra_details) || {}; } catch {}
+      try { currentDetails = JSON.parse(item.extra_details) || {}; } catch { }
     } else if (item.extra_details && typeof item.extra_details === 'object') {
       currentDetails = { ...item.extra_details };
     }
-    
+
     const currentVisible = currentDetails.is_visible !== false;
     currentDetails.is_visible = !currentVisible;
-    
+
     const { error } = await adminSupabase
       .from(tableName)
       .update({ extra_details: currentDetails })
       .eq('id', item.id);
-      
+
     if (error) {
       showAlert(error.message, 'error');
       return;
     }
-    
+
     fetchTable(tableName);
   };
 
@@ -466,7 +466,7 @@ const SevenMod = () => {
               <p className="text-[9px] md:text-[10px] uppercase tracking-widest font-black text-muted-foreground">Control Center</p>
             </div>
           </div>
-          
+
           <button
             type="button"
             onClick={handleLogout}
@@ -484,9 +484,8 @@ const SevenMod = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-shrink-0 whitespace-nowrap w-auto md:w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-xs md:text-sm font-black transition-all ${
-                  activeTab === tab.id ? 'bg-foreground text-background shadow-lg shadow-foreground/10' : 'hover:bg-background text-muted-foreground border border-transparent md:border-none hover:border-border'
-                }`}
+                className={`flex-shrink-0 whitespace-nowrap w-auto md:w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-xs md:text-sm font-black transition-all ${activeTab === tab.id ? 'bg-foreground text-background shadow-lg shadow-foreground/10' : 'hover:bg-background text-muted-foreground border border-transparent md:border-none hover:border-border'
+                  }`}
               >
                 <Icon size={14} className="md:w-4 md:h-4" />
                 <span>{tab.name}</span>
@@ -528,9 +527,12 @@ const SevenMod = () => {
                   setEditingItem(null);
                   setIsModalOpen(true);
                 }}
-                className="w-full sm:w-auto px-6 py-3.5 md:py-4 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20 shrink-0"
+                className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-black text-white font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-3 hover:-translate-y-1 hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-black/20 shrink-0 border border-white/10"
               >
-                <Plus size={18} /> Add New Entry
+                <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
+                  <Plus size={16} />
+                </div>
+                Add New Entry
               </button>
             </div>
           )}
@@ -573,10 +575,10 @@ const SevenMod = () => {
 
                 const counters = { Total: visibleTableData.length };
                 visibleTableData.forEach(item => {
-                   const typeName = item.category || item.role || item.topic || item.type;
-                   if (typeName) {
-                     counters[typeName] = (counters[typeName] || 0) + 1;
-                   }
+                  const typeName = item.category || item.role || item.topic || item.type;
+                  if (typeName) {
+                    counters[typeName] = (counters[typeName] || 0) + 1;
+                  }
                 });
 
                 // Display only Total if that's the only counter
@@ -602,9 +604,9 @@ const SevenMod = () => {
                           <div className="flex gap-4">
                             {(item.cover_image || item.image_url || item.thumbnail || item.avatar_url) && (
                               <div className="w-20 h-20 rounded-2xl overflow-hidden border border-border flex-shrink-0 bg-muted">
-                                <img 
-                                  src={item.cover_image || item.image_url || item.thumbnail || item.avatar_url} 
-                                  alt="thumbnail" 
+                                <img
+                                  src={item.cover_image || item.image_url || item.thumbnail || item.avatar_url}
+                                  alt="thumbnail"
                                   className="w-full h-full object-cover"
                                 />
                               </div>
@@ -615,7 +617,7 @@ const SevenMod = () => {
                                 {item.short_desc || item.description || item.bio || 'No description'}
                               </p>
                               <div className="mt-2 flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-lg bg-muted text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                                <span className="px-3 py-1 rounded-lg badge-glass text-[9px]">
                                   {item.category || item.topic || 'General'}
                                 </span>
                               </div>
@@ -625,11 +627,10 @@ const SevenMod = () => {
                             <button
                               title={item.extra_details?.is_visible === false ? "Hidden on site. Click to show." : "Visible on site. Click to hide."}
                               onClick={() => toggleVisibility(activeTab, item)}
-                              className={`px-4 py-2.5 rounded-xl flex items-center justify-center transition-all ${
-                                item.extra_details?.is_visible === false
+                              className={`px-4 py-2.5 rounded-xl flex items-center justify-center transition-all ${item.extra_details?.is_visible === false
                                 ? 'border border-muted text-muted-foreground bg-muted/10'
                                 : 'border border-primary/40 text-primary bg-primary/5'
-                              }`}
+                                }`}
                             >
                               {item.extra_details?.is_visible === false ? <EyeOff size={14} /> : <Eye size={14} />}
                             </button>
@@ -732,9 +733,8 @@ const SevenMod = () => {
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
                         onClick={() => togglePush(item)}
-                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest ${
-                          item.is_pushed ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-green-500/10 text-green-600 dark:text-green-400'
-                        }`}
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest ${item.is_pushed ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-green-500/10 text-green-600 dark:text-green-400'
+                          }`}
                       >
                         {item.is_pushed ? 'Unpush' : 'Push'}
                       </button>
@@ -767,13 +767,13 @@ const SevenMod = () => {
 
       {isModalOpen && CONTENT_TABLES.some((t) => t.id === activeTab) && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            className="absolute inset-0 bg-background/95 backdrop-blur-2xl" 
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-background/95 backdrop-blur-2xl"
             onClick={() => setIsModalOpen(false)}
           />
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 40 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -784,8 +784,8 @@ const SevenMod = () => {
                 <h3 className="text-3xl font-black italic tracking-tighter text-animate-gradient">{editingItem ? 'Edit Entry' : 'New Entry'}</h3>
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">Configure {activeTab} data points</p>
               </div>
-              <button 
-                onClick={() => setIsModalOpen(false)} 
+              <button
+                onClick={() => setIsModalOpen(false)}
                 className="p-3 rounded-full hover:bg-background border border-border transition-all hover:scale-110"
               >
                 <X size={20} />
@@ -898,7 +898,7 @@ const AdminImageField = ({ value, onChange, label, adminId }) => {
         {value && (
           <div className="relative w-full aspect-video rounded-2xl overflow-hidden border border-border bg-muted group">
             <img src={value} alt="Preview" className="w-full h-full object-cover" />
-            <button 
+            <button
               type="button"
               onClick={() => onChange('')}
               className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity"
@@ -937,11 +937,10 @@ const Field = ({ label, required, children }) => (
 
 const MessageBox = ({ type, children }) => (
   <div
-    className={`p-3 rounded-xl border text-sm font-semibold flex items-center gap-2 ${
-      type === 'success'
-        ? 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400'
-        : 'border-destructive/30 bg-destructive/10 text-destructive'
-    }`}
+    className={`p-3 rounded-xl border text-sm font-semibold flex items-center gap-2 ${type === 'success'
+      ? 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400'
+      : 'border-destructive/30 bg-destructive/10 text-destructive'
+      }`}
   >
     {type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
     {children}
@@ -956,13 +955,12 @@ const EmptyState = ({ text }) => (
 
 const StatusBadge = ({ pushed, status }) => (
   <span
-    className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-      pushed
-        ? 'bg-green-500/10 text-green-600 dark:text-green-400'
-        : status === 'unpushed'
-          ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
-          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-    }`}
+    className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${pushed
+      ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+      : status === 'unpushed'
+        ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+      }`}
   >
     {pushed ? 'Pushed' : status === 'unpushed' ? 'Unpushed' : 'On Hold'}
   </span>
@@ -1112,8 +1110,8 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
     <form onSubmit={submit} className="space-y-6 pb-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
         {fields.map((field, fIdx) => (
-          <motion.div 
-            key={field.name} 
+          <motion.div
+            key={field.name}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: fIdx * 0.05 }}
@@ -1185,9 +1183,10 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full md:w-auto px-5 py-3 rounded-xl bg-foreground text-background font-black uppercase tracking-widest text-xs flex items-center justify-center gap-2 hover:-translate-y-1 transition-all"
+          className="save-button w-full md:w-auto text-[11px]"
         >
-          {loading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save Changes
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} 
+          <span>{editingItem ? 'Save Changes' : 'Create Entry'}</span>
         </button>
       </div>
     </form>

@@ -73,7 +73,7 @@ const CourseDetail = () => {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
             <div className="absolute top-6 left-6 z-10">
-              <span className="inline-flex items-center rounded-full bg-foreground px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white shadow-xl">
+              <span className="badge-glass px-5 py-2 rounded-xl text-[10px]">
                 {course.category}
               </span>
             </div>
