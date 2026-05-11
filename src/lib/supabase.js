@@ -48,3 +48,70 @@ export const filterVisible = (items = []) => {
     return details?.is_visible !== false;
   });
 };
+
+export const orderedFetch = async (
+  supabaseClient, 
+  tableName, 
+  selectClause = '*', 
+  orderConfigs = [
+    { column: 'order_index', options: { ascending: true, nullsFirst: false } }, 
+    { column: 'created_at', options: { ascending: false } }
+  ]
+) => {
+  let query = supabaseClient.from(tableName).select(selectClause);
+  
+  // Try to apply orders
+  orderConfigs.forEach(conf => {
+    query = query.order(conf.column, conf.options);
+  });
+
+  const { data, error } = await query;
+
+  // Even if there is no error, we perform a safety sort in the frontend 
+  // because the DB might sort order_index as text (1, 10, 2) instead of numbers (1, 2, 10).
+  if (data) {
+    const safetySorted = [...data].sort((a, b) => {
+      const getOrder = (val) => {
+        if (val === null || val === undefined || val === '') return Infinity;
+        const n = Number(val);
+        return isNaN(n) ? Infinity : n;
+      };
+
+      const aOrder = getOrder(a.order_index);
+      const bOrder = getOrder(b.order_index);
+      
+      if (aOrder !== bOrder) return aOrder - bOrder;
+
+      const aTime = a?.created_at ? new Date(a.created_at).getTime() : 0;
+      const bTime = b?.created_at ? new Date(b.created_at).getTime() : 0;
+      return bTime - aTime;
+    });
+    return { data: safetySorted, error: null };
+  }
+
+  // If error is "column does not exist" (42703), fall back to a simple fetch and sort manually
+  if (error && error.code === '42703') {
+    const fallback = await supabaseClient.from(tableName).select(selectClause);
+    if (fallback.error) return fallback;
+
+    const sorted = [...(fallback.data || [])].sort((a, b) => {
+      const getOrder = (val) => {
+        if (val === null || val === undefined || val === '') return Infinity;
+        const n = Number(val);
+        return isNaN(n) ? Infinity : n;
+      };
+
+      const aOrder = getOrder(a.order_index);
+      const bOrder = getOrder(b.order_index);
+      
+      if (aOrder !== bOrder) return aOrder - bOrder;
+
+      const aTime = a?.created_at ? new Date(a.created_at).getTime() : 0;
+      const bTime = b?.created_at ? new Date(b.created_at).getTime() : 0;
+      return bTime - aTime;
+    });
+    return { data: sorted, error: null };
+  }
+
+  return { data, error };
+};

@@ -48,8 +48,14 @@ let globalSessionPromise = null;
           let resolvedProfile = await fetchProfile(currentUser.id);
           
           if (!resolvedProfile) {
-            // Attempt to create the profile from user metadata if it's missing (fallback if trigger/signup insert failed)
+            // Attempt to create the profile from user metadata if it's missing
             const meta = currentUser.user_metadata || {};
+            
+            // Generate initial ID
+            const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+            const serial = ( (count || 0) + 1).toString().padStart(4, '0');
+            const idNumber = `70326-${serial}`;
+
             const { error: createError } = await supabase.from('profiles').insert({
               id: currentUser.id,
               username: meta.username || '',
@@ -58,13 +64,27 @@ let globalSessionPromise = null;
               avatar_url: meta.avatar_url || '',
               social_links: meta.social_links || { linkedin: '', github: '', linktree: '' },
               role: 'student',
+              extra_details: { id_number: idNumber },
               updated_at: new Date().toISOString(),
             });
             if (!createError) {
               resolvedProfile = await fetchProfile(currentUser.id);
-            } else {
-              console.warn('Fallback profile creation failed:', createError.message);
             }
+          } else if (!resolvedProfile.extra_details?.id_number) {
+            // Backfill ID if missing
+            const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+            const serial = ((count || 0) + 1).toString().padStart(4, '0');
+            
+            let prefix = '70326';
+            if (resolvedProfile.role === 'faculty') prefix = '70326-FAC';
+            if (resolvedProfile.role === 'admin') prefix = '70326-FND';
+            
+            const idNumber = `${prefix}-${serial}`;
+            const updatedDetails = { ...(resolvedProfile.extra_details || {}), id_number: idNumber };
+            
+            await supabase.from('profiles').update({ extra_details: updatedDetails }).eq('id', currentUser.id);
+            resolvedProfile.extra_details = updatedDetails;
+            setProfile({ ...resolvedProfile });
           }
         } else {
           setProfile(null);

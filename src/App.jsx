@@ -20,11 +20,22 @@ const PublicProfile = lazy(() => import('./pages/PublicProfile'));
 const OAuthConsent = lazy(() => import('./pages/OAuthConsent'));
 const DeveloperDocs = lazy(() => import('./pages/DeveloperDocs'));
 const SevenMod = lazy(() => import('./pages/SevenMod'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const UpdateDetail = lazy(() => import('./pages/UpdateDetail'));
 
 import Footer from './components/Footer';
+import FloatingUpdates from './components/FloatingUpdates';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AlertProvider } from './context/AlertContext';
 import GlobalBackground from './components/GlobalBackground';
+
+const AdminRoute = ({ children }) => {
+  const { role, loading } = useAuth();
+  if (loading) return null;
+  if (role !== 'admin') return <Navigate to="/" replace />;
+  return children;
+};
 
 const AppContent = ({ loading, setLoading }) => {
   const { loading: authLoading } = useAuth();
@@ -86,12 +97,20 @@ const AppContent = ({ loading, setLoading }) => {
                   <Route path="/profile" element={<Navigate to="/student-zone?tab=settings" replace />} />
                   <Route path="/profile/:username" element={<PublicProfile />} />
                   <Route path="/oauth/consent" element={<OAuthConsent />} />
-                  <Route path="/developers" element={<DeveloperDocs />} />
+                  <Route path="/developers" element={
+                    <AdminRoute>
+                      <DeveloperDocs />
+                    </AdminRoute>
+                  } />
                   <Route path="/seven-mod" element={<SevenMod />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route path="/updates/:slug" element={<UpdateDetail />} />
                 </Routes>
               </Suspense>
             </main>
             {!isAdminPage && <Footer />}
+            {!isAdminPage && <FloatingUpdates />}
           </div>
         </div>
       )}

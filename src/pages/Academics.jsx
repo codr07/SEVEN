@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAlert } from '../context/AlertContext';
-import { supabase, withTimeout, filterVisible } from '../lib/supabase';
+import { supabase, withTimeout, filterVisible, orderedFetch } from '../lib/supabase';
 import { Loader2, GraduationCap, Search, Share2, BookText, ArrowRight, Award, Star, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MergedShape from '../components/MergedShape';
@@ -20,7 +20,7 @@ const Academics = () => {
     setErrorMsg('');
     try {
       const { data, error } = await withTimeout(
-        supabase.from('academics').select('*').order('created_at', { ascending: false }),
+        orderedFetch(supabase, 'academics'),
         10000,
         'Database connection timed out.'
       );
@@ -48,12 +48,14 @@ const Academics = () => {
   });
 
   // Group academics by category
-  const groupedAcademics = filteredAcademics.reduce((acc, item) => {
-    const cat = item.category || 'Foundation';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(item);
-    return acc;
-  }, {});
+  const groupedAcademics = useMemo(() => {
+    return filteredAcademics.reduce((acc, item) => {
+      const cat = item.category || 'Foundation';
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(item);
+      return acc;
+    }, {});
+  }, [filteredAcademics]);
 
   return (
     <div className="pt-32 pb-32 px-6 max-w-7xl mx-auto min-h-screen relative z-10">

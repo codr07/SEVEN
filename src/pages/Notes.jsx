@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { FileText, Download, Share2, Search, Filter, Loader2, BookOpen, Clock, ArrowRight, Star, Image as ImageIcon, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase, withTimeout, filterVisible } from '../lib/supabase';
+import { supabase, withTimeout, filterVisible, orderedFetch } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 import { useAlert } from '../context/AlertContext';
 import MergedShape from '../components/MergedShape';
@@ -22,7 +22,7 @@ const Notes = () => {
     setErrorMsg('');
     try {
       const { data, error } = await withTimeout(
-        supabase.from('notes').select('*').order('created_at', { ascending: false }),
+        orderedFetch(supabase, 'notes'),
         10000,
         'Connection timed out.'
       );
@@ -50,12 +50,14 @@ const Notes = () => {
 
   const categories = [...new Set(notes.map(n => n.category))].filter(Boolean);
 
-  const groupedNotes = filteredNotes.reduce((acc, note) => {
-    const cat = note.category || 'Uncategorized';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(note);
-    return acc;
-  }, {});
+  const groupedNotes = useMemo(() => {
+    return filteredNotes.reduce((acc, note) => {
+      const cat = note.category || 'Uncategorized';
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(note);
+      return acc;
+    }, {});
+  }, [filteredNotes]);
 
   return (
     <div className="pt-32 pb-32 px-6 max-w-7xl mx-auto min-h-screen relative z-10">

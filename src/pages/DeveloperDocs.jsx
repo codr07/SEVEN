@@ -11,7 +11,8 @@ import {
   Server, 
   Key, 
   Search,
-  Lock
+  Lock,
+  Mail
 } from 'lucide-react';
 
 const DeveloperDocs = () => {

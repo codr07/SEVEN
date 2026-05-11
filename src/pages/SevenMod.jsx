@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
+import GlassSelect from '../components/GlassSelect';
 import {
   AlertCircle,
   CheckCircle2,
@@ -24,26 +25,31 @@ import {
   Laptop,
   Code,
   Cpu,
-  Rocket
+  Rocket,
+  ChevronRight,
+  TrendingUp,
+  History,
+  Activity
 } from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  LineChart, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
   Line,
-  PieChart, 
-  Pie, 
-  Cell, 
+  PieChart,
+  Pie,
+  Cell,
   Legend,
   AreaChart,
   Area
 } from 'recharts';
 import { useAlert } from '../context/AlertContext';
+import { orderedFetch } from '../lib/supabase';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -65,6 +71,8 @@ const CONTENT_TABLES = [
   { id: 'faculty', name: 'Faculty' },
   { id: 'notes', name: 'Notes' },
   { id: 'founders', name: 'Founders' },
+  { id: 'service_inquiries', name: 'Service Inquiries' },
+  { id: 'updates', name: 'Platform Updates' }
 ];
 
 const ALL_TABLES = [
@@ -76,6 +84,7 @@ const ALL_TABLES = [
 const ADMIN_TABS = [
   { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
   ...CONTENT_TABLES.map((t) => ({ id: t.id, name: t.name, icon: Package })),
+  { id: 'workflow_designer', name: 'Workflow Designer', icon: Settings },
   { id: 'users', name: 'Users & Roles', icon: Users },
   { id: 'student_submissions', name: 'Student Submissions', icon: Upload },
 ];
@@ -168,25 +177,7 @@ const SevenMod = () => {
   }, [activeTab]);
 
   const fetchRowsWithCreatedAtFallback = async (tableName, selectClause = '*') => {
-    const orderedQuery = adminSupabase.from(tableName).select(selectClause).order('created_at', { ascending: false });
-    const orderedResult = await orderedQuery;
-
-    if (!orderedResult.error) {
-      return orderedResult;
-    }
-
-    const fallbackResult = await adminSupabase.from(tableName).select(selectClause);
-    if (fallbackResult.error) {
-      return fallbackResult;
-    }
-
-    const sorted = [...(fallbackResult.data || [])].sort((a, b) => {
-      const aTime = a?.created_at ? new Date(a.created_at).getTime() : 0;
-      const bTime = b?.created_at ? new Date(b.created_at).getTime() : 0;
-      return bTime - aTime;
-    });
-
-    return { data: sorted, error: null };
+    return await orderedFetch(adminSupabase, tableName, selectClause);
   };
 
   const loadAdminRole = async (userId) => {
@@ -284,6 +275,66 @@ const SevenMod = () => {
     fetchTable(activeTab);
   }, [activeTab, adminUser, adminRole]);
 
+  const backfillAllIDs = async () => {
+    setLoading(true);
+    try {
+      const tablesToSync = ['profiles', 'faculty', 'founders'];
+      let totalUpdated = 0;
+
+      for (const tableName of tablesToSync) {
+        const { data: rows, error } = await adminSupabase
+          .from(tableName)
+          .select('*')
+          .order('created_at', { ascending: true });
+
+        if (error || !rows) continue;
+
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          let extra = row.extra_details;
+          if (typeof extra === 'string') {
+            try { extra = JSON.parse(extra); } catch { extra = {}; }
+          }
+          if (!extra) extra = {};
+
+          if (!extra.id_number) {
+            const serial = String(i + 1).padStart(4, '0');
+            const prefix = tableName === 'founders' ? '70326-FND' : tableName === 'faculty' ? '70326-FAC' : '70326';
+            const idNumber = `${prefix}-${serial}`;
+
+            const newExtra = { ...extra, id_number: idNumber };
+            if (tableName === 'founders' && !newExtra.manifesto_id) {
+              newExtra.manifesto_id = idNumber;
+            }
+
+            const { error: upErr } = await adminSupabase
+              .from(tableName)
+              .update({ extra_details: newExtra })
+              .eq('id', row.id);
+
+            if (!upErr) totalUpdated++;
+          }
+        }
+      }
+
+      if (totalUpdated > 0) {
+        showAlert(`Synchronized ${totalUpdated} identities across all systems.`, 'success');
+        if (activeTab === 'users') fetchUsers();
+        else fetchTable(activeTab);
+      }
+    } catch (err) {
+      console.error('Backfill error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (adminRole === 'admin' && (activeTab === 'users' || activeTab === 'faculty' || activeTab === 'founders')) {
+      backfillAllIDs();
+    }
+  }, [activeTab, adminRole]);
+
   const fetchStats = async () => {
     const now = new Date();
     const oneDay = 24 * 60 * 60 * 1000;
@@ -297,7 +348,7 @@ const SevenMod = () => {
         const { data, error } = await adminSupabase
           .from(table.id)
           .select('*');
-        
+
         let subCategories = {};
         let totalStats = { Daily: 0, Weekly: 0, Monthly: 0, Quarterly: 0, Lifetime: (data || []).length };
 
@@ -310,7 +361,7 @@ const SevenMod = () => {
 
           if (!item.created_at) return;
           const created = new Date(item.created_at);
-          
+
           if (created >= today) { totalStats.Daily++; subCategories[typeName].Daily++; }
           if (created >= lastWeek) { totalStats.Weekly++; subCategories[typeName].Weekly++; }
           if (created >= lastMonth) { totalStats.Monthly++; subCategories[typeName].Monthly++; }
@@ -322,8 +373,8 @@ const SevenMod = () => {
           ...subCategories[key]
         }));
 
-        return { 
-          tableName: table.id, 
+        return {
+          tableName: table.id,
           name: table.name,
           count: totalStats.Lifetime,
           ...totalStats,
@@ -577,29 +628,29 @@ const SevenMod = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto mt-4 sm:mt-0">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-                <input
-                  type="text"
-                  placeholder="Search entries..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-3 md:py-3.5 rounded-2xl bg-card border border-border text-sm outline-none focus:border-primary transition-all"
-                />
-              </div>          <div className="flex items-center gap-4">
-            {(CONTENT_TABLES.some(t => t.id === activeTab) || activeTab === 'student_submissions') && (
-              <button
-                onClick={() => {
-                  setEditingItem(null);
-                  setIsModalOpen(true);
-                }}
-                className="cool-button px-6 h-12 text-white flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
-              >
-                <Plus size={16} /> New Entry
-              </button>
-            )}
-          </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <input
+                type="text"
+                placeholder="Search entries..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-3 md:py-3.5 rounded-2xl bg-card border border-border text-sm outline-none focus:border-primary transition-all"
+              />
+            </div>          <div className="flex items-center gap-4">
+              {(CONTENT_TABLES.some(t => t.id === activeTab) || activeTab === 'student_submissions') && (
+                <button
+                  onClick={() => {
+                    setEditingItem(null);
+                    setIsModalOpen(true);
+                  }}
+                  className="cool-button px-6 h-12 text-white flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                >
+                  <Plus size={16} /> New Entry
+                </button>
+              )}
             </div>
+          </div>
         </header>
 
         {activeTab === 'dashboard' && (
@@ -607,7 +658,7 @@ const SevenMod = () => {
             {/* Stats Grid */}
             <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {stats.map((item, idx) => (
-                <motion.div 
+                <motion.div
                   key={item.tableName}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -623,7 +674,7 @@ const SevenMod = () => {
                     </div>
                   </div>
                   <div className="mt-4 h-1 w-full bg-muted/30 rounded-full overflow-hidden">
-                    <motion.div 
+                    <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min((item.count / 100) * 100, 100)}%` }}
                       className="h-full bg-gradient-to-r from-primary to-accent"
@@ -655,10 +706,10 @@ const SevenMod = () => {
                           <Cell key={`cell-${index}`} fill={['#A855F7', '#EC4899', '#3B82F6', '#10B981'][index % 4]} />
                         ))}
                       </Pie>
-                      <Tooltip 
+                      <Tooltip
                         contentStyle={{ backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px' }}
                       />
-                      <Legend verticalAlign="bottom" height={36}/>
+                      <Legend verticalAlign="bottom" height={36} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -674,19 +725,19 @@ const SevenMod = () => {
                   {stats.filter(s => CONTENT_TABLES.some(t => t.id === s.tableName) || s.tableName === 'profiles').map((stat, idx) => {
                     const timeframe = graphTimeframes[stat.tableName] || 'Lifetime';
                     const data = stat.subCategories || [];
-                    
+
                     return (
                       <div key={stat.tableName} className="h-[320px] w-full bg-black/5 dark:bg-white/5 rounded-3xl p-6 border border-black/5 dark:border-white/5 flex flex-col">
                         <div className="flex items-center justify-between mb-4">
                           <p className="text-sm font-black uppercase tracking-widest text-muted-foreground">{stat.name}</p>
                           <p className="text-2xl font-black text-primary">{stat[timeframe]}</p>
                         </div>
-                        
+
                         <div className="flex flex-wrap gap-1 mb-6 bg-black/10 dark:bg-white/5 p-1 rounded-xl">
                           {['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Lifetime'].map(tf => (
                             <button
                               key={tf}
-                              onClick={() => setGraphTimeframes(prev => ({...prev, [stat.tableName]: tf}))}
+                              onClick={() => setGraphTimeframes(prev => ({ ...prev, [stat.tableName]: tf }))}
                               className={`flex-1 py-1.5 px-1 sm:px-2 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider rounded-lg transition-all ${timeframe === tf ? 'bg-white dark:bg-white/10 shadow-sm text-primary' : 'text-muted-foreground hover:bg-white/5'}`}
                             >
                               {tf}
@@ -700,17 +751,17 @@ const SevenMod = () => {
                               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700 }} />
                               <YAxis axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10 }} allowDecimals={false} />
-                              <Tooltip 
+                              <Tooltip
                                 contentStyle={{ backgroundColor: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', color: '#fff', fontSize: '12px' }}
                                 cursor={{ stroke: 'rgba(255,255,255,0.05)', strokeWidth: 2 }}
                               />
-                              <Line 
-                                type="monotone" 
-                                dataKey={timeframe} 
-                                stroke={['#A855F7', '#EC4899', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'][idx % 6]} 
-                                strokeWidth={3} 
-                                dot={{ r: 4, strokeWidth: 2, fill: '#111' }} 
-                                activeDot={{ r: 6, strokeWidth: 0 }} 
+                              <Line
+                                type="monotone"
+                                dataKey={timeframe}
+                                stroke={['#A855F7', '#EC4899', '#3B82F6', '#10B981', '#F59E0B', '#EF4444'][idx % 6]}
+                                strokeWidth={3}
+                                dot={{ r: 4, strokeWidth: 2, fill: '#111' }}
+                                activeDot={{ r: 6, strokeWidth: 0 }}
                               />
                             </LineChart>
                           </ResponsiveContainer>
@@ -786,55 +837,55 @@ const SevenMod = () => {
                               </div>
                               <div className="flex-1 w-px bg-gradient-to-t from-primary/50 to-transparent mt-4" />
                             </div>
-                          <div className="flex gap-4">
-                            {(item.cover_image || item.image_url || item.thumbnail || item.avatar_url) && (
-                              <div className="w-20 h-20 rounded-2xl overflow-hidden border border-border flex-shrink-0 bg-muted">
-                                <img
-                                  src={item.cover_image || item.image_url || item.thumbnail || item.avatar_url}
-                                  alt="thumbnail"
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-black text-lg line-clamp-1">{item.name || item.title || item.role || 'Untitled'}</p>
-                              <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                                {item.short_desc || item.description || item.bio || 'No description'}
-                              </p>
-                              <div className="mt-2 flex items-center gap-2">
-                                <span className="px-3 py-1 rounded-lg badge-glass text-[9px]">
-                                  {item.category || item.topic || 'General'}
-                                </span>
+                            <div className="flex gap-4">
+                              {(item.cover_image || item.image_url || item.thumbnail || item.avatar_url) && (
+                                <div className="w-20 h-20 rounded-2xl overflow-hidden border border-border flex-shrink-0 bg-muted">
+                                  <img
+                                    src={item.cover_image || item.image_url || item.thumbnail || item.avatar_url}
+                                    alt="thumbnail"
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-black text-lg line-clamp-1">{item.name || item.title || item.role || 'Untitled'}</p>
+                                <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                                  {item.short_desc || item.description || item.bio || 'No description'}
+                                </p>
+                                <div className="mt-2 flex items-center gap-2">
+                                  <span className="px-3 py-1 rounded-lg badge-glass text-[9px]">
+                                    {item.category || item.topic || 'General'}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2 pt-2">
-                            <button
-                              title={item.extra_details?.is_visible === false ? "Hidden on site. Click to show." : "Visible on site. Click to hide."}
-                              onClick={() => toggleVisibility(activeTab, item)}
-                              className={`px-4 py-2.5 rounded-xl flex items-center justify-center transition-all ${item.extra_details?.is_visible === false
-                                ? 'border border-muted text-muted-foreground bg-muted/10'
-                                : 'border border-primary/40 text-primary bg-primary/5'
-                                }`}
-                            >
-                              {item.extra_details?.is_visible === false ? <EyeOff size={14} /> : <Eye size={14} />}
-                            </button>
-                                                  <button
-                      onClick={() => {
-                        setEditingItem(item);
-                        setIsModalOpen(true);
-                      }}
-                      className="flex-1 px-4 py-3 rounded-xl border-2 border-primary/30 text-[10px] uppercase tracking-widest font-black flex items-center justify-center gap-2 hover:bg-primary/10 transition-all text-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]"
-                    >
-                      <Pencil size={12} /> Edit Entry
-                    </button>
-                            <button
-                              onClick={() => removeItem(activeTab, item.id)}
-                              className="px-4 py-2.5 rounded-xl border border-destructive/40 text-destructive hover:bg-destructive/10 transition-all"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
+                            <div className="flex items-center gap-2 pt-2">
+                              <button
+                                title={item.extra_details?.is_visible === false ? "Hidden on site. Click to show." : "Visible on site. Click to hide."}
+                                onClick={() => toggleVisibility(activeTab, item)}
+                                className={`px-4 py-2.5 rounded-xl flex items-center justify-center transition-all ${item.extra_details?.is_visible === false
+                                  ? 'border border-muted text-muted-foreground bg-muted/10'
+                                  : 'border border-primary/40 text-primary bg-primary/5'
+                                  }`}
+                              >
+                                {item.extra_details?.is_visible === false ? <EyeOff size={14} /> : <Eye size={14} />}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingItem(item);
+                                  setIsModalOpen(true);
+                                }}
+                                className="flex-1 px-4 py-3 rounded-xl border-2 border-primary/30 text-[10px] uppercase tracking-widest font-black flex items-center justify-center gap-2 hover:bg-primary/10 transition-all text-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]"
+                              >
+                                <Pencil size={12} /> Edit Entry
+                              </button>
+                              <button
+                                onClick={() => removeItem(activeTab, item.id)}
+                                className="px-4 py-2.5 rounded-xl border border-destructive/40 text-destructive hover:bg-destructive/10 transition-all"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </article>
                         );
                       })}
@@ -879,14 +930,16 @@ const SevenMod = () => {
                       >
                         <Pencil size={14} />
                       </button>
-                      <select
+                      <GlassSelect
                         value={item.role || 'student'}
-                        onChange={(e) => updateUserRole(item.id, e.target.value)}
-                        className="px-3 py-2 rounded-xl border border-border bg-background text-sm font-semibold"
-                      >
-                        <option value="student">student</option>
-                        <option value="admin">admin</option>
-                      </select>
+                        onChange={(val) => updateUserRole(item.id, val)}
+                        options={[
+                          { value: 'admin', label: 'Admin' },
+                          { value: 'student', label: 'Student' },
+                          { value: 'faculty', label: 'Faculty' }
+                        ]}
+                        className="w-36"
+                      />
                       <button
                         onClick={() => removeItem('profiles', item.id)}
                         className="px-3 py-2 rounded-xl border border-destructive/40 text-destructive"
@@ -969,9 +1022,103 @@ const SevenMod = () => {
             )}
           </section>
         )}
+        {activeTab === 'workflow_designer' && (
+          <section className="space-y-8">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-3xl font-black italic tracking-tighter text-animate-gradient">Workflow Architect</h2>
+              <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Engineer dynamic intake pipelines and service logic</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-1 space-y-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-2 px-2">Select Pipeline to Engineer</p>
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
+                  {tableData.length === 0 && (
+                    <button
+                      onClick={() => fetchTable('services')}
+                      className="w-full p-6 rounded-3xl border border-dashed border-border hover:border-primary/50 transition-all text-xs font-bold text-muted-foreground"
+                    >
+                      Load Services
+                    </button>
+                  )}
+                  {tableData.map(service => (
+                    <button
+                      key={service.id}
+                      onClick={() => setEditingItem(service)}
+                      className={`w-full p-5 rounded-3xl border transition-all text-left group flex items-center justify-between ${editingItem?.id === service.id ? 'bg-primary/10 border-primary shadow-[0_0_20px_rgba(var(--primary-rgb),0.1)]' : 'bg-card border-border hover:border-primary/40'}`}
+                    >
+                      <div>
+                        <p className={`font-black text-sm uppercase tracking-wider ${editingItem?.id === service.id ? 'text-primary' : ''}`}>{service.title}</p>
+                        <p className="text-[9px] text-muted-foreground mt-1 uppercase tracking-widest">{service.category || 'General'}</p>
+                      </div>
+                      <ChevronRight size={16} className={`transition-transform ${editingItem?.id === service.id ? 'translate-x-1 text-primary' : 'text-muted-foreground'}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="lg:col-span-2">
+                {editingItem ? (
+                  <div className="space-y-6">
+                    <div className="p-8 rounded-[48px] bg-card border border-border shadow-2xl space-y-8">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-2xl font-black uppercase tracking-tighter italic">{editingItem.title}</h3>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-primary mt-1">Pipeline Configuration</p>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            setLoading(true);
+                            const { error } = await adminSupabase
+                              .from('services')
+                              .update({ extra_details: editingItem.extra_details })
+                              .eq('id', editingItem.id);
+
+                            if (error) showAlert(error.message, 'error');
+                            else {
+                              showAlert('Workflow Pipeline Synchronized', 'success');
+                              fetchTable('services');
+                            }
+                            setLoading(false);
+                          }}
+                          disabled={loading}
+                          className="px-8 py-4 rounded-2xl bg-primary text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                        >
+                          {loading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                          Save Pipeline
+                        </button>
+                      </div>
+
+                      <ServiceWorkflowEditor
+                        value={editingItem.extra_details?.form_config}
+                        onChange={(newConfig) => {
+                          setEditingItem({
+                            ...editingItem,
+                            extra_details: {
+                              ...(editingItem.extra_details || {}),
+                              form_config: newConfig
+                            }
+                          });
+                        }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-[50vh] flex flex-col items-center justify-center text-center p-12 rounded-[48px] border-2 border-dashed border-border bg-muted/10">
+                    <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center text-primary mb-6">
+                      <Settings size={32} />
+                    </div>
+                    <h3 className="text-xl font-black uppercase tracking-tighter mb-2 italic">Select a Pipeline</h3>
+                    <p className="text-xs text-muted-foreground max-w-xs font-medium">Engineer the fields, tiers, and logical workflows for your service intake system.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
-      {isModalOpen && (CONTENT_TABLES.some((t) => t.id === activeTab) || activeTab === 'users' || activeTab === 'student_submissions') && (
+      {isModalOpen && (CONTENT_TABLES.some((t) => t.id === activeTab) || activeTab === 'users' || activeTab === 'student_submissions' || activeTab === 'service_inquiries') && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0 }}
@@ -1065,6 +1212,311 @@ const JSONFieldEditor = ({ value, onChange, label }) => {
         data-lenis-prevent="true"
         spellCheck="false"
       />
+    </div>
+  );
+};
+
+const ServiceWorkflowEditor = ({ value, onChange }) => {
+  const [config, setConfig] = useState(value || {
+    tiers: [],
+    tierMultipliers: {},
+    addons: [],
+    custom_fields: []
+  });
+
+  const [dialog, setDialog] = useState(null); // { type, title, inputs: [] }
+  const [dialogData, setDialogData] = useState({});
+
+  const update = (newConfig) => {
+    setConfig(newConfig);
+    onChange(newConfig);
+  };
+
+  const addTier = () => {
+    setDialog({
+      type: 'tier',
+      title: 'Architectural Tier',
+      fields: [
+        { name: 'name', label: 'Tier Name', placeholder: 'e.g. Diamond Elite', type: 'text' }
+      ]
+    });
+    setDialogData({ name: '' });
+  };
+
+  const addAddon = () => {
+    setDialog({
+      type: 'addon',
+      title: 'Strategic Add-on',
+      fields: [
+        { name: 'label', label: 'Add-on Title', placeholder: 'e.g. Express Delivery', type: 'text' },
+        { name: 'price', label: 'Fixed Price (₹)', placeholder: '5000', type: 'number' }
+      ]
+    });
+    setDialogData({ label: '', price: 0 });
+  };
+
+  const addField = () => {
+    setDialog({
+      type: 'field',
+      title: 'Intelligence Field',
+      fields: [
+        { name: 'label', label: 'Field Label', placeholder: 'e.g. Company Website', type: 'text' }
+      ]
+    });
+    setDialogData({ label: '' });
+  };
+
+  const handleDialogSubmit = () => {
+    if (dialog.type === 'tier') {
+      const { name } = dialogData;
+      if (!name) return;
+      update({
+        ...config,
+        tiers: [...(config.tiers || []), name],
+        tierMultipliers: { ...(config.tierMultipliers || {}), [name]: 1 }
+      });
+    } else if (dialog.type === 'addon') {
+      const { label, price } = dialogData;
+      if (!label) return;
+      const id = label.toLowerCase().replace(/\s+/g, '_');
+      update({
+        ...config,
+        addons: [...(config.addons || []), { id, label, price: parseInt(price) || 0 }]
+      });
+    } else if (dialog.type === 'field') {
+      const { label } = dialogData;
+      if (!label) return;
+      const name = label.toLowerCase().replace(/\s+/g, '_');
+      update({
+        ...config,
+        custom_fields: [...(config.custom_fields || []), {
+          name,
+          label,
+          type: 'text',
+          required: false,
+          placeholder: ''
+        }]
+      });
+    }
+    setDialog(null);
+  };
+
+  return (
+    <div className="space-y-6 p-6 rounded-[32px] bg-muted/20 border border-border/50">
+      <div className="flex items-center justify-between">
+        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">Workflow & Logic Architect</h4>
+        <button
+          type="button"
+          onClick={() => update({ tiers: [], tierMultipliers: {}, addons: [], custom_fields: [] })}
+          className="text-[10px] font-bold text-destructive hover:underline"
+        >
+          Reset Config
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Service Tiers & Multipliers</p>
+          <button type="button" onClick={addTier} className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all">
+            <Plus size={14} />
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {(config.tiers || []).map(tier => (
+            <div key={tier} className="p-3 rounded-xl bg-background border border-border/50 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-widest truncate">{tier}</span>
+                <button type="button" onClick={() => update({ ...config, tiers: config.tiers.filter(t => t !== tier) })} className="text-destructive"><X size={12} /></button>
+              </div>
+              <input
+                type="number"
+                step="0.1"
+                placeholder="Multiplier"
+                value={config.tierMultipliers?.[tier] || 1}
+                onChange={e => update({ ...config, tierMultipliers: { ...config.tierMultipliers, [tier]: parseFloat(e.target.value) } })}
+                className="w-full bg-muted/30 px-3 py-1.5 rounded-lg text-xs outline-none"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Optional Add-ons</p>
+          <button type="button" onClick={addAddon} className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all">
+            <Plus size={14} />
+          </button>
+        </div>
+        <div className="space-y-2">
+          {(config.addons || []).map((addon, idx) => (
+            <div key={idx} className="p-3 rounded-xl bg-background border border-border/50 flex items-center justify-between gap-4">
+              <div className="flex-1">
+                <p className="text-[10px] font-black uppercase tracking-widest">{addon.label}</p>
+                <p className="text-[10px] text-muted-foreground">₹{addon.price}</p>
+              </div>
+              <button type="button" onClick={() => update({ ...config, addons: config.addons.filter((_, i) => i !== idx) })} className="text-destructive"><X size={14} /></button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Dynamic Workflow Fields</p>
+          <button type="button" onClick={addField} className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all">
+            <Plus size={14} />
+          </button>
+        </div>
+        <div className="space-y-2">
+          {(config.custom_fields || []).map((field, idx) => (
+            <div key={idx} className="p-4 rounded-xl bg-background border border-border/50 space-y-3">
+              <div className="flex items-center justify-between">
+                <input
+                  value={field.label}
+                  onChange={e => {
+                    const newFields = [...config.custom_fields];
+                    newFields[idx].label = e.target.value;
+                    update({ ...config, custom_fields: newFields });
+                  }}
+                  className="bg-transparent font-black uppercase tracking-widest text-[10px] outline-none text-primary"
+                />
+                <button type="button" onClick={() => update({ ...config, custom_fields: config.custom_fields.filter((_, i) => i !== idx) })} className="text-destructive"><X size={14} /></button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={field.type}
+                  onChange={e => {
+                    const newFields = [...config.custom_fields];
+                    newFields[idx].type = e.target.value;
+                    update({ ...config, custom_fields: newFields });
+                  }}
+                  className="bg-muted/30 px-3 py-1.5 rounded-lg text-[10px] font-bold outline-none"
+                >
+                  <option value="text">Text Input</option>
+                  <option value="textarea">Large Text</option>
+                  <option value="select">Dropdown</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newFields = [...config.custom_fields];
+                    newFields[idx].required = !newFields[idx].required;
+                    update({ ...config, custom_fields: newFields });
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${field.required ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-muted/30 text-muted-foreground border border-transparent'}`}
+                >
+                  {field.required ? 'Required' : 'Optional'}
+                </button>
+              </div>
+              {field.type === 'select' && (
+                <input
+                  placeholder="Options (Comma separated)"
+                  value={field.options?.join(', ') || ''}
+                  onChange={e => {
+                    const newFields = [...config.custom_fields];
+                    newFields[idx].options = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                    update({ ...config, custom_fields: newFields });
+                  }}
+                  className="w-full bg-muted/30 px-3 py-1.5 rounded-lg text-[10px] font-medium outline-none"
+                />
+              )}
+
+              <div className="pt-2 border-t border-border/30">
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">Visibility Logic (showIf)</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={field.showIf?.field || ''}
+                    onChange={e => {
+                      const newFields = [...config.custom_fields];
+                      if (!e.target.value) {
+                        delete newFields[idx].showIf;
+                      } else {
+                        newFields[idx].showIf = { field: e.target.value, value: '' };
+                      }
+                      update({ ...config, custom_fields: newFields });
+                    }}
+                    className="bg-muted/30 px-3 py-1.5 rounded-lg text-[9px] font-bold outline-none"
+                  >
+                    <option value="">Always Visible</option>
+                    <option value="tier">Based on Tier</option>
+                    {config.custom_fields.filter((_, i) => i < idx).map(f => (
+                      <option key={f.name} value={f.name}>Based on {f.label}</option>
+                    ))}
+                  </select>
+                  {field.showIf && (
+                    <input
+                      placeholder="Show if value is..."
+                      value={field.showIf.value}
+                      onChange={e => {
+                        const newFields = [...config.custom_fields];
+                        newFields[idx].showIf.value = e.target.value;
+                        update({ ...config, custom_fields: newFields });
+                      }}
+                      className="bg-muted/30 px-3 py-1.5 rounded-lg text-[9px] font-medium outline-none"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {dialog && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6 pointer-events-none">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-background/60 backdrop-blur-3xl pointer-events-auto"
+              onClick={() => setDialog(null)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-sm bg-card border border-border rounded-[40px] p-10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.5)] relative z-10 pointer-events-auto"
+            >
+              <h4 className="text-2xl font-black italic tracking-tighter uppercase mb-2">Build <span className="text-primary">{dialog.title}</span></h4>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-8">Architect the specific data point parameters</p>
+
+              <div className="space-y-6 mb-10">
+                {dialog.fields.map(f => (
+                  <div key={f.name} className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-widest text-primary ml-1">{f.label}</label>
+                    <input
+                      type={f.type}
+                      placeholder={f.placeholder}
+                      value={dialogData[f.name] || ''}
+                      onChange={e => setDialogData({ ...dialogData, [f.name]: e.target.value })}
+                      autoFocus={f.name === dialog.fields[0].name}
+                      onKeyDown={e => e.key === 'Enter' && handleDialogSubmit()}
+                      className="w-full bg-muted/30 px-5 py-4 rounded-2xl text-sm font-bold border border-transparent focus:border-primary/30 focus:bg-background outline-none transition-all"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setDialog(null)}
+                  className="px-6 py-4 rounded-2xl border border-border font-black uppercase tracking-widest text-[9px] hover:bg-muted/50 transition-all active:scale-95"
+                >
+                  Abort
+                </button>
+                <button
+                  onClick={handleDialogSubmit}
+                  className="px-6 py-4 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-[9px] hover:scale-[1.02] active:scale-95 shadow-xl shadow-primary/20 transition-all"
+                >
+                  Confirm
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -1185,13 +1637,13 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
     let normalized = { ...initialData };
     // Ensure extra_details is an object if it comes back as a string
     if (typeof normalized.extra_details === 'string') {
-      try { 
-        normalized.extra_details = JSON.parse(normalized.extra_details); 
+      try {
+        normalized.extra_details = JSON.parse(normalized.extra_details);
         if (typeof normalized.extra_details !== 'object' || normalized.extra_details === null) {
           normalized.extra_details = {};
         }
-      } catch { 
-        normalized.extra_details = {}; 
+      } catch {
+        normalized.extra_details = {};
       }
     } else if (!normalized.extra_details) {
       normalized.extra_details = {};
@@ -1204,6 +1656,7 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
     switch (table) {
       case 'courses':
         return [
+          { name: 'order_index', type: 'number', label: 'Order (1, 2, 3...)' },
           { name: 'category', type: 'text', label: 'Category' },
           { name: 'name', type: 'text', label: 'Name', required: true },
           { name: 'short_desc', type: 'textarea', label: 'Short Description' },
@@ -1219,6 +1672,7 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
         ];
       case 'academics':
         return [
+          { name: 'order_index', type: 'number', label: 'Order (1, 2, 3...)' },
           { name: 'title', type: 'text', label: 'Title', required: true },
           { name: 'description', type: 'textarea', label: 'Description' },
           { name: 'price', type: 'text', label: 'Price' },
@@ -1231,6 +1685,7 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
         ];
       case 'services':
         return [
+          { name: 'order_index', type: 'number', label: 'Order (1, 2, 3...)' },
           { name: 'category', type: 'text', label: 'Category', required: true },
           { name: 'title', type: 'text', label: 'Title', required: true },
           { name: 'price', type: 'text', label: 'Price' },
@@ -1240,9 +1695,11 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
           { name: 'extra_details.details', type: 'string_array', label: 'Service Details (Comma separated)' },
           { name: 'extra_details.detailed_description', type: 'textarea', label: 'Detailed Description' },
           { name: 'extra_details.public_review', type: 'textarea', label: 'Client Review Text' },
+          { name: 'extra_details.form_config', type: 'json', label: 'Custom Form & Workflow Config (JSON)' },
         ];
       case 'faculty':
         return [
+          { name: 'order_index', type: 'number', label: 'Order (1, 2, 3...)' },
           { name: 'name', type: 'text', label: 'Name', required: true },
           { name: 'topic', type: 'text', label: 'Topic' },
           { name: 'stars', type: 'text', label: 'Stars' },
@@ -1258,6 +1715,7 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
         ];
       case 'notes':
         return [
+          { name: 'order_index', type: 'number', label: 'Order (1, 2, 3...)' },
           { name: 'category', type: 'text', label: 'Category', required: true },
           { name: 'title', type: 'text', label: 'Title', required: true },
           { name: 'short_desc', type: 'textarea', label: 'Short Description' },
@@ -1269,9 +1727,11 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
         ];
       case 'founders':
         return [
+          { name: 'order_index', type: 'number', label: 'Order (1, 2, 3...)' },
           { name: 'name', type: 'text', label: 'Name', required: true },
           { name: 'role', type: 'text', label: 'Role', required: true },
           { name: 'bio', type: 'textarea', label: 'Bio', required: true },
+          { name: 'extra_details.manifesto_id', type: 'text', label: 'Manifesto ID' },
           { name: 'cover_image', type: 'text', label: 'Cover Image URL' },
           { name: 'linkedin_url', type: 'text', label: 'LinkedIn URL' },
           { name: 'portfolio_url', type: 'text', label: 'Portfolio URL' },
@@ -1289,15 +1749,39 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
           { name: 'full_name', type: 'text', label: 'Full Name' },
           { name: 'phone', type: 'text', label: 'Phone' },
           { name: 'avatar_url', type: 'text', label: 'Avatar URL' },
-          { name: 'role', type: 'text', label: 'Role (admin/student)' },
+          { name: 'role', type: 'select', label: 'Role', options: ['admin', 'student', 'faculty'] },
+          { name: 'extra_details.id_number', type: 'text', label: 'ID Card Number' },
         ];
       case 'student_submissions':
         return [
           { name: 'title', type: 'text', label: 'Title', required: true },
-          { name: 'submission_type', type: 'text', label: 'Type', required: true },
+          { name: 'submission_type', type: 'select', label: 'Type', options: ['project', 'research_paper'], required: true },
           { name: 'summary', type: 'textarea', label: 'Summary' },
           { name: 'content_url', type: 'text', label: 'Content/Project URL' },
           { name: 'is_pushed', type: 'boolean', label: 'Push to Live?' },
+        ];
+      case 'service_inquiries':
+        return [
+          { name: 'name', type: 'text', label: 'Client Name', required: true },
+          { name: 'email', type: 'text', label: 'Email', required: true },
+          { name: 'phone', type: 'text', label: 'Phone' },
+          { name: 'service_type', type: 'text', label: 'Service Type' },
+          { name: 'tier', type: 'text', label: 'Tier' },
+          { name: 'budget', type: 'text', label: 'Budget' },
+          { name: 'timeline', type: 'text', label: 'Timeline' },
+          { name: 'status', type: 'select', label: 'Status', options: ['ordered', 'contacted', 'completed', 'rejected'] },
+          { name: 'requirements', type: 'textarea', label: 'Requirements' },
+          { name: 'custom_responses', type: 'json', label: 'Dynamic Field Data (JSON)' },
+        ];
+      case 'updates':
+        return [
+          { name: 'title', type: 'text', label: 'Update Title', required: true },
+          { name: 'slug', type: 'text', label: 'URL Slug', required: true },
+          { name: 'type', type: 'select', label: 'Type', options: ['content', 'patch'], required: true },
+          { name: 'category', type: 'select', label: 'Category', options: ['course', 'service', 'note', 'academic', 'system', 'feature'] },
+          { name: 'date', type: 'text', label: 'Date (e.g., May 11, 2026)' },
+          { name: 'excerpt', type: 'textarea', label: 'Short Summary' },
+          { name: 'content', type: 'textarea', label: 'Full Documentation (Markdown)' },
         ];
       default:
         return [];
@@ -1335,7 +1819,7 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
       // 1. Filter payload to ONLY include valid fields for this table
       const validKeys = fields.map(f => f.name.split('.')[0]);
       const uniqueKeys = [...new Set(validKeys)];
-      
+
       const payload = {};
       uniqueKeys.forEach(key => {
         if (formData[key] !== undefined) {
@@ -1358,8 +1842,29 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
       delete payload.updated_at;
 
       const actualTable = (table === 'profiles_edit' || table === 'users') ? 'profiles' : table;
-      
-      const { data, error } = initialData?.id 
+
+      // AUTO-GENERATE ID NUMBER FOR ALL ROLES
+      if ((actualTable === 'profiles' || actualTable === 'faculty' || actualTable === 'founders') && !initialData?.id) {
+        const { count, error: countErr } = await adminSupabase
+          .from(actualTable)
+          .select('*', { count: 'exact', head: true });
+
+        if (!countErr) {
+          const serial = String((count || 0) + 1).padStart(4, '0');
+          const prefix = actualTable === 'founders' ? '70326-FND' : actualTable === 'faculty' ? '70326-FAC' : '70326';
+          const idNumber = `${prefix}-${serial}`;
+          payload.extra_details = {
+            ...(payload.extra_details || {}),
+            id_number: idNumber
+          };
+          // For founders, also set manifesto_id if it's missing to keep it in sync
+          if (actualTable === 'founders' && !payload.extra_details.manifesto_id) {
+            payload.extra_details.manifesto_id = idNumber;
+          }
+        }
+      }
+
+      const { data, error } = initialData?.id
         ? await adminSupabase.from(actualTable).update(payload).eq('id', initialData.id).select()
         : await adminSupabase.from(actualTable).insert([payload]).select();
 
@@ -1367,8 +1872,24 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
       if (!data || data.length === 0) {
         throw new Error('Update failed. You might not have permission (RLS blocked), or the record was not found.');
       }
-      
+
       showAlert(initialData?.id ? 'Updated successfully' : 'Created successfully', 'success');
+
+      // AUTO-GENERATE UPDATE FOR NEW CONTENT
+      if (!initialData?.id && ['courses', 'services', 'notes', 'academics'].includes(actualTable)) {
+        const updateTitle = `New ${actualTable.slice(0, -1)}: ${payload.title || payload.name}`;
+        const updateSlug = `${actualTable.slice(0, -1)}-${Date.now()}`;
+
+        await adminSupabase.from('updates').insert([{
+          title: updateTitle,
+          slug: updateSlug,
+          type: 'patch',
+          category: actualTable.slice(0, -1),
+          date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+          excerpt: payload.short_desc || payload.description || `A new entry has been added to the ${actualTable} database.`,
+          content: `## Institutional Update\n\nA new **${actualTable.slice(0, -1)}** has been deployed to the 5EVEN Institutional network.\n\n**Record Title:** ${payload.title || payload.name}\n**Deployment Date:** ${new Date().toISOString()}`
+        }]);
+      }
 
       onSuccess();
     } catch (err) {
@@ -1420,6 +1941,13 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
                 placeholder="Item 1, Item 2..."
                 data-lenis-prevent="true"
               />
+            ) : field.type === 'select' ? (
+              <GlassSelect
+                value={getValue(field.name) || (field.options?.[0]?.value || field.options?.[0])}
+                onChange={(val) => setValue(field.name, val)}
+                options={field.options}
+                className="w-full"
+              />
             ) : field.type === 'boolean' ? (
               <div className="flex items-center gap-3 pt-2">
                 <input
@@ -1429,6 +1957,13 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
                   className="w-6 h-6 rounded-md border-border bg-background focus:ring-primary accent-primary"
                 />
                 <span className="text-xs font-bold uppercase tracking-widest text-foreground">Yes</span>
+              </div>
+            ) : field.type === 'json' && field.name === 'extra_details.form_config' ? (
+              <div key={field.name} className="md:col-span-2">
+                <ServiceWorkflowEditor
+                  value={getValue(field.name)}
+                  onChange={(val) => setValue(field.name, val)}
+                />
               </div>
             ) : field.type === 'json' ? (
               <JSONFieldEditor
@@ -1458,7 +1993,7 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
           disabled={loading}
           className="save-button w-full md:w-auto text-[11px]"
         >
-          {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} 
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
           <span>{initialData ? 'Save Changes' : 'Create Entry'}</span>
         </button>
       </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import GlassSelect from '../components/GlassSelect';
 import { useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
@@ -652,19 +653,12 @@ const StudentZone = () => {
                         {(Array.isArray(editableProfile.social_links) ? editableProfile.social_links : []).map((link, idx) => (
                           <div key={idx} className="p-4 rounded-2xl bg-background border border-border flex items-center gap-3 transition-all hover:border-primary/30">
                             <div className="w-32">
-                              <select
+                              <GlassSelect
                                 value={link.platform}
-                                onChange={(e) => updateSocial(idx, 'platform', e.target.value)}
-                                className="w-full px-3 py-2 rounded-xl bg-card border border-border text-[10px] font-black uppercase tracking-widest focus:border-primary outline-none"
-                              >
-                                <option>LinkedIn</option>
-                                <option>GitHub</option>
-                                <option>Twitter/X</option>
-                                <option>Portfolio</option>
-                                <option>Instagram</option>
-                                <option>Discord</option>
-                                <option>Other</option>
-                              </select>
+                                onChange={(val) => updateSocial(idx, 'platform', val)}
+                                options={['LinkedIn', 'GitHub', 'Twitter/X', 'Portfolio', 'Instagram', 'Discord', 'Other']}
+                                className="w-40"
+                              />
                             </div>
                             <input
                               placeholder="URL"
@@ -728,14 +722,14 @@ const StudentZone = () => {
                         />
                       </Field>
                       <Field label="Type" required>
-                        <select
+                        <GlassSelect
                           value={postForm.submission_type}
-                          onChange={(e) => setPostForm((p) => ({ ...p, submission_type: e.target.value }))}
-                          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                        >
-                          <option value="project">Project</option>
-                          <option value="research_paper">Research Paper</option>
-                        </select>
+                          onChange={(val) => setPostForm((p) => ({ ...p, submission_type: val }))}
+                          options={[
+                            { value: 'project', label: 'Project' },
+                            { value: 'research_paper', label: 'Research Paper' }
+                          ]}
+                        />
                       </Field>
                     </div>
 

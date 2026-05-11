@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import sevenLogo from '../assets/seven.svg';
 import { useTheme } from '../context/ThemeContext';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 const Footer = () => {
   const { theme } = useTheme();
+  const { role } = useAuth();
 
   return (
     <footer className="w-full bg-card/80 backdrop-blur-md border-t border-border mt-auto h-auto relative overflow-hidden z-20">
@@ -58,7 +60,9 @@ const Footer = () => {
               <Link to="/courses" className="hover:text-foreground hover:translate-x-1 transition-all w-fit">Courses</Link>
               <Link to="/services" className="hover:text-foreground hover:translate-x-1 transition-all w-fit">Services</Link>
               <Link to="/notes" className="hover:text-foreground hover:translate-x-1 transition-all w-fit">Notes</Link>
-              <Link to="/developers" className="hover:text-foreground hover:translate-x-1 transition-all w-fit text-primary font-bold">Developers</Link>
+              {role === 'admin' && (
+                <Link to="/developers" className="hover:text-foreground hover:translate-x-1 transition-all w-fit text-primary font-bold">Developers</Link>
+              )}
             </div>
           </div>
 
@@ -81,8 +85,8 @@ const Footer = () => {
         <div className="mt-16 pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <p>&copy; {new Date().getFullYear()} 5EVEN Institution. All rights reserved.</p>
           <div className="flex items-center gap-6">
-            <Link to="#" className="hover:text-foreground transition-colors">Privacy Policy</Link>
-            <Link to="#" className="hover:text-foreground transition-colors">Terms of Service</Link>
+            <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
           </div>
         </div>
       </div>

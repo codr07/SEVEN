@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase, withTimeout, filterVisible } from '../lib/supabase';
+import { supabase, withTimeout, filterVisible, orderedFetch } from '../lib/supabase';
 import { Loader2, Code, Rocket, Brain, Cpu, Sparkles, BookOpen, GraduationCap, Laptop, Book as BookIcon, Zap } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform, useScroll } from 'framer-motion';
 import sevenLogo from '../assets/seven.svg';
 import ProfileModal from '../components/ProfileModal';
 import TiltCard from '../components/TiltCard';
+import VisionaryCard from '../components/VisionaryCard';
 
 const ScrollAnimatedSection = ({ children, className = "" }) => {
   const ref = useRef(null);
@@ -159,11 +160,11 @@ const Home = () => {
     try {
       const results = await withTimeout(
         Promise.all([
-          supabase.from('faculty').select('*'),
-          supabase.from('founders').select('*'),
-          supabase.from('academics').select('*'),
-          supabase.from('courses').select('*'),
-          supabase.from('services').select('*')
+          orderedFetch(supabase, 'faculty'),
+          orderedFetch(supabase, 'founders'),
+          orderedFetch(supabase, 'academics'),
+          orderedFetch(supabase, 'courses'),
+          orderedFetch(supabase, 'services')
         ]),
         15000,
         'Server is taking too long to respond.'
@@ -172,7 +173,28 @@ const Home = () => {
       const [fac, fnd, aca, crs, srv] = results;
 
       setFaculties(filterVisible(fac.data || []));
-      setFounders(filterVisible(fnd.data || []));
+      
+      const FOUNDER_ROLE_PRIORITY = ['Founder & CEO', 'Co-Founder & CTO', 'CFO'];
+      const sortedFounders = filterVisible(fnd.data || []).sort((a, b) => {
+        const getOrder = (val) => {
+          if (val === null || val === undefined || val === '') return Infinity;
+          const n = Number(val);
+          return isNaN(n) ? Infinity : n;
+        };
+        const aOrder = getOrder(a.order_index);
+        const bOrder = getOrder(b.order_index);
+        if (aOrder !== bOrder) return aOrder - bOrder;
+
+        // Role-based fallback
+        const aRoleIdx = FOUNDER_ROLE_PRIORITY.indexOf(a.role);
+        const bRoleIdx = FOUNDER_ROLE_PRIORITY.indexOf(b.role);
+        if (aRoleIdx !== -1 && bRoleIdx !== -1) return aRoleIdx - bRoleIdx;
+        if (aRoleIdx !== -1) return -1;
+        if (bRoleIdx !== -1) return 1;
+
+        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      });
+      setFounders(sortedFounders);
       setAcademics(filterVisible(aca.data || []));
       setCourses(filterVisible(crs.data || []));
       setServices(filterVisible(srv.data || []));
@@ -330,7 +352,7 @@ const Home = () => {
         </ScrollAnimatedSection>
 
         {/* Founders & Faculty */}
-        <section className="flex flex-col gap-16 md:gap-24 w-full">
+        <section className="flex flex-col gap-16 md:gap-24 w-full justify-center">
           {loading ? (
             <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" size={40} /></div>
           ) : loadError ? (
@@ -343,19 +365,18 @@ const Home = () => {
               <ScrollAnimatedSection>
                 <div className="flex flex-col gap-8 md:gap-12">
                   <h2 className="text-3xl md:text-4xl font-black text-center text-animate-gradient">Our Visionaries</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 max-w-5xl mx-auto w-full">
-                    {founders.map(founder => (
-                      <TiltCard key={founder.id}>
-                        <div className="institution-card p-6 md:p-8 flex flex-col items-center text-center group h-full">
-                          <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-white shadow-2xl mb-8 group-hover:scale-105 transition-transform duration-500">
-                            <img src={founder.cover_image || 'https://via.placeholder.com/150'} alt={founder.name} className="w-full h-full object-cover" loading="lazy" />
-                          </div>
-                          <h4 className="text-xl md:text-2xl font-black mb-1">{founder.name}</h4>
-                          <p className="text-[8px] md:text-[10px] font-black text-secondary uppercase tracking-[0.2em] mb-4 md:mb-6">{founder.role}</p>
-                          <p className="text-xs md:text-sm text-muted-foreground italic mb-6 md:mb-8 px-2">"{founder.bio}"</p>
-                          <button onClick={() => { setSelectedProfile(founder); setProfileType('founder'); }} className="w-full h-12 md:h-14 cool-button mt-auto">Read Journey</button>
-                        </div>
-                      </TiltCard>
+                  <div className="flex flex-col gap-0 max-w-5xl mx-auto w-full">
+                    {founders.map((founder, idx) => (
+                      <VisionaryCard
+                        key={founder.id}
+                        name={founder.name}
+                        role={founder.role}
+                        bio={founder.bio}
+                        image={founder.cover_image}
+                        manifestoId={founder.extra_details?.manifesto_id}
+                        onClick={() => { setSelectedProfile(founder); setProfileType('founder'); }}
+                        accentColor={idx % 2 === 0 ? "var(--primary)" : "var(--secondary)"}
+                      />
                     ))}
                   </div>
                 </div>

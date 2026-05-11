@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { supabase, withTimeout, filterVisible } from '../lib/supabase';
+import React, { useEffect, useState, useMemo } from 'react';
+import { supabase, withTimeout, filterVisible, orderedFetch } from '../lib/supabase';
 import { Loader2, BookOpen, Clock, Star, Share2, Search, Filter, ArrowRight, CheckCircle2, X, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -22,7 +22,7 @@ const Courses = () => {
     setErrorMsg('');
     try {
       const { data, error } = await withTimeout(
-        supabase.from('courses').select('*').order('created_at', { ascending: false }),
+        orderedFetch(supabase, 'courses'),
         10000,
         'Database connection timed out.'
       );
@@ -50,12 +50,14 @@ const Courses = () => {
 
   const categories = [...new Set(courses.map(c => c.category))].filter(Boolean);
 
-  const groupedCourses = filteredCourses.reduce((acc, course) => {
-    const cat = course.category || 'General';
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(course);
-    return acc;
-  }, {});
+  const groupedCourses = useMemo(() => {
+    return filteredCourses.reduce((acc, course) => {
+      const cat = course.category || 'General';
+      if (!acc[cat]) acc[cat] = [];
+      acc[cat].push(course);
+      return acc;
+    }, {});
+  }, [filteredCourses]);
 
   return (
     <div className="pt-32 pb-32 px-6 max-w-7xl mx-auto min-h-screen relative z-10">

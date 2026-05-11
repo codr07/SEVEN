@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { CheckCircle2, AlertCircle, Info, X, HelpCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle2, AlertCircle, Info, X, HelpCircle, Bell } from 'lucide-react';
 
 const AlertContext = createContext();
 
@@ -23,10 +24,10 @@ export const AlertProvider = ({ children }) => {
     const id = Math.random().toString(36).substr(2, 9);
     setAlerts((prev) => [...prev, { id, message, type }]);
     
-    // Auto remove after 4 seconds
+    // Auto remove after 5 seconds
     setTimeout(() => {
       removeAlert(id);
-    }, 4000);
+    }, 5000);
   }, [removeAlert]);
 
   const showConfirm = useCallback((message, onConfirm) => {
@@ -37,72 +38,123 @@ export const AlertProvider = ({ children }) => {
     <AlertContext.Provider value={{ showAlert, showConfirm }}>
       {children}
       
-      {/* Toast Notifications */}
-      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[10001] flex flex-col gap-3 w-full max-w-sm px-4 md:px-0">
-        {alerts.map((alert) => (
-          <div 
-            key={alert.id}
-            className="group relative overflow-hidden backdrop-blur-3xl bg-card/95 border border-white/10 rounded-2xl p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-8 fade-in zoom-in-95 duration-300 flex items-center gap-4 border-l-4 border-l-primary"
-          >
-            <div className={`p-2 rounded-xl shrink-0 ${
-              alert.type === 'success' ? 'bg-green-500/20 text-green-500' :
-              alert.type === 'error' ? 'bg-destructive/20 text-destructive' :
-              'bg-primary/20 text-primary'
-            }`}>
-              {alert.type === 'success' ? <CheckCircle2 size={20} /> :
-               alert.type === 'error' ? <AlertCircle size={20} /> :
-               <Info size={20} />}
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-black uppercase tracking-widest text-foreground line-clamp-2">
-                {alert.message}
-              </p>
-            </div>
-
-            <button 
-              onClick={() => removeAlert(alert.id)} 
-              className="p-1 hover:bg-white/5 rounded-lg transition-colors opacity-40 hover:opacity-100"
+      {/* Toast Notifications Stack */}
+      <div className="fixed top-8 right-8 z-[10001] flex flex-col gap-4 w-full max-w-[400px] pointer-events-none">
+        <AnimatePresence mode="popLayout">
+          {alerts.map((alert) => (
+            <motion.div 
+              key={alert.id}
+              layout
+              initial={{ opacity: 0, x: 50, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 20, scale: 0.95 }}
+              className="pointer-events-auto"
             >
-              <X size={16} />
-            </button>
-            
-            <div className="absolute bottom-0 left-0 h-0.5 bg-primary/40 animate-progress-shrink" />
-          </div>
-        ))}
+              <div className="group relative overflow-hidden backdrop-blur-2xl bg-white/70 dark:bg-black/40 border border-black/5 dark:border-white/10 rounded-[32px] p-6 shadow-[0_20px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_40px_rgba(0,0,0,0.4)] flex items-center gap-5">
+                {/* Glow Effect */}
+                <div className={`absolute -inset-1 opacity-20 blur-2xl transition-all duration-500 group-hover:opacity-40 ${
+                  alert.type === 'success' ? 'bg-green-500' :
+                  alert.type === 'error' ? 'bg-destructive' :
+                  'bg-primary'
+                }`} />
+
+                <div className={`w-14 h-14 rounded-2xl shrink-0 flex items-center justify-center relative z-10 ${
+                  alert.type === 'success' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
+                  alert.type === 'error' ? 'bg-destructive/10 text-destructive border border-destructive/20' :
+                  'bg-primary/10 text-primary border border-primary/20'
+                }`}>
+                  {alert.type === 'success' ? <CheckCircle2 size={24} /> :
+                   alert.type === 'error' ? <AlertCircle size={24} /> :
+                   <Info size={24} />}
+                </div>
+                
+                <div className="flex-1 min-w-0 relative z-10">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-1">
+                    {alert.type === 'success' ? 'Protocol Success' :
+                     alert.type === 'error' ? 'System Warning' :
+                     'Intelligence Update'}
+                  </p>
+                  <p className="text-sm font-bold text-foreground leading-tight">
+                    {alert.message}
+                  </p>
+                </div>
+
+                <button 
+                  onClick={() => removeAlert(alert.id)} 
+                  className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center hover:bg-destructive hover:text-white transition-all duration-300 group/close relative z-10"
+                >
+                  <X size={14} />
+                </button>
+                
+                {/* Visual Progress Line */}
+                <motion.div 
+                  initial={{ scaleX: 1 }}
+                  animate={{ scaleX: 0 }}
+                  transition={{ duration: 5, ease: "linear" }}
+                  style={{ originX: 0 }}
+                  className={`absolute bottom-0 left-0 right-0 h-1 ${
+                    alert.type === 'success' ? 'bg-green-500' :
+                    alert.type === 'error' ? 'bg-destructive' :
+                    'bg-primary'
+                  } opacity-30`}
+                />
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
 
-      {/* Confirmation Dialog */}
-      {confirmConfig && (
-        <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-card border border-white/10 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-6">
-              <HelpCircle size={32} />
-            </div>
-            <h3 className="text-xl font-black uppercase tracking-tighter mb-4">Are you sure?</h3>
-            <p className="text-sm text-muted-foreground font-medium leading-relaxed mb-8">
-              {confirmConfig.message}
-            </p>
-            <div className="flex gap-3">
-              <button 
-                onClick={() => setConfirmConfig(null)}
-                className="flex-1 px-6 py-4 rounded-xl border border-border font-black uppercase tracking-widest text-[10px] hover:bg-accent transition-all"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={() => {
-                  confirmConfig.onConfirm();
-                  setConfirmConfig(null);
-                }}
-                className="flex-1 px-6 py-4 rounded-xl bg-destructive text-destructive-foreground font-black uppercase tracking-widest text-[10px] hover:opacity-90 shadow-xl shadow-destructive/20 transition-all"
-              >
-                Confirm
-              </button>
-            </div>
+      {/* Confirmation Dialog Overlay */}
+      <AnimatePresence>
+        {confirmConfig && (
+          <div className="fixed inset-0 z-[10002] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfirmConfig(null)}
+              className="absolute inset-0 bg-background/60 backdrop-blur-2xl"
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-md relative z-10"
+            >
+              <div className="overflow-hidden bg-white/70 dark:bg-black/40 backdrop-blur-3xl border border-black/10 dark:border-white/10 rounded-[48px] p-10 shadow-[0_40px_100px_rgba(0,0,0,0.2)] dark:shadow-[0_40px_100px_rgba(0,0,0,0.6)]">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-20 h-20 rounded-[32px] bg-primary/10 text-primary flex items-center justify-center mb-8 border border-primary/20 shadow-[0_0_40px_rgba(var(--primary-rgb),0.1)]">
+                    <HelpCircle size={40} />
+                  </div>
+                  <h3 className="text-3xl font-black italic tracking-tighter uppercase mb-4">Verification <span className="text-primary">Required</span></h3>
+                  <p className="text-sm text-muted-foreground font-bold leading-relaxed mb-10 max-w-[280px]">
+                    {confirmConfig.message}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => setConfirmConfig(null)}
+                    className="px-8 py-5 rounded-3xl border border-black/10 dark:border-white/10 font-black uppercase tracking-widest text-[10px] hover:bg-muted/50 transition-all active:scale-95"
+                  >
+                    Abort
+                  </button>
+                  <button 
+                    onClick={() => {
+                      confirmConfig.onConfirm();
+                      setConfirmConfig(null);
+                    }}
+                    className="px-8 py-5 rounded-3xl bg-gray-900 dark:bg-primary text-white font-black uppercase tracking-widest text-[10px] hover:scale-[1.02] active:scale-95 shadow-2xl shadow-primary/20 transition-all"
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </AlertContext.Provider>
   );
 };

@@ -332,3 +332,34 @@
   color: transparent;
   animation: gradient-shift 5s linear infinite;
 }
+
+@keyframes scan {
+  from { left: -100%; }
+  to { left: 100%; }
+}
+
+.animate-scan-fast {
+  animation: scan 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-scan-slow {
+  animation: scan-vertical 4s ease-in-out infinite;
+}
+
+@keyframes scan-vertical {
+  0% { top: 0%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+.select-none {
+  user-select: none;
+  -webkit-user-select: none;
+}
