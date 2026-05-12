@@ -115,3 +115,31 @@ export const orderedFetch = async (
 
   return { data, error };
 };
+
+/**
+ * Generic file upload utility for Supabase Storage
+ * @param {Object} supabaseClient - Supabase client instance
+ * @param {string} bucket - Storage bucket name
+ * @param {string} folder - Folder path (e.g. 'submissions/userId')
+ * @param {File} file - File object from input
+ * @returns {Promise<string>} - Public URL of uploaded file
+ */
+export const uploadFile = async (supabaseClient, bucket, folder, file) => {
+  if (!file) return null;
+
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Math.random().toString(36).slice(2)}_${Date.now()}.${fileExt}`;
+  const filePath = `${folder}/${fileName}`;
+
+  const { error: uploadError } = await supabaseClient.storage
+    .from(bucket)
+    .upload(filePath, file);
+
+  if (uploadError) throw uploadError;
+
+  const { data: { publicUrl } } = supabaseClient.storage
+    .from(bucket)
+    .getPublicUrl(filePath);
+
+  return publicUrl;
+};

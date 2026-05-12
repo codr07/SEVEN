@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import GlassSelect from '../components/GlassSelect';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import {
   AlertCircle,
   CheckCircle2,
@@ -21,11 +21,15 @@ import {
   Camera,
   Trash2,
   ExternalLink,
+  History,
+  Activity,
+  Search,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
-import { supabase, withTimeout } from '../lib/supabase';
+import { supabase, withTimeout, uploadFile } from '../lib/supabase';
 import SignatureButton from '../components/SignatureButton';
+import { X as CloseIcon } from 'lucide-react';
 
 const INITIAL_SIGNUP = {
   username: '',
@@ -65,7 +69,7 @@ const StudentZone = () => {
   const [postForm, setPostForm] = useState(INITIAL_POST);
   const [loadingData, setLoadingData] = useState(true);
 
-  const isStudent = role === 'student';
+  const isStudent = role === 'student' || role === 'admin';
 
   useEffect(() => {
     const requestedTab = searchParams.get('tab');
@@ -318,6 +322,38 @@ const StudentZone = () => {
     setEditableProfile(prev => ({ ...prev, social_links: updated }));
   };
 
+  const updateTaskStatus = async (taskIndex, newStatus) => {
+    if (!profile || !user?.id) return;
+    
+    setIsBusy(true);
+    try {
+      const currentTasks = profile.extra_details?.academics?.tasks || [];
+      const updatedTasks = [...currentTasks];
+      updatedTasks[taskIndex] = { ...updatedTasks[taskIndex], status: newStatus };
+      
+      const newExtraDetails = {
+        ...(profile.extra_details || {}),
+        academics: {
+          ...(profile.extra_details?.academics || {}),
+          tasks: updatedTasks
+        }
+      };
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ extra_details: newExtraDetails })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      await refreshProfile();
+      showAlert('Task status updated.', 'success');
+    } catch (err) {
+      showAlert(err.message || 'Failed to update task.', 'error');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
   const submitPost = async (e) => {
     e.preventDefault();
     if (!user?.id || !isStudent) return;
@@ -326,13 +362,24 @@ const StudentZone = () => {
     setMessage({ text: '', type: '' });
 
     try {
+      // 1. Handle File Uploads if they are actual File objects
+      let coverUrl = postForm.cover_image;
+      let contentUrl = postForm.content_url;
+
+      if (postForm.cover_file) {
+        coverUrl = await uploadFile(supabase, 'avatars', `submissions/${user.id}/covers`, postForm.cover_file);
+      }
+      if (postForm.content_file) {
+        contentUrl = await uploadFile(supabase, 'avatars', `submissions/${user.id}/files`, postForm.content_file);
+      }
+
       const payload = {
         author_id: user.id,
         title: postForm.title,
         submission_type: postForm.submission_type,
         summary: postForm.summary,
-        content_url: postForm.content_url || null,
-        cover_image: postForm.cover_image || null,
+        content_url: contentUrl || null,
+        cover_image: coverUrl || null,
         moderation_status: 'on_hold',
         is_pushed: false,
       };
@@ -343,6 +390,7 @@ const StudentZone = () => {
       setPostForm(INITIAL_POST);
       await Promise.all([fetchMyPosts(), fetchPublicPosts()]);
       setMessage({ text: 'Submission added and sent for admin review (on hold).', type: 'success' });
+      setActiveTab('dashboard');
     } catch (err) {
       setMessage({ text: err.message || 'Failed to submit item.', type: 'error' });
     } finally {
@@ -417,14 +465,163 @@ const StudentZone = () => {
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full p-8 md:p-10 rounded-4xl bg-card border border-border shadow-2xl"
+            className="w-full p-8 md:p-12 rounded-[40px] bg-card border border-border shadow-2xl relative overflow-hidden group"
           >
-            <h2 className="text-3xl font-black uppercase tracking-tight mb-2 text-animate-gradient">Student Zone</h2>
-            <p className="text-sm text-muted-foreground">
-              Login and account controls are handled from the top-right navbar avatar menu. Student Zone shows published work here.
-            </p>
+            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+              <Plus size={200} className="rotate-45" />
+            </div>
+            <div className="relative z-10 space-y-6 max-w-2xl">
+              <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter leading-none text-animate-gradient">
+                The Student <br /> Creative Hub
+              </h2>
+              <p className="text-muted-foreground font-medium text-lg leading-relaxed">
+                Publish your research papers, showcase your engineering projects, and build your professional legacy in the 5EVEN Student Zone.
+              </p>
+              
+              <div className="flex flex-wrap gap-4 pt-2">
+                <button 
+                  onClick={() => {
+                    const authElement = document.getElementById('auth-section');
+                    if (authElement) authElement.scrollIntoView({ behavior: 'smooth' });
+                  }} 
+                  className="px-8 py-4 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-sm hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
+                >
+                  Join & Submit Your Work
+                </button>
+                <div className="flex items-center gap-4 px-6 py-4 rounded-2xl bg-muted/50 border border-border text-xs font-black uppercase tracking-widest text-muted-foreground">
+                  <CheckCircle2 size={16} className="text-green-500" />
+                  Peer Reviewed & Moderated
+                </div>
+              </div>
+            </div>
           </motion.div>
-          <PublicFeed loadingData={loadingData} posts={publicPosts} />
+
+          <div id="auth-section" className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center py-12">
+            <div className="space-y-6">
+               <h3 className="text-3xl font-black uppercase tracking-tighter italic">Authentication Required</h3>
+               <p className="text-muted-foreground">Log in or create a student account to access the submission portal, track your academic tasks, and manage your public profile.</p>
+               <div className="space-y-4">
+                 <div className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border">
+                   <div className="p-3 rounded-xl bg-primary/10 text-primary"><User size={20} /></div>
+                   <div>
+                     <p className="font-bold text-sm uppercase tracking-tight">Personalized Profile</p>
+                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Showcase your skills to the world</p>
+                   </div>
+                 </div>
+                 <div className="flex items-center gap-4 p-4 rounded-2xl bg-card border border-border">
+                   <div className="p-3 rounded-xl bg-primary/10 text-primary"><Plus size={20} /></div>
+                   <div>
+                     <p className="font-bold text-sm uppercase tracking-tight">Unlimited Submissions</p>
+                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Share papers, projects, and insights</p>
+                   </div>
+                 </div>
+               </div>
+            </div>
+
+            <div className="p-8 rounded-[32px] bg-card border border-border shadow-2xl">
+              <div className="flex items-center gap-4 mb-8 p-1 bg-muted rounded-2xl">
+                <button
+                  onClick={() => setAuthMode('login')}
+                  className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${authMode === 'login' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Login
+                </button>
+                <button
+                  onClick={() => setAuthMode('signup')}
+                  className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${authMode === 'signup' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Sign Up
+                </button>
+              </div>
+
+              <form onSubmit={handleAuthSubmit} className="space-y-4">
+                {authMode === 'signup' && (
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={signupData.fullName}
+                        onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                        placeholder="John Doe"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Username</label>
+                      <input
+                        type="text"
+                        required
+                        value={signupData.username}
+                        onChange={(e) => setSignupData({ ...signupData, username: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                        placeholder="johndoe"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Phone</label>
+                      <input
+                        type="text"
+                        required
+                        value={signupData.phone}
+                        onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                        placeholder="+91 ..."
+                      />
+                    </div>
+                  </>
+                )}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                    placeholder="email@example.com"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isBusy}
+                  className="w-full py-4 bg-foreground text-background rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all disabled:opacity-50 mt-4"
+                >
+                  {isBusy ? <Loader2 className="animate-spin mx-auto" size={16} /> : authMode === 'login' ? 'Login' : 'Create Account'}
+                </button>
+                
+                {message.text && (
+                  <div className={`p-4 rounded-xl text-[10px] font-bold uppercase tracking-widest text-center ${message.type === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-500'}`}>
+                    {message.text}
+                  </div>
+                )}
+              </form>
+            </div>
+          </div>
+          
+          <div className="pt-8">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-2xl font-black uppercase tracking-tight italic">Public Exhibition</h3>
+              <div className="h-px flex-1 bg-border mx-8 hidden md:block" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground bg-muted px-4 py-1.5 rounded-full border border-border">
+                Live Feed
+              </span>
+            </div>
+            <PublicFeed loadingData={loadingData} posts={publicPosts} />
+          </div>
         </section>
       ) : (
         <section className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-8">
@@ -432,6 +629,9 @@ const StudentZone = () => {
             <nav className="flex flex-col gap-2">
               <TabButton icon={LayoutDashboard} active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')}>
                 Dashboard
+              </TabButton>
+              <TabButton icon={Globe} active={activeTab === 'explore'} onClick={() => setActiveTab('explore')}>
+                Explore Hall
               </TabButton>
               <TabButton icon={Settings} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>
                 Profile Settings
@@ -448,17 +648,82 @@ const StudentZone = () => {
             <AnimatePresence mode="wait">
               {activeTab === 'dashboard' && (
                 <motion.div key="dashboard" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-                  {role === 'admin' && (
-                    <div className="p-5 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-sm font-semibold">
-                      Admin account detected. Use /seven-mod for admin controls. Student publishing is intended for student role accounts.
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-8 rounded-[40px] bg-primary/5 border border-primary/10 shadow-inner">
+                    <div className="space-y-1">
+                      <h3 className="text-2xl font-black uppercase tracking-tight text-primary">Student Dashboard</h3>
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Management & Directive Controls</p>
                     </div>
-                  )}
+                    
+                    <button 
+                      type="button"
+                      onClick={() => setActiveTab('publish')}
+                      className="px-8 py-4 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
+                    >
+                      <Plus size={18} />
+                      Submit New Work
+                    </button>
+                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <StatCard title="My Submissions" value={String(stats.total)} />
                     <StatCard title="Pushed" value={String(stats.pushed)} />
                     <StatCard title="On Hold" value={String(stats.onHold)} />
                   </div>
+
+                  {/* Tasks Manifesto Section */}
+                  {profile?.extra_details?.academics?.tasks?.length > 0 && (
+                    <div className="p-8 rounded-[40px] border border-primary/20 bg-card shadow-2xl relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <FileText size={120} className="rotate-12" />
+                      </div>
+                      <div className="relative z-10 space-y-6">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-2xl font-black italic tracking-tighter uppercase text-animate-gradient">Tasks Manifesto</h3>
+                          <span className="px-4 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20">
+                            Academic Directives
+                          </span>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {profile.extra_details.academics.tasks.map((task, idx) => (
+                            <div key={idx} className="p-5 rounded-2xl border border-border bg-background/50 hover:border-primary/40 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
+                              <div className="flex items-start gap-4">
+                                <div className={`mt-1 w-3 h-3 rounded-full shrink-0 shadow-[0_0_10px_rgba(var(--primary-rgb),0.3)] ${
+                                  task.status === 'Done' ? 'bg-green-500 shadow-green-500/50' : 
+                                  task.status === 'In Progress' ? 'bg-amber-500 shadow-amber-500/50' : 
+                                  'bg-primary'
+                                }`} />
+                                <div>
+                                  <p className="font-bold text-lg leading-tight uppercase tracking-tight">{task.title}</p>
+                                  <p className="text-xs text-muted-foreground font-medium mt-1 uppercase tracking-widest">{task.deadline || 'No Deadline'}</p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <GlassSelect
+                                  value={task.status || 'Pending'}
+                                  onChange={(val) => updateTaskStatus(idx, val)}
+                                  options={['Pending', 'In Progress', 'Done']}
+                                  className="w-36 h-10"
+                                />
+                                {task.status !== 'Done' && (
+                                  <button 
+                                    onClick={() => {
+                                      setPostForm({ ...INITIAL_POST, title: `Submission for: ${task.title}` });
+                                      setActiveTab('publish');
+                                    }}
+                                    className="px-4 py-2 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20"
+                                  >
+                                    Submit Work
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="p-6 rounded-3xl border border-border bg-card shadow-xl">
                     <h3 className="text-xl font-black mb-4">My Submission Status</h3>
@@ -478,7 +743,23 @@ const StudentZone = () => {
                       </div>
                     )}
                   </div>
+                </motion.div>
+              )}
 
+              {activeTab === 'explore' && (
+                <motion.div key="explore" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div className="space-y-2">
+                      <h3 className="text-3xl font-black uppercase tracking-tighter italic">Explore Hall</h3>
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">A compilation of peer-reviewed student excellence</p>
+                    </div>
+                    <div className="flex-1 max-w-md">
+                      {/* Placeholder for Search if needed */}
+                    </div>
+                  </div>
+                  
+                  <div className="h-px bg-border w-full" />
+                  
                   <PublicFeed loadingData={loadingData} posts={publicPosts} />
                 </motion.div>
               )}
@@ -705,73 +986,72 @@ const StudentZone = () => {
                 </motion.div>
               )}
 
-              {activeTab === 'publish' && isStudent && (
+              {activeTab === 'publish' && (
                 <motion.div key="publish" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
                   <form onSubmit={submitPost} className="space-y-4 p-6 rounded-3xl border border-border bg-card shadow-xl">
                     <h3 className="text-xl font-black">Publish Project / Research Paper</h3>
-                    <p className="text-sm text-muted-foreground">All submissions are on hold until admin pushes them globally.</p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Field label="Title" required>
+                      <Field label="Title">
                         <input
                           type="text"
-                          required
                           value={postForm.title}
-                          onChange={(e) => setPostForm((p) => ({ ...p, title: e.target.value }))}
+                          onChange={(e) => setPostForm({ ...postForm, title: e.target.value })}
                           className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                          placeholder="Project Name..."
+                          required
                         />
                       </Field>
-                      <Field label="Type" required>
+                      <Field label="Type">
                         <GlassSelect
                           value={postForm.submission_type}
-                          onChange={(val) => setPostForm((p) => ({ ...p, submission_type: val }))}
-                          options={[
-                            { value: 'project', label: 'Project' },
-                            { value: 'research_paper', label: 'Research Paper' }
-                          ]}
+                          onChange={(val) => setPostForm({ ...postForm, submission_type: val })}
+                          options={['project', 'research_paper']}
                         />
                       </Field>
                     </div>
 
-                    <Field label="Summary" required>
+                    <Field label="Summary">
                       <textarea
-                        required
                         value={postForm.summary}
-                        onChange={(e) => setPostForm((p) => ({ ...p, summary: e.target.value }))}
-                        className="w-full min-h-[120px] px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                        onChange={(e) => setPostForm({ ...postForm, summary: e.target.value })}
+                        className="w-full h-24 px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none resize-none"
+                        placeholder="Brief overview of your work..."
+                        required
                       />
                     </Field>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Field label="Content URL">
-                        <input
-                          type="text"
-                          value={postForm.content_url}
-                          onChange={(e) => setPostForm((p) => ({ ...p, content_url: e.target.value }))}
-                          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                          placeholder="https://paper-or-project-link"
-                        />
-                      </Field>
-                      <Field label="Cover Image URL">
-                        <input
-                          type="text"
-                          value={postForm.cover_image}
-                          onChange={(e) => setPostForm((p) => ({ ...p, cover_image: e.target.value }))}
-                          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                        />
-                      </Field>
+                      <StudentFileField
+                        label="Cover Image"
+                        accept="image/*"
+                        value={postForm.cover_image}
+                        onFileSelect={(file) => setPostForm({ ...postForm, cover_file: file })}
+                        onUrlChange={(url) => setPostForm({ ...postForm, cover_image: url })}
+                        placeholder="Paste URL or upload image"
+                      />
+                      <StudentFileField
+                        label="Project File / Link"
+                        accept=".pdf,.zip,.rar,.docx,.doc"
+                        value={postForm.content_url}
+                        onFileSelect={(file) => setPostForm({ ...postForm, content_file: file })}
+                        onUrlChange={(url) => setPostForm({ ...postForm, content_url: url })}
+                        placeholder="Paste URL or upload PDF/ZIP"
+                      />
                     </div>
 
-                    <button
-                      type="submit"
-                      disabled={isBusy}
-                      className="px-6 py-3 rounded-xl bg-primary text-white font-black uppercase tracking-widest text-xs flex items-center gap-2"
-                    >
-                      {isBusy ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />} Submit For Review
-                    </button>
-
-                    {message.text && <MessageBox type={message.type}>{message.text}</MessageBox>}
+                    <div className="pt-4">
+                      <button
+                        type="submit"
+                        disabled={isBusy}
+                        className="w-full py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-widest flex items-center justify-center gap-3 hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl shadow-primary/20 disabled:opacity-50"
+                      >
+                        {isBusy ? <Loader2 className="animate-spin" /> : <Plus size={20} />}
+                        <span>Submit for Moderation</span>
+                      </button>
+                    </div>
                   </form>
+                  {message.text && <MessageBox type={message.type}>{message.text}</MessageBox>}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -792,6 +1072,50 @@ const TabButton = ({ icon: Icon, active, onClick, children }) => (
     {children}
   </button>
 );
+
+const StudentFileField = ({ label, value, onFileSelect, onUrlChange, accept, placeholder }) => {
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState('');
+
+  return (
+    <div className="space-y-2">
+      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">{label}</label>
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={value || ''}
+            onChange={(e) => onUrlChange(e.target.value)}
+            placeholder={placeholder}
+            className="flex-1 px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none text-xs"
+          />
+          <label className="cursor-pointer px-4 py-3 rounded-xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all flex items-center gap-2 shrink-0">
+            <Upload size={14} />
+            <span className="text-[10px] font-black uppercase tracking-widest">{isUploading ? '...' : 'Upload'}</span>
+            <input 
+              type="file" 
+              accept={accept} 
+              className="hidden" 
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setSelectedFileName(file.name);
+                  onFileSelect(file);
+                }
+              }} 
+            />
+          </label>
+        </div>
+        {selectedFileName && (
+          <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20 text-[9px] font-bold text-green-600 dark:text-green-400">
+            <span className="truncate max-w-[200px]">Selected: {selectedFileName}</span>
+            <button type="button" onClick={() => { setSelectedFileName(''); onFileSelect(null); }} className="text-green-600 hover:text-green-800"><CloseIcon size={12} /></button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const Field = ({ label, required, children }) => (
   <div className="space-y-2">
@@ -834,51 +1158,154 @@ const StatusBadge = ({ pushed, status }) => (
   </span>
 );
 
-const PublicFeed = ({ loadingData, posts }) => (
-  <div className="p-6 rounded-3xl border border-border bg-card shadow-xl space-y-4">
-    <div className="flex items-center gap-3">
-      <FileText className="text-primary" size={20} />
-      <h3 className="text-xl font-black">Global Student Zone Feed</h3>
-    </div>
-    {loadingData ? (
-      <div className="py-10 flex justify-center">
-        <Loader2 className="animate-spin text-primary" />
+const PublicFeed = ({ loadingData, posts }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredPosts = useMemo(() => {
+    if (!searchQuery) return posts;
+    const q = searchQuery.toLowerCase();
+    return posts.filter(p => 
+      p.title?.toLowerCase().includes(q) || 
+      p.summary?.toLowerCase().includes(q) ||
+      p.author_profile?.full_name?.toLowerCase().includes(q) ||
+      p.author_profile?.username?.toLowerCase().includes(q)
+    );
+  }, [posts, searchQuery]);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-3xl bg-card border border-border shadow-xl">
+        <div className="flex items-center gap-3 px-4 py-2 border-r border-border hidden md:flex">
+          <Globe className="text-primary" size={20} />
+          <span className="text-xs font-black uppercase tracking-widest italic">Global Network</span>
+        </div>
+        <div className="flex-1 relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
+          <input
+            type="text"
+            placeholder="Search projects, papers, or student creators..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 rounded-2xl bg-background border border-border focus:border-primary outline-none text-sm font-medium transition-all"
+          />
+        </div>
       </div>
-    ) : posts.length === 0 ? (
-      <p className="text-sm text-muted-foreground">No pushed submissions yet.</p>
-    ) : (
-      <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
-        {posts.map((item) => (
-          <article key={item.id} className="p-4 rounded-2xl border border-border bg-background">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-black text-lg leading-tight">{item.title}</p>
-                <p className="text-xs uppercase tracking-widest font-black text-muted-foreground mt-1">{item.submission_type}</p>
+
+      {loadingData ? (
+        <div className="py-20 flex flex-col items-center justify-center gap-4">
+          <Loader2 className="animate-spin text-primary" size={40} />
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground animate-pulse">Syncing Feed...</p>
+        </div>
+      ) : filteredPosts.length === 0 ? (
+        <div className="py-20 text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center text-muted-foreground opacity-50">
+            <Search size={32} />
+          </div>
+          <p className="text-muted-foreground font-medium">No matches found for your exploration.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6">
+          {filteredPosts.map((item) => (
+            <article 
+              key={item.id} 
+              className="group p-6 rounded-[32px] border border-border bg-card shadow-xl hover:shadow-2xl hover:border-primary/20 transition-all duration-500 overflow-hidden relative"
+            >
+              {/* Card Header: Facebook style */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <Link 
+                    to={`/profile/${item.author_profile?.username}`}
+                    className="relative shrink-0 group/avatar"
+                  >
+                    <div className="w-12 h-12 rounded-2xl overflow-hidden bg-muted border-2 border-border group-hover/avatar:border-primary transition-all">
+                      {item.author_profile?.avatar_url ? (
+                        <img src={item.author_profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          <User size={20} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-card shadow-sm" />
+                  </Link>
+                  <div>
+                    <Link 
+                      to={`/profile/${item.author_profile?.username}`}
+                      className="text-base font-black hover:text-primary transition-colors block leading-none"
+                    >
+                      {item.author_profile?.full_name || item.author_profile?.username || 'Institutional Student'}
+                    </Link>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">@{item.author_profile?.username || 'student'}</span>
+                      <span className="w-1 h-1 rounded-full bg-border" />
+                      <span className="text-[10px] font-medium text-muted-foreground italic">
+                        {new Date(item.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <span className="hidden sm:inline-block text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                    {item.submission_type === 'research_paper' ? 'Research Paper' : 'Technical Project'}
+                  </span>
+                  <div className="p-2 rounded-xl bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer">
+                    <Globe size={16} />
+                  </div>
+                </div>
               </div>
-              <StatusBadge pushed={item.is_pushed} status={item.moderation_status} />
-            </div>
-            <p className="text-sm text-muted-foreground mt-3">{item.summary}</p>
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <p className="text-xs font-semibold text-muted-foreground">
-                By {item.author_profile?.full_name || item.author_profile?.username || 'Student'}
-              </p>
-              {item.content_url && (
-                <a href={item.content_url} target="_blank" rel="noreferrer">
-                  <SignatureButton 
-                    label="Open" 
-                    size="w-10 h-10" 
-                    iconSize={14} 
-                    labelSize="text-[5px]" 
-                    translateY="translate-y-2.5" 
-                  />
-                </a>
-              )}
-            </div>
-          </article>
-        ))}
-      </div>
-    )}
-  </div>
-);
+
+              {/* Card Body */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h4 className="text-2xl font-black uppercase tracking-tighter leading-tight group-hover:text-primary transition-colors">
+                    {item.title}
+                  </h4>
+                  <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3">
+                    {item.summary}
+                  </p>
+                </div>
+
+                {item.cover_image && (
+                  <div className="relative aspect-video rounded-2xl overflow-hidden border border-border group-hover:border-primary/20 transition-all">
+                    <img src={item.cover_image} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                )}
+              </div>
+
+              {/* Card Footer Actions */}
+              <div className="mt-6 pt-6 border-t border-border flex items-center justify-between gap-4">
+                <div className="flex items-center gap-6">
+                  <button className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors">
+                    <History size={14} />
+                    <span>Peer Review</span>
+                  </button>
+                  <button className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors">
+                    <Activity size={14} />
+                    <span>Analytics</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {item.content_url && (
+                    <a 
+                      href={item.content_url} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="px-6 py-2.5 rounded-xl bg-foreground text-background text-[10px] font-black uppercase tracking-widest hover:-translate-y-0.5 transition-all shadow-lg"
+                    >
+                      View Source
+                    </a>
+                  )}
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default StudentZone;

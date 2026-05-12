@@ -968,16 +968,19 @@ const SevenMod = () => {
                 {submissions.map((item) => (
                   <div key={item.id} className="p-4 rounded-2xl border border-border bg-card space-y-3">
                     <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-                      <div>
+                      <div className="flex-1">
                         <p className="font-black text-lg">{item.title}</p>
                         <p className="text-xs text-muted-foreground uppercase tracking-widest mt-1">
                           {item.submission_type} • by {item.author_profile?.full_name || item.author_profile?.username || item.author_id}
                         </p>
                       </div>
-                      <StatusBadge pushed={item.is_pushed} status={item.moderation_status} />
+                      <div className="flex flex-col items-end gap-2">
+                        <StatusBadge pushed={item.is_pushed} status={item.moderation_status} />
+                        <span className="text-[9px] font-bold text-muted-foreground">{new Date(item.created_at).toLocaleDateString()}</span>
+                      </div>
                     </div>
 
-                    <p className="text-sm text-muted-foreground">{item.summary}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{item.summary}</p>
 
                     <div className="flex items-center gap-2 flex-wrap">
                       <button
@@ -1167,6 +1170,85 @@ const SevenMod = () => {
           </motion.div>
         </div>
       )}
+    </div>
+  );
+};
+
+const StudentAcademicEditor = ({ value, onChange }) => {
+  const [tasks, setTasks] = useState(Array.isArray(value) ? value : []);
+
+  const update = (newTasks) => {
+    setTasks(newTasks);
+    onChange(newTasks);
+  };
+
+  const addTask = () => {
+    update([...tasks, { title: 'New Task', deadline: 'TBD', status: 'Pending' }]);
+  };
+
+  return (
+    <div className="space-y-4 p-5 rounded-3xl bg-muted/20 border border-border/50">
+      <div className="flex items-center justify-between">
+        <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Academic Tasks Manifesto</h4>
+        <button type="button" onClick={addTask} className="p-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all">
+          <Plus size={14} />
+        </button>
+      </div>
+      
+      <div className="space-y-2">
+        {tasks.map((task, idx) => (
+          <div key={idx} className="p-4 rounded-xl bg-background border border-border/50 space-y-3 relative group">
+            <button 
+              type="button" 
+              onClick={() => update(tasks.filter((_, i) => i !== idx))}
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 text-destructive hover:bg-destructive/10 rounded-md transition-all"
+            >
+              <Trash2 size={12} />
+            </button>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-[8px] font-black uppercase tracking-widest opacity-50">Task Title</label>
+                <input
+                  value={task.title}
+                  onChange={e => {
+                    const n = [...tasks];
+                    n[idx].title = e.target.value;
+                    update(n);
+                  }}
+                  className="w-full bg-transparent border-b border-border focus:border-primary outline-none text-[11px] font-bold py-1"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[8px] font-black uppercase tracking-widest opacity-50">Deadline / Date</label>
+                <input
+                  value={task.deadline}
+                  onChange={e => {
+                    const n = [...tasks];
+                    n[idx].deadline = e.target.value;
+                    update(n);
+                  }}
+                  className="w-full bg-transparent border-b border-border focus:border-primary outline-none text-[11px] font-bold py-1"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[8px] font-black uppercase tracking-widest opacity-50">Initial Status:</span>
+              <GlassSelect
+                value={task.status || 'Pending'}
+                onChange={val => {
+                  const n = [...tasks];
+                  n[idx].status = val;
+                  update(n);
+                }}
+                options={['Pending', 'In Progress', 'Done']}
+                className="w-28 h-7 text-[9px]"
+              />
+            </div>
+          </div>
+        ))}
+        {tasks.length === 0 && <p className="text-[10px] text-muted-foreground italic text-center py-4">No tasks assigned.</p>}
+      </div>
     </div>
   );
 };
@@ -1770,6 +1852,11 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
           { name: 'avatar_url', type: 'text', label: 'Avatar URL' },
           { name: 'role', type: 'select', label: 'Role', options: ['admin', 'student', 'faculty'] },
           { name: 'extra_details.id_number', type: 'text', label: 'ID Card Number' },
+          ...(formData.role === 'student' ? [
+            { name: 'extra_details.academics.attendance', type: 'text', label: 'Attendance %' },
+            { name: 'extra_details.academics.avgGrade', type: 'text', label: 'Avg Grade' },
+            { name: 'extra_details.academics.tasks', type: 'academic_tasks', label: 'Academic Directives (Tasks)' },
+          ] : [])
         ];
       case 'student_submissions':
         return [
@@ -1884,6 +1971,11 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
         }
       }
 
+      // INJECT AUTHOR_ID FOR SUBMISSIONS
+      if (actualTable === 'student_submissions' && !initialData?.id) {
+        payload.author_id = adminId;
+      }
+
       const { data, error } = initialData?.id
         ? await adminSupabase.from(actualTable).update(payload).eq('id', initialData.id).select()
         : await adminSupabase.from(actualTable).insert([payload]).select();
@@ -1985,6 +2077,11 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
                   onChange={(val) => setValue(field.name, val)}
                 />
               </div>
+            ) : field.type === 'academic_tasks' ? (
+              <StudentAcademicEditor
+                value={getValue(field.name)}
+                onChange={(val) => setValue(field.name, val)}
+              />
             ) : field.type === 'json' ? (
               <JSONFieldEditor
                 label={field.label}
