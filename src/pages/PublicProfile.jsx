@@ -3,8 +3,88 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase, withTimeout } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { updateMetadata } from '../lib/seo';
-import { Loader2, Settings, ArrowLeft, Fingerprint, CheckCircle2, ShieldCheck, GraduationCap, CircleUser, UserCheck, ChevronRight, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const LiveWatch = () => {
+  const [time, setTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const seconds = time.getSeconds();
+  const minutes = time.getMinutes();
+  const hours = time.getHours();
+
+  return (
+    <div className="relative w-16 h-16 md:w-20 md:h-20 flex items-center justify-center">
+      {/* Outer Glow */}
+      <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl animate-pulse" />
+
+      {/* Watch Face */}
+      <div className="relative w-full h-full rounded-full border-2 border-white/10 bg-black/40 backdrop-blur-md shadow-2xl flex items-center justify-center overflow-hidden">
+        {/* Tick Marks */}
+        {[...Array(12)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-0.5 h-1.5 bg-white/20"
+            style={{
+              transform: `rotate(${i * 30}deg) translateY(-28px)`,
+              height: i % 3 === 0 ? '4px' : '2px',
+              backgroundColor: i % 3 === 0 ? 'rgba(var(--primary-rgb), 0.5)' : 'rgba(255,255,255,0.1)'
+            }}
+          />
+        ))}
+
+        {/* Hands */}
+        {/* Hour Hand */}
+        <motion.div
+          className="absolute w-1 h-6 bg-white/60 rounded-full origin-bottom bottom-1/2"
+          style={{ rotate: (hours % 12) * 30 + minutes * 0.5 }}
+        />
+        {/* Minute Hand */}
+        <motion.div
+          className="absolute w-0.5 h-8 bg-primary/80 rounded-full origin-bottom bottom-1/2"
+          style={{ rotate: minutes * 6 }}
+        />
+        {/* Second Hand */}
+        <motion.div
+          className="absolute w-[1px] h-9 bg-accent rounded-full origin-bottom bottom-1/2"
+          style={{ rotate: seconds * 6 }}
+        />
+        {/* Center Pivot */}
+        <div className="absolute w-1.5 h-1.5 rounded-full bg-white border border-primary shadow-[0_0_10px_rgba(var(--primary-rgb),1)] z-10" />
+      </div>
+      {/* Time Label */}
+      <div className="absolute -bottom-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md border border-white/10">
+        <p className="text-[7px] font-black text-white/50 tracking-widest uppercase">
+          {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" }
+  }
+};
 
 const IdentityCard = ({ profile, type }) => {
   const idNumber = profile.extra_details?.id_number || profile.extra_details?.manifesto_id || "70326-0001";
@@ -28,7 +108,7 @@ const IdentityCard = ({ profile, type }) => {
             <p className="text-xl font-black text-foreground italic uppercase tracking-tighter">5EVEN Institution</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-primary backdrop-blur-md">
-            <Fingerprint size={24} />
+            <i className="ri-fingerprint-line text-2xl text-primary"></i>
           </div>
         </div>
 
@@ -39,10 +119,13 @@ const IdentityCard = ({ profile, type }) => {
           </div>
           <div className="flex flex-col justify-center">
             <div className="flex items-center gap-1.5 mb-1">
-              <CheckCircle2 size={10} className="text-green-500" />
+              <i className="ri-checkbox-circle-fill text-[10px] text-green-500"></i>
               <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Identity Verified</p>
             </div>
             <h3 className="text-lg font-black text-foreground uppercase leading-tight">{profile.full_name || profile.name || profile.username}</h3>
+            {profile.gender && (
+              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Gender: {profile.gender}</p>
+            )}
             <div className="flex items-center gap-2 mt-2">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">{roleLabel}</span>
@@ -95,7 +178,7 @@ const IDCardWindow = ({ profile, onClose }) => {
           className="absolute -top-16 right-0 md:-right-12 flex flex-col items-center gap-2 text-white/40 hover:text-white transition-all group"
         >
           <div className="p-3 rounded-2xl bg-white/5 border border-white/10 group-hover:bg-destructive group-hover:border-destructive group-hover:rotate-90 transition-all duration-500 shadow-2xl">
-            <X size={24} />
+            <i className="ri-close-line text-2xl"></i>
           </div>
           <span className="text-[8px] font-black uppercase tracking-[0.4em] opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Terminate Session</span>
         </button>
@@ -130,7 +213,7 @@ const renderGameData = (entry) => {
 
   if (entry.game === 'Call of Duty Mobile') {
     return (
-      <>
+      <div className="space-y-2">
         <div className="text-xs md:text-sm flex flex-wrap items-center gap-2 text-muted-foreground break-words">
           {entry.modeIcons?.mp && <img src={entry.modeIcons.mp} alt="MP" className="w-4 h-4 object-contain shrink-0" />}
           MP Rank:
@@ -145,13 +228,13 @@ const renderGameData = (entry) => {
           <span className="font-semibold text-foreground">{entry.data.brRankCurrent}</span>
         </div>
         <div className="text-xs md:text-sm text-muted-foreground break-words">BR Legendaries: <span className="font-semibold text-foreground">{entry.data.brLegendaries}</span></div>
-      </>
+      </div>
     );
   }
 
   if (entry.game === 'Valorant') {
     return (
-      <>
+      <div className="space-y-2">
         <div className="text-xs md:text-sm text-muted-foreground break-words">Server: <span className="font-semibold text-foreground">{entry.data.serverName}</span></div>
         <div className="text-xs md:text-sm flex flex-wrap items-center gap-2 text-muted-foreground break-words">
           Peak Rank:
@@ -163,35 +246,35 @@ const renderGameData = (entry) => {
           {entry.rankIcons?.current && <img src={entry.rankIcons.current} alt="Current" className="w-4 h-4 object-contain shrink-0" />}
           <span className="font-semibold text-foreground">{entry.data.currentRank}</span>
         </div>
-      </>
+      </div>
     );
   }
 
   if (entry.game === 'Counter-Strike 2') {
     return (
-      <>
+      <div className="space-y-2">
         <div className="text-xs md:text-sm text-muted-foreground break-words">Server: <span className="font-semibold text-foreground">{entry.data.serverName}</span></div>
         <div className="text-xs md:text-sm text-muted-foreground break-words">Peak Rank: <span className="font-semibold text-foreground">{entry.data.peakRankActSeason}</span></div>
         <div className="text-xs md:text-sm text-muted-foreground break-words">Current Rank: <span className="font-semibold text-foreground">{entry.data.currentRank}</span></div>
-      </>
+      </div>
     );
   }
 
   if (entry.game === 'FIFA') {
     return (
-      <>
+      <div className="space-y-2">
         <div className="text-xs md:text-sm text-muted-foreground break-words">Peak OVR: <span className="font-semibold text-foreground">{entry.data.peakOVR} - {entry.data.peakOvrSeasonYear}</span></div>
         <div className="text-xs md:text-sm text-muted-foreground break-words">Current OVR: <span className="font-semibold text-foreground">{entry.data.currentOvr}</span></div>
-      </>
+      </div>
     );
   }
 
   if (entry.game === 'Chess') {
     return (
-      <>
+      <div className="space-y-2">
         <div className="text-xs md:text-sm text-muted-foreground break-words">Peak Rating: <span className="font-semibold text-foreground">{entry.data.peakRating}</span></div>
         <div className="text-xs md:text-sm text-muted-foreground break-words">Current Rating: <span className="font-semibold text-foreground">{entry.data.currentRating}</span></div>
-      </>
+      </div>
     );
   }
 
@@ -242,18 +325,29 @@ const PublicProfile = () => {
         data.description = data.bio;
         data.cover_image = data.avatar_url; // Use avatar for the large circle if no cover
         // Map native fields to extra_details for simpler rendering logic
-        if (!data.extra_details) {
-          data.extra_details = {
-            education: data.education || [],
-            expertise: [],
-            gamesPlayed: [],
-            research: [],
-            books: []
-          };
+        if (!data.extra_details) data.extra_details = {};
+
+        // Ensure arrays are merged or prioritized from top-level
+        data.extra_details.education = data.education || data.extra_details.education || [];
+        data.extra_details.social_links = data.social_links || data.extra_details.social_links || [];
+
+        // Fetch Submissions (Research/Projects)
+        const { data: submissions, error: subError } = await supabase
+          .from('student_submissions')
+          .select('*')
+          .eq('author_id', data.id)
+          .eq('is_pushed', true);
+
+        if (!subError && submissions) {
+          data.extra_details.research = submissions.filter(s => s.submission_type === 'research_paper');
+          data.extra_details.projects = submissions.filter(s => s.submission_type === 'project');
+        } else {
+          data.extra_details.research = data.extra_details.research || [];
+          data.extra_details.projects = data.extra_details.projects || [];
         }
 
         setProfile(data);
-        
+
         // Update Metadata
         updateMetadata({
           title: data.full_name || data.username,
@@ -273,8 +367,8 @@ const PublicProfile = () => {
   if (loading) {
     return (
       <div className="min-h-screen pt-28 flex items-center justify-center bg-background">
-        <Loader2 className="w-12 h-12 animate-spin text-primary" />
-        <span className="ml-3 text-muted-foreground font-bold tracking-widest uppercase text-xs">Loading Profile...</span>
+        <i className="ri-loader-4-line text-5xl animate-spin text-primary"></i>
+        <span className="ml-3 text-muted-foreground font-black tracking-[0.5em] uppercase text-[10px]">Syncing Data</span>
       </div>
     );
   }
@@ -302,10 +396,20 @@ const PublicProfile = () => {
 
   const getRoleIcon = (role) => {
     const r = role?.toLowerCase();
-    if (r === 'admin') return <ShieldCheck size={14} className="text-primary" />;
-    if (r === 'faculty') return <GraduationCap size={14} className="text-primary" />;
-    if (r === 'student') return <CircleUser size={14} className="text-primary" />;
-    return <UserCheck size={14} className="text-primary" />;
+    if (r === 'admin') return <i className="ri-shield-star-fill text-primary"></i>;
+    if (r === 'faculty') return <i className="ri-graduation-cap-fill text-primary"></i>;
+    if (r === 'student') return <i className="ri-user-smile-fill text-primary"></i>;
+    return <i className="ri-user-received-2-line text-primary"></i>;
+  };
+
+  const getSocialIcon = (platform) => {
+    const p = platform?.toLowerCase();
+    if (p.includes('linkedin')) return <i className="ri-linkedin-box-fill text-lg"></i>;
+    if (p.includes('github')) return <i className="ri-github-fill text-lg"></i>;
+    if (p.includes('twitter') || p.includes('x.com')) return <i className="ri-twitter-x-fill text-lg"></i>;
+    if (p.includes('instagram')) return <i className="ri-instagram-line text-lg"></i>;
+    if (p.includes('discord')) return <i className="ri-discord-fill text-lg"></i>;
+    return <i className="ri-links-line text-lg"></i>;
   };
 
   const getArray = (val) => {
@@ -315,11 +419,12 @@ const PublicProfile = () => {
     return [String(val)];
   };
 
-  const eduArr = getArray(profile.extra_details?.education);
-  const expertiseArr = getArray(profile.extra_details?.expertise);
+  const eduArr = getArray(profile.education || profile.extra_details?.education);
+  const expertiseArr = getArray(profile.expertise || profile.extra_details?.expertise);
   const gamesArr = getArray(profile.extra_details?.gamesPlayed);
   const researchArr = getArray(profile.extra_details?.research);
   const booksArr = getArray(profile.extra_details?.books);
+  const projectsArr = getArray(profile.extra_details?.projects);
 
   const getCourses = () => profile.extra_details?.enrolled_courses || [];
 
@@ -338,97 +443,194 @@ const PublicProfile = () => {
   const notes = getNotes();
   const academics = getAcademics();
 
+  const research = researchArr;
+  const books = booksArr;
+  const projects = projectsArr;
+
   return (
     <div className="min-h-screen bg-background md:bg-[#0a0a0a] pt-28 pb-20 px-4 md:px-8 flex justify-center">
 
       {/* Profile Container */}
-      <div
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
         className="relative w-full max-w-6xl flex flex-col bg-background md:bg-white/[0.03] backdrop-blur-3xl border-0 md:border border-white/10 rounded-none md:rounded-[40px] md:shadow-[0_0_100px_rgba(0,0,0,0.8)] z-10"
       >
         {/* Soft Background Gradient for Liquid Glass feel */}
-        <div className="absolute inset-0 pointer-events-none opacity-30 mix-blend-screen rounded-[40px]" style={{ background: 'radial-gradient(circle at top right, rgba(var(--primary-rgb),0.3), transparent 40%), radial-gradient(circle at bottom left, rgba(var(--secondary-rgb),0.2), transparent 40%)' }} />
+        <div className="absolute inset-0 pointer-events-none opacity-40 mix-blend-screen rounded-[40px] overflow-hidden">
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.2, 1],
+              rotate: [0, 90, 0],
+              x: [-20, 20, -20],
+              y: [-20, 20, -20]
+            }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className="absolute -top-[50%] -right-[50%] w-full h-full bg-primary/20 rounded-full blur-[120px]" 
+          />
+          <motion.div 
+            animate={{ 
+              scale: [1.2, 1, 1.2],
+              rotate: [0, -90, 0],
+              x: [20, -20, 20],
+              y: [20, -20, 20]
+            }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+            className="absolute -bottom-[50%] -left-[50%] w-full h-full bg-accent/20 rounded-full blur-[120px]" 
+          />
+          <div className="absolute inset-0 bg-[#0a0a0a]/40" />
+        </div>
 
         {/* Main Content Area */}
         <div className="relative z-10 w-full p-0 md:p-10 lg:p-12">
-
-          {/* Top Bar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 pb-8 border-b border-white/10">
-            <div>
-              <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter drop-shadow-md">Public Profile</h1>
-              <div className="flex items-center gap-2 mt-3">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_#22c55e]" />
-                <p className="text-xs md:text-sm font-black uppercase tracking-[0.3em] text-green-500">
-                  {profile.role?.toLowerCase() === 'admin' ? 'Verified Admin' : profile.role?.toLowerCase() === 'faculty' ? 'Verified Faculty' : 'Verified Student'}
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-4">
-              <button
-                onClick={() => setShowID(!showID)}
-                className="flex items-center gap-3 px-5 py-3.5 bg-primary text-white rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest transition-all hover:-translate-y-1 hover:shadow-[0_10px_30px_rgba(var(--primary-rgb),0.4)]"
-              >
-                <Fingerprint size={18} /> <span>View ID Card</span>
-              </button>
-              <div className="flex items-center gap-4 pl-4 md:pl-6 border-l border-white/10">
-                <div className="text-right hidden sm:block">
-                  <p className="text-base font-bold text-white">{profile.name || profile.username}</p>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mt-0.5">{secondaryValue}</p>
+          <div className="relative z-10 mb-12">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8 p-8 md:p-12 rounded-[3.5rem] bg-white/[0.03] border border-white/10 backdrop-blur-3xl shadow-2xl relative overflow-hidden group">
+              {/* Background Glows */}
+              <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/20 rounded-full blur-[100px] animate-pulse" />
+              <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-accent/20 rounded-full blur-[100px] animate-pulse" />
+              
+              <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+                {/* Avatar with dynamic ring */}
+                <div className="relative shrink-0 group">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-primary via-accent to-primary rounded-[2.5rem] blur-xl opacity-20 group-hover:opacity-40 transition-opacity animate-spin-slow" />
+                  <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] border-4 border-white/10 p-1.5 bg-background relative overflow-hidden">
+                    <img 
+                      src={profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (profile.username || profile.name)} 
+                      alt={profile.full_name || profile.name} 
+                      className="w-full h-full object-cover rounded-[2rem] transition-transform duration-700 group-hover:scale-110"
+                    />
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-primary flex items-center justify-center border-4 border-background text-white shadow-xl">
+                    <i className="ri-shield-check-fill text-xl"></i>
+                  </div>
                 </div>
-                <div className="w-14 h-14 rounded-2xl border-2 border-primary/30 overflow-hidden bg-muted shadow-[0_0_15px_rgba(var(--primary-rgb),0.2)]">
-                  <img src={profile.avatar_url || profile.cover_image || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + profile.name} className="w-full h-full object-cover" />
+
+                <div className="text-center md:text-left space-y-3">
+                  <div className="flex flex-col md:flex-row items-center gap-3">
+                    <h1 className="text-4xl md:text-7xl font-black text-white italic tracking-tighter leading-none bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] animate-gradient-x bg-clip-text text-transparent">
+                      {profile.full_name || profile.name || profile.username}
+                    </h1>
+                  </div>
+                  
+                  <div className="flex items-center justify-center md:justify-start gap-4">
+                    <div className="flex items-center gap-2">
+                      <i className="ri-user-follow-line text-primary"></i>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">{secondaryValue}</p>
+                    </div>
+                    <span className="w-1 h-1 rounded-full bg-white/20" />
+                    <div className="flex items-center gap-2">
+                      <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">{profile.gender || 'Agent'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-4">
+                    <span className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
+                      <i className="ri-fingerprint-line text-xs"></i> {profile.extra_details?.id_number || profile.extra_details?.manifesto_id || '70326-0001'}
+                    </span>
+                    {profile.email && (
+                      <span className="px-4 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-[9px] font-black lowercase tracking-widest text-primary flex items-center gap-2">
+                        <i className="ri-mail-send-line text-xs"></i> {profile.email}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Watch and Actions */}
+              <div className="flex flex-col items-center md:items-end gap-6 relative z-10 w-full md:w-auto">
+                <LiveWatch />
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => setShowID(true)}
+                    className="px-6 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-white font-black uppercase tracking-widest text-[10px] transition-all flex items-center gap-3 group/btn"
+                  >
+                    <i className="ri-id-card-line text-lg group-hover/btn:rotate-12 transition-transform"></i>
+                    Identity Node
+                  </button>
+                  {isOwner && (
+                    <button 
+                      onClick={() => navigate('/student-zone?tab=settings')}
+                      className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center hover:scale-110 transition-all shadow-xl shadow-primary/30"
+                    >
+                      <i className="ri-settings-4-line text-xl"></i>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* KPI Stats Row (Glass Cards) */}
-          {(courses.length > 0 || services.length > 0 || academics.avgGrade) && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6">
-              <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[1.5rem] p-5 md:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.2)] relative overflow-hidden group hover:border-blue-500/30 transition-all">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
-                    <i className="ri-folder-open-line text-xl"></i>
+          {/* KPI Stats Row (Liquid Glass Cards) */}
+          {(courses.length > 0 || services.length > 0 || academics.attendance != null) && (
+            <motion.div 
+              variants={itemVariants}
+              className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8"
+            >
+              <motion.div 
+                whileHover={{ y: -5, scale: 1.02 }}
+                className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-6 md:p-8 shadow-xl relative overflow-hidden group"
+              >
+                <div className="absolute top-0 left-0 w-full h-1 bg-blue-500 opacity-20 group-hover:opacity-100 transition-opacity" />
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-all shadow-lg shadow-blue-500/20">
+                    <i className="ri-book-open-line text-2xl"></i>
                   </div>
-                  <span className="text-2xl md:text-3xl font-black text-white">{courses.length}</span>
+                  <span className="text-3xl font-black text-white italic">{courses.length}</span>
                 </div>
-                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-muted-foreground">Enrolled Courses</p>
-              </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Active Programs</p>
+              </motion.div>
 
-              <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[1.5rem] p-5 md:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.2)] relative overflow-hidden group hover:border-green-500/30 transition-all">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-400 group-hover:scale-110 transition-transform">
-                    <i className="ri-check-double-line text-xl"></i>
+              <motion.div 
+                whileHover={{ y: -5, scale: 1.02 }}
+                className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-6 md:p-8 shadow-xl relative overflow-hidden group"
+              >
+                <div className="absolute top-0 left-0 w-full h-1 bg-green-500 opacity-20 group-hover:opacity-100 transition-opacity" />
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center text-green-400 group-hover:bg-green-500 group-hover:text-white transition-all shadow-lg shadow-green-500/20">
+                    <i className="ri-shield-check-line text-2xl"></i>
                   </div>
-                  <span className="text-2xl md:text-3xl font-black text-white">{courses.filter(c => c.progress === 100).length}</span>
+                  <span className="text-3xl font-black text-white italic">{courses.filter(c => c.progress === 100).length}</span>
                 </div>
-                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-muted-foreground">Courses Completed</p>
-              </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Mastered Skills</p>
+              </motion.div>
 
-              <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[1.5rem] p-5 md:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.2)] relative overflow-hidden group hover:border-purple-500/30 transition-all">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
-                    <i className="ri-shield-flash-line text-xl"></i>
+              <motion.div 
+                whileHover={{ y: -5, scale: 1.02 }}
+                className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-6 md:p-8 shadow-xl relative overflow-hidden group"
+              >
+                <div className="absolute top-0 left-0 w-full h-1 bg-purple-500 opacity-20 group-hover:opacity-100 transition-opacity" />
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-400 group-hover:bg-purple-500 group-hover:text-white transition-all shadow-lg shadow-purple-500/20">
+                    <i className="ri-command-line text-2xl"></i>
                   </div>
-                  <span className="text-2xl md:text-3xl font-black text-white">{services.length}</span>
+                  <span className="text-3xl font-black text-white italic">{services.length}</span>
                 </div>
-                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Services</p>
-              </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Active Directives</p>
+              </motion.div>
 
-              <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[1.5rem] p-5 md:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.2)] relative overflow-hidden group hover:border-yellow-500/30 transition-all">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-400 group-hover:scale-110 transition-transform">
-                    <i className="ri-bar-chart-box-line text-xl"></i>
+              <motion.div 
+                whileHover={{ y: -5, scale: 1.02 }}
+                className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-6 md:p-8 shadow-xl relative overflow-hidden group"
+              >
+                <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500 opacity-20 group-hover:opacity-100 transition-opacity" />
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-12 h-12 rounded-2xl bg-yellow-500/10 flex items-center justify-center text-yellow-400 group-hover:bg-yellow-500 group-hover:text-white transition-all shadow-lg shadow-yellow-500/20">
+                    <i className="ri-pulse-line text-2xl"></i>
                   </div>
-                  <span className="text-2xl md:text-3xl font-black text-white">{academics.avgGrade || 'N/A'}</span>
+                  <span className="text-3xl font-black text-white italic">{academics.attendance || 0}%</span>
                 </div>
-                <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-muted-foreground">Avg. Grade</p>
-              </div>
-            </div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Operational Status</p>
+              </motion.div>
+            </motion.div>
           )}
 
           {/* Main Content Row 1: Courses & Tasks */}
           {(courses.length > 0 || academics.tasks.length > 0) && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <motion.div 
+              variants={itemVariants}
+              className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6"
+            >
               {/* Course Progress */}
               {courses.length > 0 && (
                 <div className="col-span-1 lg:col-span-2 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-6 md:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
@@ -468,41 +670,247 @@ const PublicProfile = () => {
                   </div>
                 </div>
               )}
-            </div>
+            </motion.div>
           )}
 
-          {/* Content Row 2: Attendance, Bio */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            {/* Strategic Intelligence Brief (Bio) */}
-            <div className={`bg-gradient-to-br from-primary/10 to-white/5 backdrop-blur-2xl border border-primary/20 rounded-[2rem] p-6 md:p-8 shadow-[0_8px_32px_rgba(var(--primary-rgb),0.1)] relative overflow-hidden flex flex-col justify-center ${academics.attendance != null ? 'col-span-1 lg:col-span-2' : 'col-span-1 lg:col-span-3'}`}>
-              <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
-                <i className="ri-folder-user-line text-9xl"></i>
-              </div>
-              <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-4">Strategic Intelligence Brief</h3>
-              <p className="text-sm md:text-lg text-foreground/90 leading-relaxed font-medium italic pl-4 border-l-4 border-primary/40 relative z-10">
-                "{profile.bio || profile.description || 'No strategic brief submitted.'}"
-              </p>
+          {/* Content Row 1: Bio (Full Width) */}
+          <motion.div 
+            variants={itemVariants}
+            className="w-full bg-gradient-to-br from-primary/10 to-white/5 backdrop-blur-2xl border border-primary/20 rounded-[3rem] p-8 md:p-12 shadow-[0_20px_50px_rgba(var(--primary-rgb),0.1)] relative overflow-hidden mb-8"
+          >
+            <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none">
+              <i className="ri-quill-pen-line text-[12rem]"></i>
             </div>
-
-            {/* Attendance Donut Chart Mock */}
-            {academics.attendance != null && (
-              <div className="col-span-1 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-6 md:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)] flex flex-col items-center justify-center relative">
-                <h3 className="text-xs font-black uppercase tracking-widest text-white w-full text-center mb-6">Attendance</h3>
-                <div className="relative w-36 h-36 md:w-44 md:h-44 rounded-full border-[16px] border-white/5 flex items-center justify-center">
-                  <svg className="absolute inset-0 w-full h-full transform -rotate-90">
-                    <circle cx="50%" cy="50%" r="41%" fill="none" stroke="rgba(var(--primary-rgb), 1)" strokeWidth="16" strokeDasharray="200" strokeDashoffset={200 - (200 * academics.attendance / 100)} strokeLinecap="round" className="transition-all duration-1000" />
-                  </svg>
-                  <div className="text-center">
-                    <span className="text-3xl md:text-5xl font-black text-white">{academics.attendance}%</span>
+            <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-primary mb-8">Strategic Intelligence Brief</h3>
+            <p className="text-lg md:text-2xl text-foreground font-black italic leading-tight tracking-tighter">
+              "{profile.bio || profile.description || 'No strategic brief submitted for this operative.'}"
+            </p>
+            <div className="mt-8 flex flex-wrap gap-6 pt-8 border-t border-white/5">
+              {profile.institution && (
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white/30 mb-1">Base of Operations</span>
+                  <div className="flex items-center gap-2 text-xs font-bold text-white/80 uppercase tracking-tight">
+                    <i className="ri-building-2-line text-primary"></i> {profile.institution}
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+              {profile.major && (
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white/30 mb-1">Sector Expertise</span>
+                  <div className="flex items-center gap-2 text-xs font-bold text-white/80 uppercase tracking-tight">
+                    <i className="ri-shield-user-line text-primary"></i> {profile.major}
+                  </div>
+                </div>
+              )}
+              {academics.attendance != null && (
+                <div className="flex flex-col border-l border-white/10 pl-6">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-white/30 mb-1">Activity Index</span>
+                  <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-tight">
+                    <i className="ri-pulse-line"></i> {academics.attendance}% Operational
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Content Row 3: Socials, Portfolio & Education Side-by-Side */}
+          <motion.div 
+            variants={itemVariants}
+            className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8"
+          >
+            {/* Social & Portfolio Column */}
+            <div className="flex flex-col gap-6">
+              {/* Portfolio Card */}
+              {profile.portfolio_url && (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="bg-gradient-to-br from-primary/20 to-primary/5 backdrop-blur-2xl border border-primary/30 rounded-[2rem] p-8 shadow-[0_20px_50px_rgba(var(--primary-rgb),0.15)] group relative overflow-hidden h-fit"
+                >
+                  <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:rotate-12 transition-transform">
+                    <i className="ri-rocket-2-line text-6xl"></i>
+                  </div>
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-4">Master Portfolio</h3>
+                  <p className="text-sm font-bold text-white/70 mb-6 leading-relaxed uppercase tracking-tight">Access the primary creative & engineering repository matrix.</p>
+                  <a 
+                    href={profile.portfolio_url.startsWith('http') ? profile.portfolio_url : `https://${profile.portfolio_url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-4 rounded-2xl bg-primary text-white font-black uppercase tracking-[0.3em] text-[10px] flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/20"
+                  >
+                    Launch Matrix <i className="ri-external-link-line"></i>
+                  </a>
+                </motion.div>
+              )}
+
+              {/* Social Link Matrix */}
+              {profile.social_links && (Array.isArray(profile.social_links) ? profile.social_links.length > 0 : Object.keys(profile.social_links).length > 0) && (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)]"
+                >
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-white/50 mb-6">Digital Social Mesh</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {Array.isArray(profile.social_links) ? (
+                      profile.social_links.map((link, sIdx) => {
+                        const platform = link.platform.toLowerCase();
+                        const brandColor = 
+                          platform.includes('github') ? 'hover:border-white/40 hover:bg-white/5' :
+                          platform.includes('linkedin') ? 'hover:border-blue-500/40 hover:bg-blue-500/5' :
+                          platform.includes('twitter') || platform.includes('x') ? 'hover:border-white/40 hover:bg-white/5' :
+                          platform.includes('instagram') ? 'hover:border-pink-500/40 hover:bg-pink-500/5' :
+                          platform.includes('discord') ? 'hover:border-indigo-500/40 hover:bg-indigo-500/5' :
+                          'hover:border-primary/40 hover:bg-primary/5';
+                        
+                        const iconColor = 
+                          platform.includes('linkedin') ? 'group-hover:text-blue-400' :
+                          platform.includes('instagram') ? 'group-hover:text-pink-400' :
+                          platform.includes('discord') ? 'group-hover:text-indigo-400' :
+                          'group-hover:text-primary';
+
+                        return (
+                          <motion.a
+                            key={sIdx}
+                            href={link.url.startsWith('http') ? link.url : `https://${link.url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            whileHover={{ y: -5, scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-[2rem] bg-white/[0.03] border border-white/10 transition-all group shadow-xl ${brandColor}`}
+                          >
+                            <div className={`text-3xl transition-all duration-500 group-hover:scale-125 ${iconColor}`}>
+                              {getSocialIcon(link.platform)}
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 group-hover:text-white transition-colors">
+                              {link.platform}
+                            </span>
+                          </motion.a>
+                        );
+                      })
+                    ) : (
+                      Object.entries(profile.social_links).map(([platform, url], sIdx) => {
+                        if (!url) return null;
+                        const p = platform.toLowerCase();
+                        const brandColor = 
+                          p.includes('github') ? 'hover:border-white/40 hover:bg-white/5' :
+                          p.includes('linkedin') ? 'hover:border-blue-500/40 hover:bg-blue-500/5' :
+                          'hover:border-primary/40 hover:bg-primary/5';
+                        
+                        return (
+                          <motion.a
+                            key={sIdx}
+                            href={url.startsWith('http') ? url : `https://${url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            whileHover={{ y: -5, scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className={`flex flex-col items-center justify-center gap-3 p-6 rounded-[2rem] bg-white/[0.03] border border-white/10 transition-all group shadow-xl ${brandColor}`}
+                          >
+                            <div className="text-3xl group-hover:text-primary group-hover:scale-125 transition-all duration-500">
+                              {getSocialIcon(platform)}
+                            </div>
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 group-hover:text-white transition-colors">
+                              {platform}
+                            </span>
+                          </motion.a>
+                        );
+                      })
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Education Timeline Column */}
+            <div className="lg:col-span-2">
+              {eduArr.length > 0 && (
+                <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-6 md:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)] relative h-full">
+                  <div className="relative z-10">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-accent mb-8 flex items-center gap-3">
+                      Academic Evolution Timeline
+                    </h3>
+                    
+                    <div className="relative pl-8 space-y-8 mt-10">
+                      {/* Precise Connection Header */}
+                      <div className="absolute -top-8 left-1.5 flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
+                        <span className="text-[7px] font-black uppercase tracking-[0.4em] text-accent">Active Neural Path</span>
+                      </div>
+
+                      {/* Base Static Line - Aligned Precisely */}
+                      <div className="absolute left-[14px] top-2 bottom-4 w-[2px] bg-white/5" />
+                      
+                      {/* Liquid Flow Line - Aligned Precisely */}
+                      <motion.div 
+                        initial={{ height: 0 }}
+                        animate={{ height: 'calc(100% - 24px)' }}
+                        transition={{ duration: 1.5, ease: "circOut" }}
+                        className="absolute left-[14px] top-2 w-[2px] bg-gradient-to-b from-accent via-primary to-accent bg-[length:100%_200%] animate-gradient-y origin-top z-0" 
+                      />
+
+                      {/* Traveling Data Pulse - Aligned Precisely */}
+                      <motion.div
+                        animate={{ 
+                          top: ['-5%', '105%'],
+                          opacity: [0, 1, 0]
+                        }}
+                        transition={{ 
+                          duration: 2.5, 
+                          repeat: Infinity, 
+                          ease: "easeInOut"
+                        }}
+                        className="absolute left-[11px] w-[8px] h-32 bg-gradient-to-b from-transparent via-accent to-transparent z-10 blur-[3px]"
+                      />
+
+                      {eduArr.map((edu, idx) => {
+                        const isObject = typeof edu === 'object';
+                        return (
+                          <motion.div 
+                            key={idx} 
+                            variants={itemVariants}
+                            whileHover={{ x: 10 }}
+                            className="relative group/edu"
+                          >
+                            <motion.div 
+                              animate={{ 
+                                scale: [1, 1.2, 1],
+                                boxShadow: ['0 0 0px rgba(var(--accent-rgb), 0)', '0 0 30px rgba(var(--accent-rgb), 0.8)', '0 0 0px rgba(var(--accent-rgb), 0)']
+                              }}
+                              transition={{ duration: 3, repeat: Infinity, delay: idx * 0.7 }}
+                              className="absolute -left-[23px] top-1.5 w-4 h-4 rounded-full bg-background border-[4px] border-accent z-20 shadow-2xl" 
+                            />
+                            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-accent/30 transition-all">
+                              <div className="flex justify-between items-start mb-1">
+                                <span className="text-[8px] font-black uppercase tracking-widest text-accent/60">Stage {idx + 1}</span>
+                                {isObject && edu.year && (
+                                  <span className="text-[9px] font-bold text-white/30">{edu.year}</span>
+                                )}
+                              </div>
+                              <h4 className="text-sm font-bold text-white">
+                                {isObject ? edu.school : edu}
+                              </h4>
+                              {isObject && edu.degree && (
+                                <p className="text-[10px] font-medium text-white/50 uppercase tracking-wide mt-0.5">{edu.degree}</p>
+                              )}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
 
           {/* Content Row 3: Services & Notes & Specializations */}
           {(services.length > 0 || notes.length > 0 || expertiseArr.length > 0) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            <motion.div 
+              variants={itemVariants}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6"
+            >
 
               {services.length > 0 && (
                 <div className="col-span-1 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
@@ -545,11 +953,14 @@ const PublicProfile = () => {
                   </div>
                 </div>
               )}
-            </div>
+            </motion.div>
           )}
 
           {/* Content Row 4: Combat History & Education */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-4">
+          <motion.div 
+            variants={itemVariants}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-4"
+          >
 
             {/* Combat History */}
             {gamesArr.length > 0 && (
@@ -583,34 +994,104 @@ const PublicProfile = () => {
               </div>
             )}
 
-            {/* Education Timeline */}
-            {eduArr.length > 0 && (
-              <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-6 md:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
-                <h3 className="text-xs font-black uppercase tracking-widest text-white mb-8">Educational Walkthrough</h3>
-                <div className="relative pl-6 space-y-6 md:space-y-8">
-                  <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-accent via-accent/20 to-transparent" />
-                  {eduArr.map((edu, idx) => {
-                    const isObject = typeof edu === 'object';
-                    return (
-                      <div key={idx} className="relative group/edu">
-                        <div className="absolute -left-[20px] top-1.5 w-3 h-3 rounded-full bg-background border-[3px] border-accent shadow-[0_0_10px_rgba(var(--accent-rgb),0.5)] group-hover:scale-125 transition-transform" />
-                        <div className="p-4 md:p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-accent/30 transition-all hover:bg-accent/5">
-                          <div className="mb-1 md:mb-2">
-                            <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-accent/60">Phase {idx + 1}</span>
+
+
+            </motion.div>
+
+          {/* Published Works & Academic Artifacts */}
+          {(research.length > 0 || books.length > 0 || projects.length > 0) && (
+            <motion.div 
+              variants={itemVariants}
+              className="mt-8 border-t border-white/10 pt-10"
+            >
+              <h2 className="text-2xl font-black text-white italic tracking-tighter mb-8 flex items-center gap-4">
+                <i className="ri-flask-line text-primary"></i> Published Works & Artifacts
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-4">
+                {(research.length > 0 || projects.length > 0) && (
+                  <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-6 md:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)] col-span-1 md:col-span-2">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-white mb-6">Published Submissions</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[...research, ...projects].map((paper, idx) => (
+                        <motion.div 
+                          key={idx} 
+                          whileHover={{ y: -5 }}
+                          className="p-5 rounded-[2rem] bg-white/5 border border-white/5 hover:border-primary/30 transition-all group overflow-hidden relative"
+                        >
+                          {paper.cover_image && (
+                            <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity">
+                              <img src={paper.cover_image} className="w-full h-full object-cover grayscale" />
+                            </div>
+                          )}
+                          <div className="relative z-10 flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform border border-primary/20">
+                              <i className={paper.submission_type === 'research_paper' ? "ri-microscope-line text-xl" : "ri-code-box-line text-xl"}></i>
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start mb-1">
+                                <span className="text-[8px] font-black uppercase tracking-widest text-primary/60">{paper.submission_type?.replace('_', ' ')}</span>
+                              </div>
+                              <p className="text-sm md:text-base font-bold text-white mb-2 leading-tight">{paper.title}</p>
+                              <p className="text-[11px] text-white/50 line-clamp-2 mb-4 leading-relaxed">{paper.summary}</p>
+                              {paper.content_url && (
+                                <a href={paper.content_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all">
+                                  Access File <i className="ri-external-link-line text-xs"></i>
+                                </a>
+                              )}
+                            </div>
                           </div>
-                          <span className="text-sm font-bold text-white leading-tight block">{isObject ? (edu.school || edu.degree) : edu}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {books.length > 0 && (
+                  <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-6 md:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)]">
+                    <h3 className="text-xs font-black uppercase tracking-widest text-white mb-6">Authored Manuals</h3>
+                    <div className="space-y-4">
+                      {books.map((book, idx) => (
+                        <motion.div 
+                          key={idx} 
+                          whileHover={{ x: 5 }}
+                          className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-accent/30 transition-all group"
+                        >
+                          <div className="flex items-start gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform"><i className="ri-book-3-line text-lg"></i></div>
+                            <div>
+                              <p className="text-sm font-bold text-white/90 group-hover:text-white transition-colors">{typeof book === 'object' ? book.title : book}</p>
+                              {typeof book === 'object' && book.publisher && (
+                                <span className="text-[9px] font-black text-accent/60 uppercase tracking-widest block mt-1">{book.publisher}</span>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* Final Contact Vector (Admin/Faculty/Owner only) */}
+          {(isOwner || profile.role?.toLowerCase() === 'admin' || profile.role?.toLowerCase() === 'faculty') && profile.phone && (
+            <div className="mt-8 p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-500 border border-green-500/20">
+                  <i className="ri-shield-user-line text-lg"></i>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground leading-none mb-1">Direct Secure Line</p>
+                  <p className="text-sm font-bold text-white">{profile.phone}</p>
                 </div>
               </div>
-            )}
-
-          </div>
+              <p className="text-[9px] font-black text-white/20 uppercase tracking-[0.3em]">Encrypted Data Stream Active</p>
+            </div>
+          )}
 
         </div>
-      </div>
+      </motion.div>
 
       <AnimatePresence>
         {showID && (

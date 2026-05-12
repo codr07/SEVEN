@@ -62,6 +62,7 @@ let globalSessionPromise = null;
               full_name: meta.full_name || '',
               phone: meta.phone || '',
               avatar_url: meta.avatar_url || '',
+              gender: meta.gender || '',
               social_links: meta.social_links || { linkedin: '', github: '', linktree: '' },
               role: 'student',
               extra_details: { id_number: idNumber },
@@ -151,6 +152,7 @@ let globalSessionPromise = null;
       username = '',
       fullName = '',
       phone = '',
+      gender = '',
       avatarUrl = '',
       socialLinks = { linkedin: '', github: '', linktree: '' },
     } = profileData || {};
@@ -164,6 +166,7 @@ let globalSessionPromise = null;
           username,
           full_name: fullName,
           phone,
+          gender,
           avatar_url: avatarUrl,
           social_links: socialLinks,
         },

@@ -16,17 +16,18 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
 
   const selectedServiceObj = services.find(s => s.title === formData.service_type);
   const serviceCategory = selectedServiceObj ? (selectedServiceObj.category || '').toLowerCase() : 'custom';
+  const dbConfig = selectedServiceObj?.extra_details?.form_config;
 
   const DYNAMIC_OPTIONS = useMemo(() => {
     // 1. Try to get config from the selected service entry
-    const dbConfig = selectedServiceObj?.extra_details?.form_config;
-    if (dbConfig && typeof dbConfig === 'object') {
+    const config = dbConfig;
+    if (config && typeof config === 'object') {
       return {
-        addons: dbConfig.addons || [],
-        tiers: dbConfig.tiers || [],
-        tierMultipliers: dbConfig.tierMultipliers || (dbConfig.tiers || []).reduce((acc, t) => ({ ...acc, [t]: 1 }), {}),
-        timelinePlaceholder: dbConfig.timelinePlaceholder || "e.g. ASAP",
-        custom_fields: dbConfig.custom_fields || []
+        addons: config.addons || [],
+        tiers: config.tiers || [],
+        tierMultipliers: config.tierMultipliers || (config.tiers || []).reduce((acc, t) => ({ ...acc, [t]: 1 }), {}),
+        timelinePlaceholder: config.timelinePlaceholder || "e.g. ASAP",
+        custom_fields: config.custom_fields || []
       };
     }
 
@@ -124,7 +125,6 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
     if (!formData.service_type) return 'Select a service';
     
     // 1. Handle specialized services with fixed/calculated rates via Templates
-    const dbConfig = selectedServiceObj?.extra_details?.form_config;
     const template = dbConfig?.specialized_template;
     if (template === 'mock_exams') {
       const tests = formData.custom_responses.mock_tests || 1;
@@ -154,10 +154,9 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
     }
 
     // 2. Fallback to Web/General Service pricing logic
-    const service = services.find(s => s.title === formData.service_type);
-    if (!service) return 'Custom Quote';
+    if (!selectedServiceObj) return 'Custom Quote';
 
-    const priceStr = service.price || '0';
+    const priceStr = selectedServiceObj.price || '0';
     const match = priceStr.replace(/,/g, '').match(/(\d+(\.\d+)?)/);
     const basePrice = match ? parseFloat(match[0]) : 0;
     let total = basePrice;
@@ -174,9 +173,10 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
   };
 
   const handleSubmit = async (e) => {
-    // Note: FormSubmit.co will handle the email part via the 'action' and 'method' attributes
-    // This function handles the Supabase logging
+    e.preventDefault();
     setLoading(true);
+    const form = e.target;
+
     try {
       const payload = {
         name: formData.name,
@@ -193,8 +193,11 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
         custom_responses: formData.custom_responses
       };
       await supabase.from('service_inquiries').insert([payload]);
-      showAlert('Architectural Manifesto Received. Our elite squad will contact you shortly.', 'success');
-      onClose();
+      
+      // After Supabase logging, trigger the form submission to FormSubmit.co
+      form.submit(); 
+      
+      showAlert('Architectural Manifesto Received. Redirecting...', 'success');
     } catch (err) {
       console.error(err);
       showAlert('Communication Bridge Interrupted. Please retry.', 'error');

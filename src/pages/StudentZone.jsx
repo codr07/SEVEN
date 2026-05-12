@@ -228,6 +228,10 @@ const StudentZone = () => {
         major: editableProfile.major || null,
         location: editableProfile.location || null,
         portfolio_url: editableProfile.portfolio_url || null,
+        gender: editableProfile.gender || null,
+        extra_details: {
+          ...(editableProfile.extra_details || {}),
+        },
         updated_at: new Date().toISOString(),
       };
 
@@ -650,7 +654,12 @@ const StudentZone = () => {
                 <motion.div key="dashboard" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-8 rounded-[40px] bg-primary/5 border border-primary/10 shadow-inner">
                     <div className="space-y-1">
-                      <h3 className="text-2xl font-black uppercase tracking-tight text-primary">Student Dashboard</h3>
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-2xl font-black uppercase tracking-tight text-primary">Student Dashboard</h3>
+                        <span className="px-3 py-1 rounded-lg bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20">
+                          ID: {profile?.extra_details?.id_number || '70326-0001'}
+                        </span>
+                      </div>
                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Management & Directive Controls</p>
                     </div>
                     
@@ -799,6 +808,22 @@ const StudentZone = () => {
                           value={editableProfile.phone || ''}
                           onChange={(e) => setEditableProfile((p) => ({ ...p, phone: e.target.value }))}
                           className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                        />
+                      </Field>
+                      <Field label="Gender">
+                        <GlassSelect
+                          value={editableProfile.gender || ''}
+                          onChange={(val) => setEditableProfile((p) => ({ 
+                            ...p, 
+                            gender: val 
+                          }))}
+                          options={[
+                            { value: 'male', label: 'Male' },
+                            { value: 'female', label: 'Female' },
+                            { value: 'others', label: 'Others' }
+                          ]}
+                          placeholder="Select Gender"
+                          className="w-full"
                         />
                       </Field>
                       <Field label="Email (read-only)">

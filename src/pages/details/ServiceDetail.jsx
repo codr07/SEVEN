@@ -99,7 +99,7 @@ const ServiceDetail = () => {
               <div className="rounded-2xl border border-border bg-background p-6 lg:p-8 shadow-sm">
                 <h2 className="text-2xl font-bold text-foreground border-b border-border pb-4 mb-6">Service Offerings & Deliverables</h2>
                 <ul className="grid gap-3">
-                  {(view.description || service.description || []).map((point, idx) => (
+                  {(Array.isArray(view.description) ? view.description : Array.isArray(service.description) ? service.description : [service.description].filter(Boolean)).map((point, idx) => (
                     <li key={idx} className="flex gap-3 text-muted-foreground font-medium">
                       <div className="mt-1 w-2 h-2 rounded-full bg-secondary shrink-0" />
                       {point}

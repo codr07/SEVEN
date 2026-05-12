@@ -8,6 +8,7 @@ import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
 import logoMain from '../assets/seven.svg';
+import GlassSelect from './GlassSelect';
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -36,6 +37,7 @@ const Navbar = () => {
   const [signupUsername, setSignupUsername] = useState('');
   const [signupFullName, setSignupFullName] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
+  const [signupGender, setSignupGender] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoginBusy, setIsLoginBusy] = useState(false);
   const [showVerificationSent, setShowVerificationSent] = useState(false);
@@ -89,12 +91,17 @@ const Navbar = () => {
     setLoginError('');
     setIsLoginBusy(true);
     try {
-      await signup(loginEmail, loginPassword, {
+      const data = await signup(loginEmail, loginPassword, {
         username: signupUsername,
         fullName: signupFullName,
-        phone: signupPhone
+        phone: signupPhone,
+        gender: signupGender
       });
-      setShowVerificationSent(true);
+      if (data?.session) {
+        setIsLoginOpen(false);
+      } else {
+        setShowVerificationSent(true);
+      }
     } catch (error) {
       setLoginError(error.message || 'Signup failed');
     } finally {
@@ -301,29 +308,58 @@ const Navbar = () => {
       {isLoginOpen && (
         <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-card w-full max-w-md rounded-3xl p-8 shadow-2xl relative border border-border">
-            <button onClick={() => setIsLoginOpen(false)} className="absolute top-4 right-4 p-2 hover:bg-muted rounded-full"><X size={20} /></button>
-            <h2 className="text-2xl font-black uppercase tracking-widest mb-8">{isSignUpMode ? 'Create Account' : 'Welcome Back'}</h2>
+            <button onClick={() => { setIsLoginOpen(false); setShowVerificationSent(false); }} className="absolute top-4 right-4 p-2 hover:bg-muted rounded-full"><X size={20} /></button>
             
-            <form onSubmit={isSignUpMode ? handleManualSignUp : handleWebsiteAuth} className="flex flex-col gap-4">
-              {isSignUpMode && (
-                <>
-                  <input type="text" placeholder="Full Name" value={signupFullName} onChange={e => setSignupFullName(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
-                  <input type="text" placeholder="Username" value={signupUsername} onChange={e => setSignupUsername(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
-                </>
-              )}
-              <input type="email" placeholder="Email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
-              <input type="password" placeholder="Password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
-              
-              {loginError && <p className="text-destructive text-xs font-bold">{loginError}</p>}
-              
-              <button type="submit" disabled={isLoginBusy} className="w-full py-4 bg-primary text-white rounded-xl font-black uppercase tracking-widest mt-2 hover:scale-[1.02] transition-all disabled:opacity-50">
-                {isLoginBusy ? 'Processing...' : (isSignUpMode ? 'Register' : 'Login')}
-              </button>
-            </form>
-            
-            <button onClick={() => setIsSignUpMode(!isSignUpMode)} className="w-full mt-6 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
-              {isSignUpMode ? 'Already have an account? Login' : 'New here? Create account'}
-            </button>
+            {showVerificationSent ? (
+              <div className="flex flex-col items-center text-center gap-4 py-6">
+                <div className="w-16 h-16 rounded-full bg-primary/20 text-primary flex items-center justify-center mb-2">
+                  <Mail size={32} />
+                </div>
+                <h3 className="text-xl font-black uppercase tracking-widest text-primary">Check Your Email</h3>
+                <p className="text-sm text-muted-foreground">
+                  We've sent a verification link to <span className="font-bold text-foreground">{loginEmail}</span>.
+                  Please verify your email to complete registration.
+                </p>
+                <button onClick={() => { setIsLoginOpen(false); setShowVerificationSent(false); }} className="w-full py-4 mt-4 bg-muted text-foreground rounded-xl font-black uppercase tracking-widest hover:bg-muted/80 transition-colors">
+                  Close
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-2xl font-black uppercase tracking-widest mb-8">{isSignUpMode ? 'Create Account' : 'Welcome Back'}</h2>
+                <form onSubmit={isSignUpMode ? handleManualSignUp : handleWebsiteAuth} className="flex flex-col gap-4">
+                  {isSignUpMode && (
+                    <>
+                      <input type="text" placeholder="Full Name" value={signupFullName} onChange={e => setSignupFullName(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
+                      <input type="text" placeholder="Username" value={signupUsername} onChange={e => setSignupUsername(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
+                      <GlassSelect
+                        value={signupGender}
+                        onChange={(val) => setSignupGender(val)}
+                        options={[
+                          { value: 'male', label: 'Male' },
+                          { value: 'female', label: 'Female' },
+                          { value: 'others', label: 'Others' }
+                        ]}
+                        placeholder="Select Gender"
+                        className="w-full"
+                      />
+                    </>
+                  )}
+                  <input type="email" placeholder="Email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
+                  <input type="password" placeholder="Password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
+                  
+                  {loginError && <p className="text-destructive text-xs font-bold">{loginError}</p>}
+                  
+                  <button type="submit" disabled={isLoginBusy} className="w-full py-4 bg-primary text-white rounded-xl font-black uppercase tracking-widest mt-2 hover:scale-[1.02] transition-all disabled:opacity-50">
+                    {isLoginBusy ? 'Processing...' : (isSignUpMode ? 'Register' : 'Login')}
+                  </button>
+                </form>
+                
+                <button onClick={() => setIsSignUpMode(!isSignUpMode)} className="w-full mt-6 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
+                  {isSignUpMode ? 'Already have an account? Login' : 'New here? Create account'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
