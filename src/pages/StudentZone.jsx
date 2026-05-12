@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CreatorBadge } from '@/components/ui/SocialBadges';
 import GlassSelect from '../components/GlassSelect';
 import { useSearchParams, Link } from 'react-router-dom';
 import {
@@ -1271,9 +1272,9 @@ const PublicFeed = ({ loadingData, posts }) => {
                 </div>
                 
                 <div className="flex items-center gap-3">
-                  <span className="hidden sm:inline-block text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                    {item.submission_type === 'research_paper' ? 'Research Paper' : 'Technical Project'}
-                  </span>
+                  <div className="hidden sm:block scale-75 origin-right">
+                    <CreatorBadge role={item.submission_type === 'research_paper' ? 'writer' : 'creator'} />
+                  </div>
                   <div className="p-2 rounded-xl bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer">
                     <Globe size={16} />
                   </div>

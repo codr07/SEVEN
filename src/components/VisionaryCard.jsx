@@ -9,7 +9,8 @@ const VisionaryCard = ({
   manifestoId = "5EVEN-VZN-001",
   onClick,
   fill = "rgba(255, 255, 255, 0.03)",
-  accentColor = "var(--primary)"
+  accentColor = "var(--primary)",
+  mirrored = false
 }) => {
   return (
     <div className="w-full max-w-[1090px] mx-auto group py-8 md:py-32 px-4 md:px-8 flex justify-center items-center overflow-visible">
@@ -77,79 +78,86 @@ const VisionaryCard = ({
         style={{ width: 1090, height: 490 }}
         onClick={onClick}
       >
-        {/* Shape 1 - Main Body */}
-        <div
-          className="absolute left-[190px] top-[90px] w-[650px] h-[320px] rounded-[0px_32px_32px_0px] border border-white/10 backdrop-blur-3xl transition-all duration-500 group-hover:bg-white/5 group-hover:border-primary/50 group-hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.2)]"
-          style={{ backgroundColor: fill }}
-        />
+        {/* Mirroring Wrapper for Shapes and SVGs */}
+        <div className={mirrored ? "scale-x-[-1] absolute inset-0 w-full h-full" : "absolute inset-0 w-full h-full"}>
+          {/* Shape 1 - Main Body */}
+          <div
+            className="absolute left-[190px] top-[90px] w-[650px] h-[320px] rounded-[0px_32px_32px_0px] border border-white/10 backdrop-blur-3xl transition-all duration-500 group-hover:bg-white/5 group-hover:border-primary/50 group-hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.2)]"
+            style={{ backgroundColor: fill }}
+          />
 
-        {/* Shape 2 - Top Left (ID) */}
-        <div
-          className="absolute left-0 top-0 w-[190px] h-[150px] rounded-[42px_42px_0px_42px] border border-white/10 backdrop-blur-3xl transition-all duration-500 group-hover:bg-white/5 group-hover:border-primary/50 group-hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.2)]"
-          style={{ backgroundColor: fill }}
-        />
+          {/* Shape 2 - Top Left (ID) */}
+          <div
+            className="absolute left-0 top-0 w-[190px] h-[150px] rounded-[42px_42px_0px_42px] border border-white/10 backdrop-blur-3xl transition-all duration-500 group-hover:bg-white/5 group-hover:border-primary/50 group-hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.2)]"
+            style={{ backgroundColor: fill }}
+          />
 
-        {/* Shape 3 - Right Tab (Role) */}
-        <div
-          className="absolute left-[840px] top-[300px] w-[250px] h-[80px] rounded-[0px_7px_7px_0px] border border-white/10 backdrop-blur-3xl transition-all duration-500 group-hover:bg-white/5 group-hover:border-primary/50 group-hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.2)]"
-          style={{ backgroundColor: fill }}
-        />
+          {/* Shape 3 - Right Tab (Role) */}
+          <div
+            className="absolute left-[840px] top-[300px] w-[250px] h-[80px] rounded-[0px_7px_7px_0px] border border-white/10 backdrop-blur-3xl transition-all duration-500 group-hover:bg-white/5 group-hover:border-primary/50 group-hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.2)]"
+            style={{ backgroundColor: fill }}
+          />
 
-        {/* Shape 4 - Bottom Left (Read Journey) */}
-        <div
-          className="absolute left-[40px] top-[340px] w-[150px] h-[150px] rounded-[80px_0px_80px_80px] border border-white/10 backdrop-blur-3xl transition-all duration-500 group-hover:bg-white/5 group-hover:border-primary/50 group-hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.2)]"
-          style={{ backgroundColor: fill }}
-        />
+          {/* Shape 4 - Bottom Left (Read Journey) */}
+          <div
+            className="absolute left-[40px] top-[340px] w-[150px] h-[150px] rounded-[80px_0px_80px_80px] border border-white/10 backdrop-blur-3xl transition-all duration-500 group-hover:bg-white/5 group-hover:border-primary/50 group-hover:shadow-[0_0_30px_rgba(var(--primary-rgb),0.2)]"
+            style={{ backgroundColor: fill }}
+          />
 
-        {/* Bridges (Provided SVGs) */}
-        <svg className="absolute left-[158px] top-[150px] w-8 h-8 pointer-events-none" viewBox="-32 -32 32 32">
-          <path d="M 0 0 C 0 -23.872 -5.76 -32 -32 -32 H 0 Z" fill={fill} />
-          <path d="M 0 0 C 0 -23.872 -5.76 -32 -32 -32" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" className="group-hover:stroke-primary/50 transition-all" />
-        </svg>
+          {/* Bridges (Provided SVGs) */}
+          <svg className="absolute left-[158px] top-[150px] w-8 h-8 pointer-events-none" viewBox="-32 -32 32 32">
+            <path d="M 0 0 C 0 -23.872 -5.76 -32 -32 -32 H 0 Z" fill={fill} />
+            <path d="M 0 0 C 0 -23.872 -5.76 -32 -32 -32" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" className="group-hover:stroke-primary/50 transition-all" />
+          </svg>
 
-        <svg className="absolute left-[840px] top-[293px] w-[7px] h-[7px] pointer-events-none" viewBox="0 0 7 7">
-          <path d="M 0 0 C 0 5.2219999999999995 1.26 7 7 7 H 0 Z" fill={fill} />
-          <path d="M 0 0 C 0 5.2219999999999995 1.26 7 7 7" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" className="group-hover:stroke-primary/50 transition-all" />
-        </svg>
+          <svg className="absolute left-[840px] top-[293px] w-[7px] h-[7px] pointer-events-none" viewBox="0 0 7 7">
+            <path d="M 0 0 C 0 5.2219999999999995 1.26 7 7 7 H 0 Z" fill={fill} />
+            <path d="M 0 0 C 0 5.2219999999999995 1.26 7 7 7" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" className="group-hover:stroke-primary/50 transition-all" />
+          </svg>
 
-        <svg className="absolute left-[840px] top-[380px] w-[7px] h-[7px] pointer-events-none" viewBox="0 -7 7 7">
-          <path d="M 0 0 C 0 -5.2219999999999995 1.26 -7 7 -7 H 0 Z" fill={fill} />
-          <path d="M 0 0 C 0 -5.2219999999999995 1.26 -7 7 -7" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" className="group-hover:stroke-primary/50 transition-all" />
-        </svg>
+          <svg className="absolute left-[840px] top-[380px] w-[7px] h-[7px] pointer-events-none" viewBox="0 -7 7 7">
+            <path d="M 0 0 C 0 -5.2219999999999995 1.26 -7 7 -7 H 0 Z" fill={fill} />
+            <path d="M 0 0 C 0 -5.2219999999999995 1.26 -7 7 -7" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" className="group-hover:stroke-primary/50 transition-all" />
+          </svg>
 
-        <svg className="absolute left-[158px] top-[308px] w-8 h-8 pointer-events-none" viewBox="-32 0 32 32">
-          <path d="M 0 0 C 0 23.872 -5.76 32 -32 32 H 0 Z" fill={fill} />
-          <path d="M 0 0 C 0 23.872 -5.76 32 -32 32" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" className="group-hover:stroke-primary/50 transition-all" />
-        </svg>
+          <svg className="absolute left-[158px] top-[308px] w-8 h-8 pointer-events-none" viewBox="-32 0 32 32">
+            <path d="M 0 0 C 0 23.872 -5.76 32 -32 32 H 0 Z" fill={fill} />
+            <path d="M 0 0 C 0 23.872 -5.76 32 -32 32" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" className="group-hover:stroke-primary/50 transition-all" />
+          </svg>
 
-        <svg className="absolute left-[190px] top-[58px] w-8 h-8 pointer-events-none" viewBox="0 0 32 32">
-          <path d="M 0 0 C 0 23.872 5.76 32 32 32 H 0 Z" fill={fill} />
-          <path d="M 0 0 C 0 23.872 5.76 32 32 32" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" className="group-hover:stroke-primary/50 transition-all" />
-        </svg>
+          <svg className="absolute left-[190px] top-[58px] w-8 h-8 pointer-events-none" viewBox="0 0 32 32">
+            <path d="M 0 0 C 0 23.872 5.76 32 32 32 H 0 Z" fill={fill} />
+            <path d="M 0 0 C 0 23.872 5.76 32 32 32" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" className="group-hover:stroke-primary/50 transition-all" />
+          </svg>
 
-        <svg className="absolute left-[190px] top-[410px] w-8 h-8 pointer-events-none" viewBox="0 -32 32 32">
-          <path d="M 0 0 C 0 -23.872 5.76 -32 32 -32 H 0 Z" fill={fill} />
-          <path d="M 0 0 C 0 -23.872 5.76 -32 32 -32" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" className="group-hover:stroke-primary/50 transition-all" />
-        </svg>
+          <svg className="absolute left-[190px] top-[410px] w-8 h-8 pointer-events-none" viewBox="0 -32 32 32">
+            <path d="M 0 0 C 0 -23.872 5.76 -32 32 -32 H 0 Z" fill={fill} />
+            <path d="M 0 0 C 0 -23.872 5.76 -32 32 -32" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" className="group-hover:stroke-primary/50 transition-all" />
+          </svg>
 
-        {/* Glow Effects */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute left-[190px] top-[90px] w-[650px] h-[320px] rounded-[0px_32px_32px_0px] shadow-[0_0_50px_rgba(var(--primary-rgb),0.1)] group-hover:shadow-[0_0_120px_rgba(var(--primary-rgb),0.3)] transition-all duration-700" />
-          <div className="absolute left-0 top-0 w-[190px] h-[150px] rounded-[42px_42px_0px_42px] group-hover:shadow-[0_0_40px_rgba(var(--primary-rgb),0.2)] transition-all duration-700" />
+          {/* Glow Effects */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute left-[190px] top-[90px] w-[650px] h-[320px] rounded-[0px_32px_32px_0px] shadow-[0_0_50px_rgba(var(--primary-rgb),0.1)] group-hover:shadow-[0_0_120px_rgba(var(--primary-rgb),0.3)] transition-all duration-700" />
+            <div className="absolute left-0 top-0 w-[190px] h-[150px] rounded-[42px_42px_0px_42px] group-hover:shadow-[0_0_40px_rgba(var(--primary-rgb),0.2)] transition-all duration-700" />
+          </div>
         </div>
 
-        {/* CONTENT MAPPING */}
+        {/* CONTENT MAPPING (Manually Mirrored Positions) */}
 
-        {/* 1. ID Section (Top Left) */}
-        <div className="absolute left-0 top-0 w-[190px] h-[150px] z-30 flex flex-col items-center justify-center p-6">
+        {/* 1. ID Section */}
+        <div 
+          className="absolute top-0 w-[190px] h-[150px] z-30 flex flex-col items-center justify-center p-6 transition-all duration-500"
+          style={{ left: mirrored ? 900 : 0 }}
+        >
           <span className="text-[9px] font-black uppercase tracking-[0.5em] text-primary mb-1 opacity-40">Classification</span>
           <span className="text-2xl font-black text-white tracking-tighter font-mono drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">{manifestoId}</span>
           <div className="w-8 h-[2px] bg-primary/20 mt-4 rounded-full" />
         </div>
 
-        {/* 2. Read Journey (Bottom Left - Animated) */}
+        {/* 2. Read Journey */}
         <div
-          className="absolute left-[40px] top-[340px] w-[150px] h-[150px] z-30 flex items-center justify-center cursor-pointer overflow-hidden group/btn"
+          className="absolute top-[340px] w-[150px] h-[150px] z-30 flex items-center justify-center cursor-pointer overflow-hidden group/btn transition-all duration-500"
+          style={{ left: mirrored ? 900 : 40 }}
           onClick={onClick}
         >
           <motion.div
@@ -177,12 +185,15 @@ const VisionaryCard = ({
           </div>
         </div>
 
-        {/* 3. Role (Right Tab) */}
-        <div className="absolute left-[840px] top-[300px] w-[250px] h-[80px] z-30 flex items-center justify-center px-8">
-          <div className="flex flex-col items-end w-full max-w-[210px]">
+        {/* 3. Role */}
+        <div 
+          className="absolute top-[300px] w-[250px] h-[80px] z-30 flex items-center justify-center px-8 transition-all duration-500"
+          style={{ left: mirrored ? 0 : 840 }}
+        >
+          <div className={mirrored ? "flex flex-col items-start w-full max-w-[210px]" : "flex flex-col items-end w-full max-w-[210px]"}>
             <span className="text-[9px] font-black uppercase tracking-widest text-primary mb-1 shadow-sm">Strategic Command</span>
             <span
-              className="text-xl font-black uppercase tracking-tight text-white leading-tight text-right break-words w-full"
+              className={mirrored ? "text-xl font-black uppercase tracking-tight text-white leading-tight text-left break-words w-full" : "text-xl font-black uppercase tracking-tight text-white leading-tight text-right break-words w-full"}
               style={{ textShadow: '0 0 20px rgba(var(--primary-rgb), 0.8)' }}
             >
               {role}
@@ -191,27 +202,36 @@ const VisionaryCard = ({
         </div>
 
         {/* 4. Main Body Content (Name & Bio) */}
-        <div className="absolute left-[240px] top-[90px] w-[420px] h-[320px] z-30 flex flex-col justify-center py-8">
-          <div className="flex flex-col mb-4">
+        <div 
+          className="absolute top-[90px] w-[420px] h-[320px] z-30 flex flex-col justify-center py-8 transition-all duration-500"
+          style={{ 
+            left: mirrored ? 430 : 240,
+            alignItems: mirrored ? 'flex-end' : 'flex-start'
+          }}
+        >
+          <div className={mirrored ? "flex flex-col mb-4 items-end" : "flex flex-col mb-4 items-start"}>
             <motion.h4
-              className="font-black italic uppercase tracking-tighter text-animate-gradient leading-[1.1] break-words"
+              className={mirrored ? "font-black italic uppercase tracking-tighter text-animate-gradient leading-[1.1] break-words text-right" : "font-black italic uppercase tracking-tighter text-animate-gradient leading-[1.1] break-words text-left"}
               style={{ fontSize: name.length > 18 ? '2.2rem' : (name.length > 12 ? '2.8rem' : '3.8rem') }}
             >
               {name}
             </motion.h4>
             <div className="w-20 h-1 bg-primary mt-4 rounded-full shadow-[0_0_20px_rgba(var(--primary-rgb),0.6)]" />
           </div>
-          <p className="text-sm md:text-lg text-muted-foreground font-medium leading-relaxed italic line-clamp-4 pr-6 opacity-90">
+          <p className={mirrored ? "text-sm md:text-lg text-muted-foreground font-medium leading-relaxed italic line-clamp-4 pl-6 opacity-90 text-right" : "text-sm md:text-lg text-muted-foreground font-medium leading-relaxed italic line-clamp-4 pr-6 opacity-90 text-left"}>
             "{bio}"
           </p>
         </div>
 
-        {/* 5. Image Section (Integrated in Main Body) */}
-        <div className="absolute left-[640px] top-0 w-[420px] h-[450px] z-20 pointer-events-none group-hover:scale-[1.05] transition-transform duration-1000">
+        {/* 5. Image Section */}
+        <div 
+          className="absolute top-0 w-[420px] h-[450px] z-20 pointer-events-none group-hover:scale-[1.05] transition-all duration-1000"
+          style={{ left: mirrored ? 30 : 640 }}
+        >
           <div className="relative w-full h-full">
-            <div className="absolute inset-0 rounded-[0_80px_0_80px] overflow-hidden border border-white/10">
+            <div className={mirrored ? "absolute inset-0 rounded-[80px_0_80px_0] overflow-hidden border border-white/10" : "absolute inset-0 rounded-[0_80px_0_80px] overflow-hidden border border-white/10"}>
               <img src={image} alt={name} className="w-full h-full object-cover grayscale opacity-20 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000" />
-              <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-transparent" />
+              <div className={mirrored ? "absolute inset-0 bg-gradient-to-l from-background via-transparent to-transparent" : "absolute inset-0 bg-gradient-to-r from-background via-transparent to-transparent"} />
               <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
             </div>
             {/* Decorative Glow */}

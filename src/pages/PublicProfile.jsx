@@ -4,66 +4,111 @@ import { supabase, withTimeout } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { updateMetadata } from '../lib/seo';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CommunityBadge, VerifyBadge, AccountBadge, CreatorBadge, AchievementBadge, ActivityBadge } from '@/components/ui/SocialBadges';
 
-const LiveWatch = () => {
-  const [time, setTime] = useState(new Date());
+const AccountStats = ({ createdAt }) => {
+  const [uptime, setUptime] = useState({ years: 0, days: 0, hours: 0, mins: 0, secs: 0 });
 
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+    const calculateUptime = () => {
+      const start = new Date(createdAt);
+      const now = new Date();
+      let diff = Math.floor((now - start) / 1000);
 
-  const seconds = time.getSeconds();
-  const minutes = time.getMinutes();
-  const hours = time.getHours();
+      const years = Math.floor(diff / (365 * 24 * 3600));
+      diff %= (365 * 24 * 3600);
+      const days = Math.floor(diff / (24 * 3600));
+      diff %= (24 * 3600);
+      const hours = Math.floor(diff / 3600);
+      diff %= 3600;
+      const mins = Math.floor(diff / 60);
+      const secs = diff % 60;
+
+      setUptime({ years, days, hours, mins, secs });
+    };
+
+    calculateUptime();
+    const timer = setInterval(calculateUptime, 1000);
+    return () => clearInterval(timer);
+  }, [createdAt]);
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }).toUpperCase();
+  };
 
   return (
-    <div className="relative w-16 h-16 md:w-20 md:h-20 flex items-center justify-center">
-      {/* Outer Glow */}
-      <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl animate-pulse" />
+    <div className="relative group px-5 py-3 rounded-xl border border-primary/20 bg-black/40 backdrop-blur-xl overflow-hidden flex flex-col md:flex-row items-center gap-6 md:gap-10">
+      {/* Techno Background elements */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(var(--primary-rgb),0.05),transparent)] pointer-events-none" />
+      
+      {/* Corner Brackets */}
+      <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-primary" />
+      <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-primary" />
 
-      {/* Watch Face */}
-      <div className="relative w-full h-full rounded-full border-2 border-white/10 bg-black/40 backdrop-blur-md shadow-2xl flex items-center justify-center overflow-hidden">
-        {/* Tick Marks */}
-        {[...Array(12)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-0.5 h-1.5 bg-white/20"
-            style={{
-              transform: `rotate(${i * 30}deg) translateY(-28px)`,
-              height: i % 3 === 0 ? '4px' : '2px',
-              backgroundColor: i % 3 === 0 ? 'rgba(var(--primary-rgb), 0.5)' : 'rgba(255,255,255,0.1)'
-            }}
-          />
-        ))}
-
-        {/* Hands */}
-        {/* Hour Hand */}
-        <motion.div
-          className="absolute w-1 h-6 bg-white/60 rounded-full origin-bottom bottom-1/2"
-          style={{ rotate: (hours % 12) * 30 + minutes * 0.5 }}
-        />
-        {/* Minute Hand */}
-        <motion.div
-          className="absolute w-0.5 h-8 bg-primary/80 rounded-full origin-bottom bottom-1/2"
-          style={{ rotate: minutes * 6 }}
-        />
-        {/* Second Hand */}
-        <motion.div
-          className="absolute w-[1px] h-9 bg-accent rounded-full origin-bottom bottom-1/2"
-          style={{ rotate: seconds * 6 }}
-        />
-        {/* Center Pivot */}
-        <div className="absolute w-1.5 h-1.5 rounded-full bg-white border border-primary shadow-[0_0_10px_rgba(var(--primary-rgb),1)] z-10" />
+      {/* 1. Status Indicator */}
+      <div className="flex items-center gap-2 shrink-0 border-r border-white/5 pr-6 hidden md:flex">
+        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(var(--primary-rgb),1)]" />
+        <span className="text-[8px] font-black uppercase tracking-[0.3em] text-primary">Live_Node</span>
       </div>
-      {/* Time Label */}
-      <div className="absolute -bottom-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md border border-white/10">
-        <p className="text-[7px] font-black text-white/50 tracking-widest uppercase">
-          {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </p>
+
+      {/* 2. Initialization Date */}
+      <div className="flex flex-col border-r border-white/5 pr-10">
+        <p className="text-[7px] font-black uppercase tracking-[0.3em] text-white/30 mb-0.5">Initialize_TS</p>
+        <p className="text-[10px] font-mono font-black text-white tracking-widest leading-none">{formatDate(createdAt)}</p>
+      </div>
+
+      {/* 3. Live Uptime Counter */}
+      <div className="flex items-center gap-4">
+        <p className="text-[7px] font-black uppercase tracking-[0.3em] text-accent hidden lg:block">Active_Uptime</p>
+        <div className="flex items-baseline gap-2 font-mono text-xs md:text-sm font-black tracking-tighter text-white tabular-nums">
+          <div className="flex items-baseline gap-0.5">
+            <span>{String(uptime.days).padStart(2, '0')}</span><span className="text-[7px] text-white/20 uppercase font-bold">D</span>
+          </div>
+          <span className="text-primary/30">:</span>
+          <div className="flex items-baseline gap-0.5">
+            <span>{String(uptime.hours).padStart(2, '0')}</span><span className="text-[7px] text-white/20 uppercase font-bold">H</span>
+          </div>
+          <span className="text-primary/30">:</span>
+          <div className="flex items-baseline gap-0.5">
+            <span>{String(uptime.mins).padStart(2, '0')}</span><span className="text-[7px] text-white/20 uppercase font-bold">M</span>
+          </div>
+          <span className="text-primary/30">:</span>
+          <div className="flex items-baseline gap-0.5">
+            <span className="text-primary animate-pulse">{String(uptime.secs).padStart(2, '0')}</span><span className="text-[7px] text-primary/40 uppercase font-bold">S</span>
+          </div>
+        </div>
       </div>
     </div>
   );
+};
+
+const getBadgeRole = (role) => {
+  const r = role?.toLowerCase();
+  if (r === 'admin' || r === 'founder' || r === 'visionary') return 'admin';
+  if (r === 'faculty') return 'faculty';
+  if (r === 'student') return 'student';
+  return 'newcomer';
+};
+
+const getSocialIcon = (platform) => {
+  const p = platform?.toLowerCase();
+  if (p.includes('linkedin')) return <i className="ri-linkedin-box-fill text-lg"></i>;
+  if (p.includes('github')) return <i className="ri-github-fill text-lg"></i>;
+  if (p.includes('twitter') || p.includes('x.com')) return <i className="ri-twitter-x-fill text-lg"></i>;
+  if (p.includes('instagram')) return <i className="ri-instagram-line text-lg"></i>;
+  if (p.includes('discord')) return <i className="ri-discord-fill text-lg"></i>;
+  return <i className="ri-links-line text-lg"></i>;
+};
+
+const getArray = (val) => {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') return val.split(',').map(s => s.trim()).filter(Boolean);
+  return [String(val)];
 };
 
 const containerVariants = {
@@ -107,8 +152,11 @@ const IdentityCard = ({ profile, type }) => {
             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-1">Official {cardTitle}</h4>
             <p className="text-xl font-black text-foreground italic uppercase tracking-tighter">5EVEN Institution</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-primary backdrop-blur-md">
-            <i className="ri-fingerprint-line text-2xl text-primary"></i>
+          <div className="flex flex-col items-end gap-2">
+            <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-primary backdrop-blur-md">
+              <i className="ri-fingerprint-line text-2xl text-primary"></i>
+            </div>
+            <VerifyBadge tier="official" />
           </div>
         </div>
 
@@ -118,17 +166,12 @@ const IdentityCard = ({ profile, type }) => {
             <div className="absolute inset-0 bg-primary/10 mix-blend-overlay" />
           </div>
           <div className="flex flex-col justify-center">
-            <div className="flex items-center gap-1.5 mb-1">
-              <i className="ri-checkbox-circle-fill text-[10px] text-green-500"></i>
-              <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Identity Verified</p>
-            </div>
             <h3 className="text-lg font-black text-foreground uppercase leading-tight">{profile.full_name || profile.name || profile.username}</h3>
             {profile.gender && (
               <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">Gender: {profile.gender}</p>
             )}
-            <div className="flex items-center gap-2 mt-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">{roleLabel}</span>
+            <div className="mt-4">
+               <CommunityBadge role={getBadgeRole(profile.role)} />
             </div>
           </div>
         </div>
@@ -402,23 +445,6 @@ const PublicProfile = () => {
     return <i className="ri-user-received-2-line text-primary"></i>;
   };
 
-  const getSocialIcon = (platform) => {
-    const p = platform?.toLowerCase();
-    if (p.includes('linkedin')) return <i className="ri-linkedin-box-fill text-lg"></i>;
-    if (p.includes('github')) return <i className="ri-github-fill text-lg"></i>;
-    if (p.includes('twitter') || p.includes('x.com')) return <i className="ri-twitter-x-fill text-lg"></i>;
-    if (p.includes('instagram')) return <i className="ri-instagram-line text-lg"></i>;
-    if (p.includes('discord')) return <i className="ri-discord-fill text-lg"></i>;
-    return <i className="ri-links-line text-lg"></i>;
-  };
-
-  const getArray = (val) => {
-    if (!val) return [];
-    if (Array.isArray(val)) return val;
-    if (typeof val === 'string') return val.split(',').map(s => s.trim()).filter(Boolean);
-    return [String(val)];
-  };
-
   const eduArr = getArray(profile.education || profile.extra_details?.education);
   const expertiseArr = getArray(profile.expertise || profile.extra_details?.expertise);
   const gamesArr = getArray(profile.extra_details?.gamesPlayed);
@@ -455,7 +481,7 @@ const PublicProfile = () => {
         initial="hidden"
         animate="visible"
         variants={containerVariants}
-        className="relative w-full max-w-6xl flex flex-col bg-background md:bg-white/[0.03] backdrop-blur-3xl border-0 md:border border-white/10 rounded-none md:rounded-[40px] md:shadow-[0_0_100px_rgba(0,0,0,0.8)] z-10"
+        className="relative w-full max-w-6xl flex flex-col bg-background md:bg-white/[0.03] backdrop-blur-3xl border-0 md:border border-white/10 rounded-none md:rounded-[40px] md:shadow-[0_0_100px_rgba(0,0,0,0.8)] z-10 overflow-x-hidden"
       >
         {/* Soft Background Gradient for Liquid Glass feel */}
         <div className="absolute inset-0 pointer-events-none opacity-40 mix-blend-screen rounded-[40px] overflow-hidden">
@@ -483,80 +509,105 @@ const PublicProfile = () => {
         </div>
 
         {/* Main Content Area */}
-        <div className="relative z-10 w-full p-0 md:p-10 lg:p-12">
-          <div className="relative z-10 mb-12">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-8 p-8 md:p-12 rounded-[3.5rem] bg-white/[0.03] border border-white/10 backdrop-blur-3xl shadow-2xl relative overflow-hidden group">
+        <div className="relative z-10 w-full p-4 md:p-10 lg:p-12">
+          {/* Top Bar: System Stats */}
+          <div className="flex justify-center md:justify-start mb-6 overflow-x-auto no-scrollbar">
+            <AccountStats createdAt={profile.created_at} />
+          </div>          <div className="relative z-10 mb-12 flex flex-col md:flex-row items-center gap-6">
+            {/* Grouped Floating Identity Node */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.5, x: -50 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              whileHover="hover"
+              className="relative shrink-0 z-50 -mb-8 md:mb-0 md:-mr-12 group/idnode"
+            >
+              {/* Purple Glow Ring (Parent level) */}
+              <motion.div 
+                variants={{
+                  hover: { opacity: 1, scale: 1.1 }
+                }}
+                className="absolute inset-[-4px] bg-purple-600/30 rounded-full blur-xl opacity-0 transition-opacity" 
+              />
+              
+              {/* Photo Container */}
+              <motion.div 
+                variants={{
+                  hover: { scale: 1.05 }
+                }}
+                transition={{ duration: 0.3 }}
+                className="w-28 h-28 md:w-48 md:h-48 rounded-full border border-purple-500/40 bg-background/80 backdrop-blur-md relative overflow-hidden shadow-[0_0_20px_rgba(168,85,247,0.2)]"
+              >
+                <img 
+                  src={profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (profile.username || profile.name)} 
+                  alt={profile.full_name || profile.name} 
+                  className="w-full h-full object-cover rounded-full transition-transform duration-700 group-hover/idnode:scale-110"
+                />
+                <div className="absolute inset-0 border border-purple-500/20 rounded-full pointer-events-none" />
+              </motion.div>
+
+              {/* Detached Badge */}
+              <motion.div 
+                variants={{
+                  hover: { x: 10, y: 10, scale: 1.1 }
+                }}
+                transition={{ duration: 0.3 }}
+                className="absolute -bottom-2 -right-2 md:bottom-2 md:right-2 z-20 scale-75 md:scale-100"
+              >
+                <VerifyBadge tier="official" />
+              </motion.div>
+            </motion.div>
+
+            {/* Main Header Box (Reduced Height) */}
+            <div className="flex-1 w-full flex flex-col lg:flex-row items-center justify-between gap-6 px-6 py-6 lg:pl-20 lg:pr-12 rounded-[2rem] md:rounded-[2.5rem] bg-white/[0.03] border border-white/10 backdrop-blur-3xl shadow-2xl relative overflow-hidden group">
               {/* Background Glows */}
               <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/20 rounded-full blur-[100px] animate-pulse" />
               <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-accent/20 rounded-full blur-[100px] animate-pulse" />
               
-              <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
-                {/* Avatar with dynamic ring */}
-                <div className="relative shrink-0 group">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-primary via-accent to-primary rounded-[2.5rem] blur-xl opacity-20 group-hover:opacity-40 transition-opacity animate-spin-slow" />
-                  <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] border-4 border-white/10 p-1.5 bg-background relative overflow-hidden">
-                    <img 
-                      src={profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (profile.username || profile.name)} 
-                      alt={profile.full_name || profile.name} 
-                      className="w-full h-full object-cover rounded-[2rem] transition-transform duration-700 group-hover:scale-110"
-                    />
-                  </div>
-                  <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-primary flex items-center justify-center border-4 border-background text-white shadow-xl">
-                    <i className="ri-shield-check-fill text-xl"></i>
+              <div className="flex-1 min-w-0 text-center lg:text-left space-y-2 relative z-10 w-full">
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3">
+                  <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-white italic tracking-tighter leading-tight bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] animate-gradient-x bg-clip-text text-transparent break-words max-w-full">
+                    {profile.full_name || profile.name || profile.username}
+                  </h1>
+                  <CommunityBadge role={getBadgeRole(profile.role)} />
+                </div>
+                
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4">
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest leading-none">{profile.gender || 'Agent'}</p>
+                    <span className="w-1 h-1 rounded-full bg-white/10" />
+                    <span className="text-[9px] font-black uppercase tracking-widest text-primary/60">{profile.role || 'Member'}</span>
                   </div>
                 </div>
 
-                <div className="text-center md:text-left space-y-3">
-                  <div className="flex flex-col md:flex-row items-center gap-3">
-                    <h1 className="text-4xl md:text-7xl font-black text-white italic tracking-tighter leading-none bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] animate-gradient-x bg-clip-text text-transparent">
-                      {profile.full_name || profile.name || profile.username}
-                    </h1>
-                  </div>
-                  
-                  <div className="flex items-center justify-center md:justify-start gap-4">
-                    <div className="flex items-center gap-2">
-                      <i className="ri-user-follow-line text-primary"></i>
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">{secondaryValue}</p>
-                    </div>
-                    <span className="w-1 h-1 rounded-full bg-white/20" />
-                    <div className="flex items-center gap-2">
-                      <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest">{profile.gender || 'Agent'}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-4">
-                    <span className="px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-white/40 flex items-center gap-2">
-                      <i className="ri-fingerprint-line text-xs"></i> {profile.extra_details?.id_number || profile.extra_details?.manifesto_id || '70326-0001'}
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 mt-2">
+                  <span className="px-3 py-1 rounded-lg bg-white/5 border border-white/5 text-[8px] font-black uppercase tracking-widest text-white/30 flex items-center gap-2">
+                    <i className="ri-fingerprint-line"></i> {profile.extra_details?.id_number || '70326-0001'}
+                  </span>
+                  {profile.email && (
+                    <span className="px-3 py-1 rounded-lg bg-primary/5 border border-primary/10 text-[8px] font-black lowercase tracking-widest text-primary/50 flex items-center gap-2 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
+                      <i className="ri-mail-send-line"></i> {profile.email}
                     </span>
-                    {profile.email && (
-                      <span className="px-4 py-1.5 rounded-xl bg-primary/10 border border-primary/20 text-[9px] font-black lowercase tracking-widest text-primary flex items-center gap-2">
-                        <i className="ri-mail-send-line text-xs"></i> {profile.email}
-                      </span>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
 
-              {/* Watch and Actions */}
-              <div className="flex flex-col items-center md:items-end gap-6 relative z-10 w-full md:w-auto">
-                <LiveWatch />
-                <div className="flex items-center gap-3">
+              {/* Actions */}
+              <div className="flex flex-wrap items-center justify-center gap-3 relative z-10">
+                <button 
+                  onClick={() => setShowID(true)}
+                  className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-white font-black uppercase tracking-widest text-[9px] transition-all flex items-center gap-2 group/btn"
+                >
+                  <i className="ri-id-card-line text-lg group-hover/btn:rotate-12 transition-transform"></i>
+                  ID_NODE
+                </button>
+                {isOwner && (
                   <button 
-                    onClick={() => setShowID(true)}
-                    className="px-6 py-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-white font-black uppercase tracking-widest text-[10px] transition-all flex items-center gap-3 group/btn"
+                    onClick={() => navigate('/student-zone?tab=settings')}
+                    className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center hover:scale-110 transition-all shadow-lg shadow-primary/20"
                   >
-                    <i className="ri-id-card-line text-lg group-hover/btn:rotate-12 transition-transform"></i>
-                    Identity Node
+                    <i className="ri-settings-4-line text-lg"></i>
                   </button>
-                  {isOwner && (
-                    <button 
-                      onClick={() => navigate('/student-zone?tab=settings')}
-                      className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center hover:scale-110 transition-all shadow-xl shadow-primary/30"
-                    >
-                      <i className="ri-settings-4-line text-xl"></i>
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -678,6 +729,7 @@ const PublicProfile = () => {
             variants={itemVariants}
             className="w-full bg-gradient-to-br from-primary/10 to-white/5 backdrop-blur-2xl border border-primary/20 rounded-[3rem] p-8 md:p-12 shadow-[0_20px_50px_rgba(var(--primary-rgb),0.1)] relative overflow-hidden mb-8"
           >
+
             <div className="absolute top-0 right-0 p-12 opacity-[0.02] pointer-events-none">
               <i className="ri-quill-pen-line text-[12rem]"></i>
             </div>
@@ -1011,7 +1063,7 @@ const PublicProfile = () => {
                 {(research.length > 0 || projects.length > 0) && (
                   <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-6 md:p-8 shadow-[0_8px_32px_rgba(0,0,0,0.2)] col-span-1 md:col-span-2">
                     <h3 className="text-xs font-black uppercase tracking-widest text-white mb-6">Published Submissions</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                       {[...research, ...projects].map((paper, idx) => (
                         <motion.div 
                           key={idx} 

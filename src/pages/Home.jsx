@@ -161,6 +161,19 @@ const Home = () => {
 
   const categories = [...new Set(courses.map(c => c.category || 'General'))].slice(0, 4);
 
+  // Custom sort for founders
+  const sortedFounders = [...founders].sort((a, b) => {
+    const rolesOrder = ['ceo', 'cto', 'cfo'];
+    const getIndex = (role) => {
+      const r = (role || '').toLowerCase();
+      if (r.includes('ceo')) return 0;
+      if (r.includes('cto')) return 1;
+      if (r.includes('cfo')) return 2;
+      return 3;
+    };
+    return getIndex(a.role) - getIndex(b.role);
+  });
+
   return (
     <div className="relative w-full overflow-hidden flex flex-col text-foreground selection:bg-primary/20">
       {/* Hero Section */}
@@ -315,7 +328,7 @@ const Home = () => {
                 <div className="flex flex-col gap-8 md:gap-12">
                   <h2 className="text-3xl md:text-4xl font-black text-center text-animate-gradient">Our Visionaries</h2>
                   <div className="flex flex-col gap-0 max-w-5xl mx-auto w-full">
-                    {founders.map((founder, idx) => (
+                    {sortedFounders.map((founder, idx) => (
                       <VisionaryCard
                         key={founder.id}
                         name={founder.name}
@@ -325,6 +338,7 @@ const Home = () => {
                         manifestoId={founder.extra_details?.manifesto_id}
                         onClick={() => { setSelectedProfile(founder); setProfileType('founder'); }}
                         accentColor={idx % 2 === 0 ? "var(--primary)" : "var(--secondary)"}
+                        mirrored={idx === 1}
                       />
                     ))}
                   </div>

@@ -29,7 +29,7 @@ const Navbar = () => {
   const { user, profile, logout, login, signup, role, signInWithGoogle } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
-  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(true);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');

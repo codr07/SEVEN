@@ -72,11 +72,11 @@ const FloatingUpdates = () => {
             setHasNew(false);
             setIsMinimized(false);
           }}
-          className="relative w-20 h-20 rounded-[1.25rem] bg-black border border-white/10 text-primary flex items-center justify-center shadow-2xl overflow-hidden"
+          className="relative w-14 h-14 rounded-xl bg-black border border-purple-500/50 text-purple-400 flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.3)] overflow-hidden"
         >
-          <div className="absolute inset-0 bg-primary/5 group-hover:bg-primary/10 transition-colors" />
-          <div className="absolute top-0 left-0 w-full h-[1px] bg-primary/20" />
-          <Bell size={32} className="relative z-10 animate-pulse" />
+          <div className="absolute inset-0 bg-purple-500/5 group-hover:bg-purple-500/10 transition-colors" />
+          <div className="absolute top-0 left-0 w-full h-[1px] bg-purple-500/20" />
+          <Bell size={24} className="relative z-10 animate-[pulse_2s_infinite] drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
 
           {/* Notification Badge */}
           {hasNew && (
