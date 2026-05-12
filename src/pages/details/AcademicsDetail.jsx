@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase, withTimeout } from '../../lib/supabase';
+import { updateMetadata } from '../../lib/seo';
 import { ArrowLeft, CheckCircle2, XCircle, Loader2, GraduationCap } from 'lucide-react';
 
 const AcademicsDetail = () => {
@@ -18,6 +19,13 @@ const AcademicsDetail = () => {
         );
         if (error) throw error;
         setAcademic(data);
+        
+        // Update Metadata
+        updateMetadata({
+          title: data.title,
+          description: data.description || 'Explore this institutional track at 5EVEN Institution.',
+          image: data.extra_details?.cover || data.cover_image || 'https://5even.netlify.app/assets/images/img/banner.png'
+        });
       } catch (err) {
         console.error('Error fetching academic detail:', err);
       } finally {

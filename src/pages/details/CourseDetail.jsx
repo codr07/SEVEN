@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase, withTimeout } from '../../lib/supabase';
+import { updateMetadata } from '../../lib/seo';
 import { Loader2, ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
 
 const CourseDetail = () => {
@@ -18,6 +19,13 @@ const CourseDetail = () => {
         );
         if (error) throw error;
         setCourse(data);
+        
+        // Update Metadata
+        updateMetadata({
+          title: data.name,
+          description: data.extra_details?.short_desc || data.short_desc || 'Enroll in this mastery program at 5EVEN Institution.',
+          image: data.extra_details?.cover || data.thumbnail || 'https://5even.netlify.app/assets/images/img/banner.png'
+        });
       } catch (err) {
         console.error('Error fetching course detail:', err);
       } finally {

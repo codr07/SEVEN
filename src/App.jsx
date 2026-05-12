@@ -27,6 +27,7 @@ const UpdateDetail = lazy(() => import('./pages/UpdateDetail'));
 import Footer from './components/Footer';
 import FloatingUpdates from './components/FloatingUpdates';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { DataProvider, useData } from './context/DataContext';
 import { AlertProvider } from './context/AlertContext';
 import GlobalBackground from './components/GlobalBackground';
 
@@ -39,6 +40,7 @@ const AdminRoute = ({ children }) => {
 
 const AppContent = ({ loading, setLoading }) => {
   const { loading: authLoading } = useAuth();
+  const { loading: dataLoading } = useData();
   const location = useLocation();
   const isAdminPage = location.pathname === '/seven-mod';
 
@@ -48,28 +50,99 @@ const AppContent = ({ loading, setLoading }) => {
       window.lenis.scrollTo(0, { immediate: true });
     }
 
-    // Update document title based on the route
-    const titles = {
-      '/': 'Home',
-      '/academics': 'Academics',
-      '/courses': 'Courses',
-      '/notes': 'Notes',
-      '/services': 'Services',
-      '/stars': 'Stars',
-      '/contact': 'Contact',
-      '/student-zone': 'Student Zone',
-      '/seven-mod': 'Admin Panel',
-      '/oauth/consent': 'Authorization Request',
-      '/developers': 'Developer API',
+    const PAGE_METADATA = {
+      '/': {
+        title: 'Home',
+        description: '5EVEN Institution - A premium institutional experience. Redefining education with divine balance and innovation.',
+        image: 'https://5even.netlify.app/assets/images/img/banner.png'
+      },
+      '/academics': {
+        title: 'Institutional Tracks',
+        description: 'Explore elite academic curricula and structured learning pathways at 5EVEN Institution.',
+        image: 'https://5even.netlify.app/assets/images/img/banner.png'
+      },
+      '/courses': {
+        title: 'Mastery Programs',
+        description: 'Advanced professional courses and skill development programs designed for the next generation.',
+        image: 'https://5even.netlify.app/assets/images/img/banner.png'
+      },
+      '/notes': {
+        title: 'Study Desk',
+        description: 'High-fidelity study materials and institutional notes to accelerate your mastery.',
+        image: 'https://5even.netlify.app/assets/images/img/banner.png'
+      },
+      '/services': {
+        title: 'Professional Services',
+        description: 'Premium digital solutions, commercial support, and specialized IT services by 5EVEN.',
+        image: 'https://5even.netlify.app/assets/images/img/banner.png'
+      },
+      '/stars': {
+        title: 'Our Stars',
+        description: 'Celebrating the excellence and achievements of our most distinguished visionaries.',
+        image: 'https://5even.netlify.app/assets/images/img/banner.png'
+      },
+      '/contact': {
+        title: 'Get in Touch',
+        description: 'Connect with the 5EVEN Institution team for inquiries, support, or collaboration.',
+        image: 'https://5even.netlify.app/assets/images/img/banner.png'
+      },
+      '/student-zone': {
+        title: 'Student Zone',
+        description: 'Your personalized institutional dashboard. Access certificates, settings, and profile management.',
+        image: 'https://5even.netlify.app/assets/images/img/banner.png'
+      },
+      '/seven-mod': {
+        title: 'Admin Control',
+        description: 'Authorized personnel access to 5EVEN institutional management systems.',
+        image: 'https://5even.netlify.app/assets/images/img/banner.png'
+      },
+      '/developers': {
+        title: 'Developer Portal',
+        description: 'Build with 5EVEN. Documentation and API resources for institutional developers.',
+        image: 'https://5even.netlify.app/assets/images/img/banner.png'
+      }
     };
+
     const baseRoute = '/' + location.pathname.split('/')[1];
-    let pageName = titles[location.pathname] || titles[baseRoute] || '';
-    if (baseRoute === '/profile') pageName = 'Profile';
+    const meta = PAGE_METADATA[location.pathname] || PAGE_METADATA[baseRoute] || PAGE_METADATA['/'];
     
-    document.title = pageName || '5EVEN Institution';
+    const fullTitle = `${meta.title} | 5EVEN Institution`;
+    document.title = fullTitle;
+
+    // Update Meta Tags
+    const updateMeta = (selector, attr, content) => {
+      let el = document.querySelector(selector);
+      if (!el) {
+        el = document.createElement('meta');
+        if (selector.startsWith('meta[')) {
+          const name = selector.split('"')[1];
+          el.setAttribute(attr, name);
+        } else if (selector.startsWith('meta[property')) {
+          const prop = selector.split('"')[1];
+          el.setAttribute('property', prop);
+        }
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
+    };
+
+    // Standard Tags
+    updateMeta('meta[name="description"]', 'name', meta.description);
+
+    // Open Graph Tags
+    updateMeta('meta[property="og:title"]', 'property', fullTitle);
+    updateMeta('meta[property="og:description"]', 'property', meta.description);
+    updateMeta('meta[property="og:image"]', 'property', meta.image);
+    updateMeta('meta[property="og:url"]', 'property', window.location.href);
+
+    // Twitter Tags
+    updateMeta('meta[name="twitter:title"]', 'name', fullTitle);
+    updateMeta('meta[name="twitter:description"]', 'name', meta.description);
+    updateMeta('meta[name="twitter:image"]', 'name', meta.image);
+
   }, [location.pathname]);
 
-  const isAppLoading = loading || authLoading;
+  const isAppLoading = loading || authLoading || dataLoading;
 
   return (
     <>
@@ -152,11 +225,13 @@ const App = () => {
   return (
     <AlertProvider>
       <AuthProvider>
-        <ThemeProvider>
-          <Router>
-            <AppContent loading={loading} setLoading={setLoading} />
-          </Router>
-        </ThemeProvider>
+        <DataProvider>
+          <ThemeProvider>
+            <Router>
+              <AppContent loading={loading} setLoading={setLoading} />
+            </Router>
+          </ThemeProvider>
+        </DataProvider>
       </AuthProvider>
     </AlertProvider>
   );

@@ -289,6 +289,38 @@
     0% { transform: translateX(0); }
     100% { transform: translateX(-50%); }
   }
+
+  .glass-select {
+    appearance: none;
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    padding: 1rem 1.5rem;
+    color: white;
+    font-weight: 700;
+    width: 100%;
+    outline: none;
+    transition: all 0.3s ease;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='rgba(255,255,255,0.5)'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1.25rem center;
+    background-size: 1rem;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+  }
+
+  .glass-select:focus {
+    border-color: hsl(var(--primary) / 0.5);
+    background-color: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 30px rgba(var(--primary-rgb), 0.15);
+  }
+
+  .glass-select option {
+    background-color: #080a0f;
+    color: white;
+    padding: 1rem;
+  }
 }
 
 @keyframes gradient-x {

@@ -48,7 +48,7 @@ const GlassSelect = ({ value, onChange, options = [], placeholder = "Select...",
     return (
       <motion.div
         key={idx}
-        whileHover={{ x: 5, backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+        whileHover={{ x: 5, backgroundColor: 'rgba(0, 0, 0, 0.15)' }}
         onClick={() => {
           onChange(val);
           setIsOpen(false);
@@ -80,9 +80,9 @@ const GlassSelect = ({ value, onChange, options = [], placeholder = "Select...",
         `}
       >
         <span className={`${!value && !selectedOption ? "text-white/30" : "text-white"}`}>{displayLabel}</span>
-        <ChevronDown 
-          size={18} 
-          className={`text-white/40 transition-transform duration-500 ${isOpen ? 'rotate-180 text-primary' : ''}`} 
+        <ChevronDown
+          size={18}
+          className={`text-white/40 transition-transform duration-500 ${isOpen ? 'rotate-180 text-primary' : ''}`}
         />
       </div>
 

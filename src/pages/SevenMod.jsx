@@ -1314,6 +1314,24 @@ const ServiceWorkflowEditor = ({ value, onChange }) => {
         </button>
       </div>
 
+      <div className="space-y-3 pb-4 border-b border-border/30">
+        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Specialized Logic Template</label>
+        <GlassSelect
+          value={config.specialized_template || ''}
+          onChange={val => update({ ...config, specialized_template: val })}
+          options={[
+            { value: '', label: 'Standard (Tiers & Addons)' },
+            { value: 'mock_exams', label: 'Mock & Rock (Exams/Subjects)' },
+            { value: 'project_doc', label: 'Project Documentation (Word/LaTeX)' },
+            { value: 'thesis_doc', label: 'Thesis Documentation (Page Ranges)' },
+            { value: 'poster_design', label: 'Poster Design (Standard/Premium)' },
+            { value: 'album_layout', label: 'Album Layout (Standard/Premium)' },
+            { value: 'desktop_design', label: 'Desktop Personalization (Setups)' }
+          ]}
+        />
+        <p className="text-[8px] font-medium text-muted-foreground italic">Selecting a template enables specialized input fields and pricing calculators in the service request form.</p>
+      </div>
+
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Service Tiers & Multipliers</p>
@@ -1384,19 +1402,19 @@ const ServiceWorkflowEditor = ({ value, onChange }) => {
                 <button type="button" onClick={() => update({ ...config, custom_fields: config.custom_fields.filter((_, i) => i !== idx) })} className="text-destructive"><X size={14} /></button>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <select
+                <GlassSelect
                   value={field.type}
-                  onChange={e => {
+                  onChange={val => {
                     const newFields = [...config.custom_fields];
-                    newFields[idx].type = e.target.value;
+                    newFields[idx].type = val;
                     update({ ...config, custom_fields: newFields });
                   }}
-                  className="bg-muted/30 px-3 py-1.5 rounded-lg text-[10px] font-bold outline-none"
-                >
-                  <option value="text">Text Input</option>
-                  <option value="textarea">Large Text</option>
-                  <option value="select">Dropdown</option>
-                </select>
+                  options={[
+                    { value: 'text', label: 'Text Input' },
+                    { value: 'textarea', label: 'Large Text' },
+                    { value: 'select', label: 'Dropdown' }
+                  ]}
+                />
                 <button
                   type="button"
                   onClick={() => {
@@ -1425,25 +1443,26 @@ const ServiceWorkflowEditor = ({ value, onChange }) => {
               <div className="pt-2 border-t border-border/30">
                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-2">Visibility Logic (showIf)</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <select
+                  <GlassSelect
                     value={field.showIf?.field || ''}
-                    onChange={e => {
+                    onChange={val => {
                       const newFields = [...config.custom_fields];
-                      if (!e.target.value) {
+                      if (!val) {
                         delete newFields[idx].showIf;
                       } else {
-                        newFields[idx].showIf = { field: e.target.value, value: '' };
+                        newFields[idx].showIf = { field: val, value: '' };
                       }
                       update({ ...config, custom_fields: newFields });
                     }}
-                    className="bg-muted/30 px-3 py-1.5 rounded-lg text-[9px] font-bold outline-none"
-                  >
-                    <option value="">Always Visible</option>
-                    <option value="tier">Based on Tier</option>
-                    {config.custom_fields.filter((_, i) => i < idx).map(f => (
-                      <option key={f.name} value={f.name}>Based on {f.label}</option>
-                    ))}
-                  </select>
+                    options={[
+                      { value: '', label: 'Always Visible' },
+                      { value: 'tier', label: 'Based on Tier' },
+                      ...config.custom_fields.filter((_, i) => i < idx).map(f => ({
+                        value: f.name,
+                        label: `Based on ${f.label}`
+                      }))
+                    ]}
+                  />
                   {field.showIf && (
                     <input
                       placeholder="Show if value is..."
@@ -1764,13 +1783,14 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
         return [
           { name: 'name', type: 'text', label: 'Client Name', required: true },
           { name: 'email', type: 'text', label: 'Email', required: true },
-          { name: 'phone', type: 'text', label: 'Phone' },
+          { name: 'phone', type: 'text', label: 'Phone/Contact' },
+          { name: 'location', type: 'text', label: 'Location' },
           { name: 'service_type', type: 'text', label: 'Service Type' },
           { name: 'tier', type: 'text', label: 'Tier' },
           { name: 'budget', type: 'text', label: 'Budget' },
           { name: 'timeline', type: 'text', label: 'Timeline' },
           { name: 'status', type: 'select', label: 'Status', options: ['ordered', 'contacted', 'completed', 'rejected'] },
-          { name: 'requirements', type: 'textarea', label: 'Requirements' },
+          { name: 'requirements', type: 'textarea', label: 'Requirements & Pricing' },
           { name: 'custom_responses', type: 'json', label: 'Dynamic Field Data (JSON)' },
         ];
       case 'updates':

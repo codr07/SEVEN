@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { FileText, Download, Share2, Search, Filter, Loader2, BookOpen, Clock, ArrowRight, Star, Image as ImageIcon, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase, withTimeout, filterVisible, orderedFetch } from '../lib/supabase';
+import { useData } from '../context/DataContext';
 import { Link } from 'react-router-dom';
 import { useAlert } from '../context/AlertContext';
 import MergedShape from '../components/MergedShape';
@@ -10,35 +11,10 @@ import SignatureShareButton from '../components/SignatureShareButton';
 
 const Notes = () => {
   const { showAlert } = useAlert();
-  const [notes, setNotes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
+  const { notes, loading, error: errorMsg } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-
-  const fetchNotes = async () => {
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      const { data, error } = await withTimeout(
-        orderedFetch(supabase, 'notes'),
-        10000,
-        'Connection timed out.'
-      );
-      if (error) throw error;
-      setNotes(filterVisible(data));
-    } catch (err) {
-      console.error(err);
-      setErrorMsg(err.message || String(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotes();
-  }, []);
 
   const filteredNotes = notes.filter(note => {
     const matchesSearch = !searchQuery || 
@@ -191,9 +167,16 @@ const Notes = () => {
                                 </div>
                               </div>
                               
-                              <h3 className="text-2xl font-black mb-6 leading-tight group-hover:text-primary transition-colors line-clamp-1 uppercase tracking-tighter">
-                                {note.title}
-                              </h3>
+                              <div className="flex justify-between items-start mb-6">
+                                <h3 className="text-2xl font-black leading-tight group-hover:text-primary transition-colors line-clamp-1 uppercase tracking-tighter">
+                                  {note.title}
+                                </h3>
+                                {note.extra_details?.id_number && (
+                                  <span className="text-[7px] font-black bg-accent/10 text-accent px-2 py-1 rounded-md border border-accent/20 whitespace-nowrap ml-2">
+                                    {note.extra_details.id_number}
+                                  </span>
+                                )}
+                              </div>
                               
                               {/* Pointwise Details */}
                               <div className="space-y-3 mb-8">

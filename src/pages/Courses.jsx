@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { supabase, withTimeout, filterVisible, orderedFetch } from '../lib/supabase';
+import { useData } from '../context/DataContext';
 import { Loader2, BookOpen, Clock, Star, Share2, Search, Filter, ArrowRight, CheckCircle2, X, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -10,35 +11,10 @@ import SignatureShareButton from '../components/SignatureShareButton';
 
 const Courses = () => {
   const { showAlert } = useAlert();
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
+  const { courses, loading, error: errorMsg } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-
-  const fetchCourses = async () => {
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      const { data, error } = await withTimeout(
-        orderedFetch(supabase, 'courses'),
-        10000,
-        'Database connection timed out.'
-      );
-      if (error) throw error;
-      setCourses(filterVisible(data));
-    } catch (err) {
-      console.error(err);
-      setErrorMsg(err.message || String(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCourses();
-  }, []);
 
   const filteredCourses = courses.filter(course => {
     const matchesSearch = !searchQuery || 
@@ -189,9 +165,16 @@ const Courses = () => {
                                  </div>
                                </div>
                                
-                               <h3 className="text-2xl font-black mb-6 leading-tight group-hover:text-primary transition-colors line-clamp-1 uppercase tracking-tighter">
-                                 {course.name}
-                               </h3>
+                               <div className="flex justify-between items-start mb-6">
+                                 <h3 className="text-2xl font-black leading-tight group-hover:text-primary transition-colors line-clamp-1 uppercase tracking-tighter">
+                                   {course.name}
+                                 </h3>
+                                 {course.extra_details?.id_number && (
+                                   <span className="text-[7px] font-black bg-accent/10 text-accent px-2 py-1 rounded-md border border-accent/20 whitespace-nowrap ml-2">
+                                     {course.extra_details.id_number}
+                                   </span>
+                                 )}
+                               </div>
                                
                                {/* Pointwise Details */}
                                <div className="space-y-3 mb-8">

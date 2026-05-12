@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase, withTimeout } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { updateMetadata } from '../lib/seo';
 import { Loader2, Settings, ArrowLeft, Fingerprint, CheckCircle2, ShieldCheck, GraduationCap, CircleUser, UserCheck, ChevronRight, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -252,6 +253,13 @@ const PublicProfile = () => {
         }
 
         setProfile(data);
+        
+        // Update Metadata
+        updateMetadata({
+          title: data.full_name || data.username,
+          description: data.bio || `View the official institutional profile of ${data.full_name || data.username} at 5EVEN.`,
+          image: data.avatar_url || 'https://5even.netlify.app/assets/images/img/banner.png'
+        });
       } catch (err) {
         setError(err.message || 'Error fetching profile.');
       } finally {

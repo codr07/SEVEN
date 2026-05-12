@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase, withTimeout } from '../../lib/supabase';
+import { updateMetadata } from '../../lib/seo';
 import { Loader2, ArrowLeft } from 'lucide-react';
 
 const ServiceDetail = () => {
@@ -18,6 +19,13 @@ const ServiceDetail = () => {
         );
         if (error) throw error;
         setService(data);
+        
+        // Update Metadata
+        updateMetadata({
+          title: data.title,
+          description: data.extra_details?.short_desc || (Array.isArray(data.description) ? data.description[0] : 'Explore this specialized service at 5EVEN Institution.'),
+          image: data.extra_details?.cover || data.thumbnail || 'https://5even.netlify.app/assets/images/img/banner.png'
+        });
       } catch (err) {
         console.error('Error fetching service detail:', err);
       } finally {

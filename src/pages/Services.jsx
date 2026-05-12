@@ -3,26 +3,15 @@ import { supabase, withTimeout, filterVisible, orderedFetch } from '../lib/supab
 import { Loader2, Code, Laptop, Cpu, Rocket, Search, Filter, Share2, ArrowRight, Sparkles, MessageSquare, X, Send, User, Mail, FileText, CheckCircle2, Phone, Briefcase, IndianRupee, Clock, PlusSquare, MessageSquarePlus, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import GlassSelect from '../components/GlassSelect';
+import { useData } from '../context/DataContext';
 import { Link } from 'react-router-dom';
 import { useAlert } from '../context/AlertContext';
 import MergedShape from '../components/MergedShape';
 import SignatureButton from '../components/SignatureButton';
 import SignatureShareButton from '../components/SignatureShareButton';
 
-const CustomServiceModal = ({ isOpen, onClose, services }) => {
+const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }) => {
   const { showAlert } = useAlert();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    service_type: '',
-    tier: '',
-    budget: '',
-    timeline: '',
-    addons: [],
-    requirements: '',
-    custom_responses: {}
-  });
   const [loading, setLoading] = useState(false);
 
   const selectedServiceObj = services.find(s => s.title === formData.service_type);
@@ -132,12 +121,43 @@ const CustomServiceModal = ({ isOpen, onClose, services }) => {
   };
 
   const getEstimatedPrice = () => {
-    if (!formData.service_type) return 'Select a service to calculate price';
+    if (!formData.service_type) return 'Select a service';
+    
+    // 1. Handle specialized services with fixed/calculated rates via Templates
+    const dbConfig = selectedServiceObj?.extra_details?.form_config;
+    const template = dbConfig?.specialized_template;
+    if (template === 'mock_exams') {
+      const tests = formData.custom_responses.mock_tests || 1;
+      const subs = formData.custom_responses.subjects || 1;
+      return `₹${(tests * subs * 500).toLocaleString()}`;
+    }
+    if (template === 'project_doc') {
+      const rates = { 'Word': 500, 'LaTeX': 1000, 'Custom Publisher': 2000 };
+      return `₹${(rates[formData.custom_responses.doc_type] || 0).toLocaleString()}`;
+    }
+    if (template === 'thesis_doc') {
+      const rates = { '4-7': 2000, '8-20': 5000, '20-40': 8000, '40+': 'Custom Quote' };
+      const price = rates[formData.custom_responses.thesis_range];
+      return typeof price === 'number' ? `₹${price.toLocaleString()}` : (price || 'Select Range');
+    }
+    if (template === 'poster_design') {
+      const rates = { 'Standard': 500, 'Premium': 1000 };
+      return `₹${(rates[formData.custom_responses.poster_package] || 0).toLocaleString()}`;
+    }
+    if (template === 'album_layout') {
+      const rates = { 'Standard': 2000, 'Premium': 5000 };
+      return `₹${(rates[formData.custom_responses.album_package] || 0).toLocaleString()}`;
+    }
+    if (template === 'desktop_design') {
+      const setups = formData.custom_responses.desktop_setups || 1;
+      return `₹${(setups * 1500).toLocaleString()}`;
+    }
+
+    // 2. Fallback to Web/General Service pricing logic
     const service = services.find(s => s.title === formData.service_type);
     if (!service) return 'Custom Quote';
 
     const priceStr = service.price || '0';
-    // Remove commas first then find the first sequence of numbers (including decimals)
     const match = priceStr.replace(/,/g, '').match(/(\d+(\.\d+)?)/);
     const basePrice = match ? parseFloat(match[0]) : 0;
     let total = basePrice;
@@ -150,18 +170,27 @@ const CustomServiceModal = ({ isOpen, onClose, services }) => {
     const multiplier = DYNAMIC_OPTIONS.tierMultipliers[formData.tier] || 1;
     total = Math.round(total * multiplier);
 
-    return `Estimated Price: ₹${total.toLocaleString()}${formData.tier ? '+' : ''}`;
+    return `₹${total.toLocaleString()}${formData.tier ? '+' : ''}`;
   };
 
   const handleSubmit = async (e) => {
+    // Note: FormSubmit.co will handle the email part via the 'action' and 'method' attributes
+    // This function handles the Supabase logging
     setLoading(true);
     try {
       const payload = {
-        ...formData,
+        name: formData.name,
+        email: formData.email,
+        phone: `${formData.country_code} ${formData.phone}`,
+        location: formData.location,
+        service_type: formData.service_type,
+        tier: formData.tier,
+        budget: formData.budget,
+        timeline: formData.timeline,
         status: 'ordered',
         created_at: new Date().toISOString(),
-        // Combine custom responses into requirements or extra field if needed
-        requirements: `${formData.requirements}\n\nCustom Details: ${JSON.stringify(formData.custom_responses, null, 2)}`
+        requirements: `${formData.requirements}\n\nCalculated Price: ${getEstimatedPrice()}`,
+        custom_responses: formData.custom_responses
       };
       await supabase.from('service_inquiries').insert([payload]);
       showAlert('Architectural Manifesto Received. Our elite squad will contact you shortly.', 'success');
@@ -198,141 +227,251 @@ const CustomServiceModal = ({ isOpen, onClose, services }) => {
             </div>
 
             <form
-              action={`https://formsubmit.co/orders.seveninst@gmail.com?subject=Custom%Service Service Order: ${formData.service_type}`}
-              method="post"
-              className="grid grid-cols-1 md:grid-cols-2 gap-6"
+              action="https://formsubmit.co/orders.seveninst@gmail.com"
+              method="POST"
+              className="space-y-8"
               onSubmit={handleSubmit}
             >
+              <input type="hidden" name="_subject" value={`New Highly-Detailed Service Request from 5EVEN! [${formData.service_type}]`} />
               <input type="hidden" name="_captcha" value="false" />
-              <input type="hidden" name="Total Estimated" value={getEstimatedPrice()} />
+              <input type="hidden" name="_template" value="table" />
+              <input type="hidden" name="Calculated Estimated Price" value={getEstimatedPrice()} />
 
-              {/* Basic Details - Always Visible */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Full Legal Name</label>
-                <input name="Full Name" required placeholder="John Doe" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-6 py-4 rounded-2xl border border-white/40 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-2xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.8),0_8px_32px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.3)] text-sm outline-none focus:border-primary focus:bg-white/60 dark:focus:bg-white/10 hover:bg-white/50 dark:hover:bg-white/10 transition-all text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 font-bold" />
+              {/* Base Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-primary">Full Name</label>
+                  <input type="text" name="name" required placeholder="John Doe" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full px-6 py-4 rounded-xl bg-background/50 border border-border focus:border-primary outline-none" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-primary">Email Address</label>
+                  <input type="email" name="email" required placeholder="john@example.com" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-6 py-4 rounded-xl bg-background/50 border border-border focus:border-primary outline-none" />
+                </div>
+                <div className="grid grid-cols-4 gap-4 md:col-span-1">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-primary">Code</label>
+                    <input type="text" name="Country Code" placeholder="+91" value={formData.country_code} onChange={e => setFormData({ ...formData, country_code: e.target.value })} className="w-full px-4 py-4 rounded-xl bg-background/50 border border-border focus:border-primary outline-none" />
+                  </div>
+                  <div className="col-span-3 space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-primary">Phone Number</label>
+                    <input type="tel" name="Phone" required placeholder="9876543210" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full px-6 py-4 rounded-xl bg-background/50 border border-border focus:border-primary outline-none" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-primary">Location</label>
+                  <input type="text" name="Location" placeholder="City, Country" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} className="w-full px-6 py-4 rounded-xl bg-background/50 border border-border focus:border-primary outline-none" />
+                </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Secure Email</label>
-                <input name="Email" type="email" required placeholder="Email Address" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} className="w-full px-6 py-4 rounded-2xl border border-white/40 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-2xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.8),0_8px_32px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.3)] text-sm outline-none focus:border-primary focus:bg-white/60 dark:focus:bg-white/10 hover:bg-white/50 dark:hover:bg-white/10 transition-all text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 font-bold" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Direct Contact</label>
-                <input name="Phone" type="tel" required placeholder="Phone Number" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="w-full px-6 py-4 rounded-2xl border border-white/40 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-2xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.8),0_8px_32px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.3)] text-sm outline-none focus:border-primary focus:bg-white/60 dark:focus:bg-white/10 hover:bg-white/50 dark:hover:bg-white/10 transition-all text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 font-bold" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Core Service</label>
+
+              {/* Service Selection */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-primary">Service of Interest</label>
                 <GlassSelect
                   value={formData.service_type}
-                  onChange={(val) => setFormData({ ...formData, service_type: val, tier: DYNAMIC_OPTIONS.tiers[0], addons: [] })}
-                  placeholder="Select Core Product"
+                  onChange={(val) => setFormData({ ...formData, service_type: val })}
+                  placeholder="Select a service you are interested in..."
                   options={[
-                    ...[...new Set(services.map(s => s.category))].map(cat => ({
-                      label: cat,
-                      options: services.filter(s => s.category === cat).map(s => ({ value: s.title, label: s.title }))
-                    })),
-                    { value: 'Custom', label: 'Custom Architectural Support' }
+                    {
+                      label: "Web & Commercial Services",
+                      options: services
+                        .filter(s => (s.category || '').toLowerCase().includes('web') || (s.category || '').toLowerCase().includes('software'))
+                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
+                    },
+                    {
+                      label: "Institutional & Academic Services",
+                      options: services
+                        .filter(s => (s.category || '').toLowerCase().includes('academic') || (s.category || '').toLowerCase().includes('notes'))
+                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
+                    },
+                    {
+                      label: "Creative & Design Services",
+                      options: services
+                        .filter(s => (s.category || '').toLowerCase().includes('design') || (s.category || '').toLowerCase().includes('creative'))
+                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
+                    },
+                    {
+                      label: "Marketing & Growth",
+                      options: services
+                        .filter(s => (s.category || '').toLowerCase().includes('marketing') || (s.category || '').toLowerCase().includes('seo'))
+                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
+                    },
+                    {
+                      label: "Other Specialized Services",
+                      options: services
+                        .filter(s => {
+                          const cat = (s.category || '').toLowerCase();
+                          return !cat.includes('web') && !cat.includes('software') && !cat.includes('academic') && !cat.includes('design') && !cat.includes('marketing');
+                        })
+                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
+                    },
+                    { value: "Custom", label: "Other / Highly Custom Request" }
                   ]}
                 />
               </div>
 
-              {/* Dynamic Fields - Appear after service choice */}
-              <AnimatePresence>
-                {formData.service_type && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-black/5 dark:border-white/5"
-                  >
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Architectural Tier</label>
-                      <GlassSelect
-                        value={formData.tier}
-                        onChange={(val) => setFormData({ ...formData, tier: val })}
-                        placeholder="Select Architectural Tier"
-                        options={DYNAMIC_OPTIONS.tiers.map(t => ({ value: t, label: `${t} Implementation` }))}
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Budget Allocation</label>
-                      <input name="Budget Range" placeholder="e.g. Rs. 80,000 - 1,50,000" value={formData.budget} onChange={e => setFormData({ ...formData, budget: e.target.value })} className="w-full px-6 py-4 rounded-2xl border border-white/40 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-2xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.8),0_8px_32px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.3)] text-sm outline-none focus:border-primary focus:bg-white/60 dark:focus:bg-white/10 hover:bg-white/50 dark:hover:bg-white/10 transition-all text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 font-bold" />
-                    </div>
-
-                    <div className="md:col-span-2 space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Expected Timeline</label>
-                      <input name="Expected Timeline" placeholder={DYNAMIC_OPTIONS.timelinePlaceholder} value={formData.timeline} onChange={e => setFormData({ ...formData, timeline: e.target.value })} className="w-full px-6 py-4 rounded-2xl border border-white/40 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-2xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.8),0_8px_32px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.3)] text-sm outline-none focus:border-primary focus:bg-white/60 dark:focus:bg-white/10 hover:bg-white/50 dark:hover:bg-white/10 transition-all text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 font-bold" />
-                    </div>
-
-                    {/* Dynamic Custom Fields from Admin Panel */}
-                    {DYNAMIC_OPTIONS.custom_fields?.map(field => {
-                      // Logical Workflow (showIf)
-                      if (field.showIf) {
-                        const targetField = field.showIf.field;
-                        const targetVal = field.showIf.value;
-                        const currentVal = targetField === 'tier' ? formData.tier : formData.custom_responses[targetField];
-                        if (String(currentVal) !== String(targetVal)) return null;
-                      }
-
-                      return (
-                        <div key={field.name} className={`${field.type === 'textarea' ? 'md:col-span-2' : ''} space-y-1`}>
-                          <label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">{field.label} {field.required ? '*' : ''}</label>
-                          {field.type === 'select' ? (
-                            <GlassSelect
-                              value={formData.custom_responses[field.name]}
-                              onChange={(val) => updateCustomResponse(field.name, val)}
-                              options={field.options}
-                              placeholder={`Select ${field.label}`}
-                            />
-                          ) : field.type === 'textarea' ? (
-                            <textarea
-                              required={field.required}
-                              value={formData.custom_responses[field.name] || ''}
-                              onChange={e => updateCustomResponse(field.name, e.target.value)}
-                              className="w-full px-6 py-4 rounded-3xl border border-white/40 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-2xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.8),0_8px_32_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.3)] text-sm outline-none focus:border-primary focus:bg-white/60 dark:focus:bg-white/10 transition-all text-gray-900 dark:text-white placeholder:text-gray-500 font-bold resize-none min-h-[100px]"
-                            />
-                          ) : (
-                            <input
-                              type={field.type || 'text'}
-                              required={field.required}
-                              placeholder={field.placeholder || ''}
-                              value={formData.custom_responses[field.name] || ''}
-                              onChange={e => updateCustomResponse(field.name, e.target.value)}
-                              className="w-full px-6 py-4 rounded-2xl border border-white/40 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-2xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.8),0_8px_32px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.3)] text-sm outline-none focus:border-primary focus:bg-white/60 dark:focus:bg-white/10 transition-all text-gray-900 dark:text-white placeholder:text-gray-500 font-bold"
-                            />
-                          )}
+              {/* DYNAMIC FORM SEGMENTS */}
+              
+              {/* Web Services Fields */}
+              {formData.service_type !== "" && formData.service_type !== "Custom" && (
+                <div className="space-y-6">
+                  {/* Common Web/Software Fields */}
+                  {(serviceCategory.includes('web') || serviceCategory.includes('software')) && (
+                    <div className="p-6 border border-border bg-card/50 rounded-2xl space-y-6">
+                      <h3 className="text-sm font-black uppercase tracking-widest text-secondary">Web Service Requirements</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Preferred Tier</label>
+                          <GlassSelect
+                            value={formData.tier}
+                            onChange={val => setFormData({ ...formData, tier: val })}
+                            options={DYNAMIC_OPTIONS.tiers.map(t => ({ value: t, label: `${t} Tier` }))}
+                          />
                         </div>
-                      );
-                    })}
-
-                    <div className="md:col-span-2 rounded-3xl border border-white/40 dark:border-white/10 p-6 bg-white/20 dark:bg-white/5 backdrop-blur-2xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.8),0_8px_32px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.3)]">
-                      <p className="text-xs font-black uppercase tracking-widest text-primary mb-4">Strategic Add-ons</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {DYNAMIC_OPTIONS.addons.map(addon => (
-                          <label key={addon.id} className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all cursor-pointer ${formData.addons.includes(addon.id) ? 'bg-primary/20 border-primary text-primary shadow-[inset_0_1px_2px_rgba(255,255,255,0.2)]' : 'bg-white/40 dark:bg-white/5 border-white/40 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-white/10'}`}>
-                            <input type="checkbox" className="hidden" checked={formData.addons.includes(addon.id)} onChange={() => toggleAddon(addon.id)} />
-                            <div className={`w-4 h-4 rounded flex flex-shrink-0 items-center justify-center transition-all ${formData.addons.includes(addon.id) ? 'bg-primary border border-primary' : 'bg-black/10 dark:bg-white/10 border border-white/20'}`}>
-                              {formData.addons.includes(addon.id) && <CheckCircle2 size={10} className="text-white" />}
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest">{addon.label}</span>
-                          </label>
-                        ))}
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Budget Range</label>
+                          <input type="text" name="Budget Range" placeholder="Budget (e.g. Rs. 80,000)" value={formData.budget} onChange={e => setFormData({...formData, budget: e.target.value})} className="w-full px-6 py-4 rounded-xl bg-background/50 border border-border focus:border-primary outline-none" />
+                        </div>
+                        <input type="text" name="Timeline" placeholder="Expected Timeline (e.g. 4 weeks)" value={formData.timeline} onChange={e => setFormData({...formData, timeline: e.target.value})} className="md:col-span-2 w-full px-6 py-4 rounded-xl bg-background/50 border border-border focus:border-primary outline-none" />
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Strategic Add-ons</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {DYNAMIC_OPTIONS.addons.map(addon => (
+                            <label key={addon.id} className={`flex items-center gap-2 text-xs p-3 rounded-xl border cursor-pointer transition-all ${formData.addons.includes(addon.id) ? 'bg-primary/10 border-primary text-primary' : 'bg-background border-border hover:border-primary/50'}`}>
+                              <input type="checkbox" checked={formData.addons.includes(addon.id)} onChange={() => toggleAddon(addon.id)} className="accent-primary" />
+                              <span className="truncate font-bold uppercase tracking-tighter">{addon.label}</span>
+                            </label>
+                          ))}
+                        </div>
                       </div>
                     </div>
+                  )}
 
-                    <div className="md:col-span-2 bg-primary/10 border border-primary/20 p-6 rounded-3xl flex flex-col items-center justify-center text-center">
-                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-2">Live Price Estimation</span>
-                      <span className="text-3xl font-black text-gray-900 dark:text-white">{getEstimatedPrice()}</span>
+                  {/* Mock Test Fields */}
+                  {dbConfig?.specialized_template === 'mock_exams' && (
+                    <div className="p-6 border border-border bg-card/50 rounded-2xl space-y-4">
+                      <h3 className="text-sm font-black uppercase tracking-widest text-secondary">Mock Exam Parameters</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Tests Count</label>
+                          <GlassSelect
+                            value={formData.custom_responses.mock_tests}
+                            onChange={val => updateCustomResponse('mock_tests', Number(val))}
+                            options={[1, 2, 3, 4].map(n => ({ value: n, label: `${n} Mock Test${n > 1 ? 's' : ''}` }))}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Number of Subjects</label>
+                          <input type="number" min="1" value={formData.custom_responses.subjects} onChange={e => updateCustomResponse('subjects', Number(e.target.value))} name="Number of Subjects" placeholder="Number of Subjects" className="w-full px-6 py-4 rounded-xl bg-background/50 border border-border focus:border-primary outline-none" />
+                        </div>
+                      </div>
                     </div>
+                  )}
 
-                    <div className="md:col-span-2 space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Vision Manifesto</label>
-                      <textarea name="Project Requirements" rows="4" placeholder="Describe your project requirements, technical constraints, and desired outcomes..." value={formData.requirements} onChange={e => setFormData({ ...formData, requirements: e.target.value })} className="w-full px-6 py-4 rounded-3xl border border-white/40 dark:border-white/10 bg-white/40 dark:bg-white/5 backdrop-blur-2xl shadow-[inset_0_1px_2px_rgba(255,255,255,0.8),0_8px_32px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.1),0_8px_32px_rgba(0,0,0,0.3)] text-sm outline-none focus:border-primary focus:bg-white/60 dark:focus:bg-white/10 hover:bg-white/50 dark:hover:bg-white/10 transition-all text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 font-bold resize-none" />
+                  {/* Project Doc Fields */}
+                  {dbConfig?.specialized_template === 'project_doc' && (
+                    <div className="p-6 border border-border bg-card/50 rounded-2xl space-y-4">
+                      <h3 className="text-sm font-black uppercase tracking-widest text-secondary">Documentation Details</h3>
+                      <GlassSelect
+                        value={formData.custom_responses.doc_type}
+                        onChange={val => updateCustomResponse('doc_type', val)}
+                        placeholder="Select Format"
+                        options={[
+                          { value: "Word", label: "Word Document - ₹500" },
+                          { value: "LaTeX", label: "LaTeX Documentation - ₹1000" },
+                          { value: "Custom Publisher", label: "Publisher Format - ₹2000" }
+                        ]}
+                      />
                     </div>
+                  )}
 
-                    <button type="submit" className="md:col-span-2 py-6 rounded-2xl bg-gray-900 dark:bg-primary text-white font-black uppercase tracking-[0.4em] text-xs hover:scale-[1.02] active:scale-95 transition-all shadow-2xl">Place Order Protocol</button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  {dbConfig?.specialized_template === 'thesis_doc' && (
+                    <div className="p-6 border border-border bg-card/50 rounded-2xl space-y-4">
+                      <h3 className="text-sm font-black uppercase tracking-widest text-secondary">Thesis Details</h3>
+                      <GlassSelect
+                        value={formData.custom_responses.thesis_range}
+                        onChange={val => updateCustomResponse('thesis_range', val)}
+                        placeholder="Select Content Volume"
+                        options={[
+                          { value: "4-7", label: "4-7 pages - ₹2000" },
+                          { value: "8-20", label: "8-20 pages - ₹5000" },
+                          { value: "20-40", label: "20-40 pages - ₹8000" },
+                          { value: "40+", label: "40+ pages - Custom Quote" }
+                        ]}
+                      />
+                    </div>
+                  )}
+
+                  {/* Design Fields */}
+                  {dbConfig?.specialized_template === 'desktop_design' && (
+                    <div className="p-6 border border-border bg-card/50 rounded-2xl space-y-4">
+                      <h3 className="text-sm font-black uppercase tracking-widest text-secondary">Personalization Specs</h3>
+                      <div className="grid grid-cols-1 gap-4">
+                        <input type="number" min="1" value={formData.custom_responses.desktop_setups} onChange={e => updateCustomResponse('desktop_setups', e.target.value)} name="Desktop Setups" placeholder="Total Desktop Setups" className="rounded-xl px-4 py-3 bg-background border border-border font-bold" />
+                        <input type="text" name="Theme Preference" placeholder="Theme / Style Preferences..." value={formData.custom_responses.theme_preference} onChange={e => updateCustomResponse('theme_preference', e.target.value)} className="rounded-xl px-4 py-3 bg-background border border-border font-bold" />
+                      </div>
+                    </div>
+                  )}
+                  {dbConfig?.specialized_template === 'poster_design' && (
+                    <div className="p-6 border border-border bg-card/50 rounded-2xl space-y-4">
+                      <h3 className="text-sm font-black uppercase tracking-widest text-secondary">Poster Design Package</h3>
+                      <GlassSelect
+                        value={formData.custom_responses.poster_package}
+                        onChange={val => updateCustomResponse('poster_package', val)}
+                        placeholder="Select Design Package"
+                        options={[
+                          { value: "Standard", label: "Standard - ₹500" },
+                          { value: "Premium", label: "Premium - ₹1000" }
+                        ]}
+                      />
+                    </div>
+                  )}
+                  {dbConfig?.specialized_template === 'album_layout' && (
+                    <div className="p-6 border border-border bg-card/50 rounded-2xl space-y-4">
+                      <h3 className="text-sm font-black uppercase tracking-widest text-secondary">Album Layout Package</h3>
+                      <GlassSelect
+                        value={formData.custom_responses.album_package}
+                        onChange={val => updateCustomResponse('album_package', val)}
+                        placeholder="Select Layout Package"
+                        options={[
+                          { value: "Standard", label: "Standard - ₹2000" },
+                          { value: "Premium", label: "Premium - ₹5000" }
+                        ]}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Price Calculation Display */}
+              <div className="bg-primary/5 border border-primary/20 p-6 rounded-2xl flex flex-col items-center justify-center text-center shadow-xl shadow-primary/5">
+                <span className="text-xs font-black uppercase tracking-widest text-primary mb-2">Estimated Pricing</span>
+                <span className="text-2xl font-black italic tracking-tighter text-gray-900 dark:text-white">{getEstimatedPrice()}</span>
+              </div>
+
+              {/* Project Requirements text area */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-primary">Additional Details</label>
+                <textarea 
+                  name="message" 
+                  required 
+                  rows="4" 
+                  value={formData.requirements}
+                  onChange={e => setFormData({ ...formData, requirements: e.target.value })}
+                  placeholder="Tell us any other specifics about your requirements..." 
+                  className="w-full px-6 py-4 rounded-xl bg-background/50 border border-border focus:border-primary outline-none resize-none font-bold text-sm"
+                ></textarea>
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full py-5 rounded-xl bg-primary text-primary-foreground font-black uppercase tracking-widest hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/20 disabled:opacity-50 flex items-center justify-center gap-3"
+              >
+                {loading && <Loader2 size={16} className="animate-spin" />}
+                <span>{loading ? 'Transmitting...' : 'Submit Detailed Request'}</span>
+              </button>
             </form>
           </div>
         </div>
@@ -342,36 +481,34 @@ const CustomServiceModal = ({ isOpen, onClose, services }) => {
 };
 
 const Services = () => {
-  const { showAlert } = useAlert();
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
+  const { services, loading, error: errorMsg } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const fetchServices = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await withTimeout(
-        orderedFetch(supabase, 'services'),
-        10000,
-        'Database connection timed out.'
-      );
-      if (error) throw error;
-      setServices(filterVisible(data));
-    } catch (err) {
-      console.error(err);
-      setErrorMsg(err.message || String(err));
-    } finally {
-      setLoading(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    country_code: '+91',
+    phone: '',
+    location: '',
+    service_type: '',
+    tier: 'Basic',
+    budget: '',
+    timeline: '',
+    addons: [],
+    requirements: '',
+    custom_responses: {
+      mock_tests: 1,
+      subjects: 1,
+      doc_type: '',
+      thesis_range: '',
+      desktop_setups: 1,
+      theme_preference: '',
+      poster_package: '',
+      album_package: ''
     }
-  };
-
-  useEffect(() => {
-    fetchServices();
-  }, []);
+  });
 
   const filteredServices = useMemo(() => {
     return services.filter(service => {
@@ -545,9 +682,16 @@ const Services = () => {
                                 </div>
                               </div>
 
-                              <h3 className="text-2xl font-black mb-6 leading-tight group-hover:text-primary transition-colors line-clamp-1 uppercase tracking-tighter">
-                                {service.title}
-                              </h3>
+                              <div className="flex justify-between items-start mb-6">
+                                <h3 className="text-2xl font-black leading-tight group-hover:text-primary transition-colors line-clamp-1 uppercase tracking-tighter">
+                                  {service.title}
+                                </h3>
+                                {service.extra_details?.id_number && (
+                                  <span className="text-[7px] font-black bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20 whitespace-nowrap ml-2">
+                                    {service.extra_details.id_number}
+                                  </span>
+                                )}
+                              </div>
 
                               {/* Pointwise Details */}
                               <div className="space-y-3 mb-8">
@@ -611,6 +755,8 @@ const Services = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         services={services}
+        formData={formData}
+        setFormData={setFormData}
       />
     </main>
   );

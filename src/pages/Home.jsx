@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase, withTimeout, filterVisible, orderedFetch } from '../lib/supabase';
+import { useData } from '../context/DataContext';
 import { Loader2, Code, Rocket, Brain, Cpu, Sparkles, BookOpen, GraduationCap, Laptop, Book as BookIcon, Zap } from 'lucide-react';
 import { motion, useMotionValue, useSpring, useTransform, useScroll } from 'framer-motion';
 import sevenLogo from '../assets/seven.svg';
@@ -144,71 +145,19 @@ const Hero3DAsset = ({ icon: Icon, x = 0, y = 0, colorClass = "text-primary", de
 };
 
 const Home = () => {
-  const [faculties, setFaculties] = useState([]);
-  const [founders, setFounders] = useState([]);
-  const [academics, setAcademics] = useState([]);
-  const [courses, setCourses] = useState([]);
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { 
+    faculty: faculties, 
+    founders, 
+    academics, 
+    courses, 
+    services, 
+    loading, 
+    error: loadError,
+    refresh: fetchData 
+  } = useData();
+
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [profileType, setProfileType] = useState(null);
-  const [loadError, setLoadError] = useState('');
-
-  const fetchData = async () => {
-    setLoading(true);
-    setLoadError('');
-    try {
-      const results = await withTimeout(
-        Promise.all([
-          orderedFetch(supabase, 'faculty'),
-          orderedFetch(supabase, 'founders'),
-          orderedFetch(supabase, 'academics'),
-          orderedFetch(supabase, 'courses'),
-          orderedFetch(supabase, 'services')
-        ]),
-        15000,
-        'Server is taking too long to respond.'
-      );
-
-      const [fac, fnd, aca, crs, srv] = results;
-
-      setFaculties(filterVisible(fac.data || []));
-      
-      const FOUNDER_ROLE_PRIORITY = ['Founder & CEO', 'Co-Founder & CTO', 'CFO'];
-      const sortedFounders = filterVisible(fnd.data || []).sort((a, b) => {
-        const getOrder = (val) => {
-          if (val === null || val === undefined || val === '') return Infinity;
-          const n = Number(val);
-          return isNaN(n) ? Infinity : n;
-        };
-        const aOrder = getOrder(a.order_index);
-        const bOrder = getOrder(b.order_index);
-        if (aOrder !== bOrder) return aOrder - bOrder;
-
-        // Role-based fallback
-        const aRoleIdx = FOUNDER_ROLE_PRIORITY.indexOf(a.role);
-        const bRoleIdx = FOUNDER_ROLE_PRIORITY.indexOf(b.role);
-        if (aRoleIdx !== -1 && bRoleIdx !== -1) return aRoleIdx - bRoleIdx;
-        if (aRoleIdx !== -1) return -1;
-        if (bRoleIdx !== -1) return 1;
-
-        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-      });
-      setFounders(sortedFounders);
-      setAcademics(filterVisible(aca.data || []));
-      setCourses(filterVisible(crs.data || []));
-      setServices(filterVisible(srv.data || []));
-    } catch (err) {
-      console.error('Data Fetch Error:', err);
-      setLoadError(err.message || 'Connection error.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   const categories = [...new Set(courses.map(c => c.category || 'General'))].slice(0, 4);
 

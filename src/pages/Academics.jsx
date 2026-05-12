@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAlert } from '../context/AlertContext';
 import { supabase, withTimeout, filterVisible, orderedFetch } from '../lib/supabase';
+import { useData } from '../context/DataContext';
 import { Loader2, GraduationCap, Search, Share2, BookText, ArrowRight, Award, Star, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MergedShape from '../components/MergedShape';
@@ -10,33 +11,8 @@ import SignatureShareButton from '../components/SignatureShareButton';
 
 const Academics = () => {
   const { showAlert } = useAlert();
-  const [academics, setAcademics] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState('');
+  const { academics, loading, error: errorMsg } = useData();
   const [searchQuery, setSearchQuery] = useState('');
-
-  const fetchAcademics = async () => {
-    setLoading(true);
-    setErrorMsg('');
-    try {
-      const { data, error } = await withTimeout(
-        orderedFetch(supabase, 'academics'),
-        10000,
-        'Database connection timed out.'
-      );
-      if (error) throw error;
-      setAcademics(filterVisible(data));
-    } catch (err) {
-      console.error(err);
-      setErrorMsg(err.message || String(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchAcademics();
-  }, []);
 
   const filteredAcademics = academics.filter(item => {
     if (!searchQuery) return true;
@@ -148,9 +124,16 @@ const Academics = () => {
                                 </div>
                               </div>
                               
-                              <h3 className="text-2xl font-black mb-6 leading-tight tracking-tighter uppercase group-hover:text-primary transition-colors line-clamp-1">
-                                {item.title}
-                              </h3>
+                              <div className="flex justify-between items-start mb-6">
+                                <h3 className="text-2xl font-black leading-tight tracking-tighter uppercase group-hover:text-primary transition-colors line-clamp-1">
+                                  {item.title}
+                                </h3>
+                                {item.extra_details?.id_number && (
+                                  <span className="text-[7px] font-black bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20 whitespace-nowrap ml-2">
+                                    {item.extra_details.id_number}
+                                  </span>
+                                )}
+                              </div>
 
                               {/* Pointwise Details */}
                               <div className="space-y-3 mb-8">
