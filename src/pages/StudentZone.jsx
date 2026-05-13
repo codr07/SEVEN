@@ -53,7 +53,7 @@ const INITIAL_POST = {
 const StudentZone = () => {
   const [searchParams] = useSearchParams();
   const { showAlert, showConfirm } = useAlert();
-  const { user, login, signup, logout, role, profile, refreshProfile, loading: authLoading, resetPassword, deleteAccount } = useAuth();
+  const { user, login, signup, logout, role, profile, refreshProfile, loading: authLoading, resetPassword, deleteAccount, signInWithGoogle } = useAuth();
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [authMode, setAuthMode] = useState('login');
@@ -613,6 +613,35 @@ const StudentZone = () => {
                     {message.text}
                   </div>
                 )}
+
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border"></span>
+                  </div>
+                  <div className="relative flex justify-center text-[10px] font-black uppercase">
+                    <span className="bg-card px-4 text-muted-foreground tracking-[0.3em]">Or Secure Access</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsBusy(true);
+                    setMessage({ text: '', type: '' });
+                    try {
+                      await signInWithGoogle();
+                    } catch (error) {
+                      setMessage({ text: error.message || 'Google login failed', type: 'error' });
+                    } finally {
+                      setIsBusy(false);
+                    }
+                  }}
+                  disabled={isBusy}
+                  className="w-full flex items-center justify-center gap-3 py-4 rounded-xl border border-border bg-white/5 hover:bg-white/10 transition-all font-black uppercase tracking-widest text-[10px] disabled:opacity-50"
+                >
+                  <i className="ri-google-fill text-lg"></i>
+                  <span>Continue with Google</span>
+                </button>
               </form>
             </div>
           </div>
@@ -664,14 +693,25 @@ const StudentZone = () => {
                       <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Management & Directive Controls</p>
                     </div>
                     
-                    <button 
-                      type="button"
-                      onClick={() => setActiveTab('publish')}
-                      className="px-8 py-4 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
-                    >
-                      <Plus size={18} />
-                      Submit New Work
-                    </button>
+                    <div className="flex flex-wrap items-center gap-3">
+                      {profile?.username && (
+                        <Link 
+                          to={`/profile/${profile.username}`}
+                          className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-foreground font-black uppercase tracking-widest text-xs flex items-center gap-3 hover:bg-white/10 transition-all"
+                        >
+                          <ExternalLink size={18} />
+                          View Public Profile
+                        </Link>
+                      )}
+                      <button 
+                        type="button"
+                        onClick={() => setActiveTab('publish')}
+                        className="px-8 py-4 rounded-2xl bg-primary text-white font-black uppercase tracking-widest text-xs flex items-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20"
+                      >
+                        <Plus size={18} />
+                        Submit New Work
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

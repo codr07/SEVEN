@@ -52,40 +52,70 @@ let globalSessionPromise = null;
             const meta = currentUser.user_metadata || {};
             
             // Generate initial ID
-            const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-            const serial = ( (count || 0) + 1).toString().padStart(4, '0');
-            const idNumber = `70326-${serial}`;
+            let idNumber = '70326-0001';
+            try {
+              const { count, error: countError } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+              if (!countError) {
+                const serial = ((count || 0) + 1).toString().padStart(4, '0');
+                idNumber = `70326-${serial}`;
+              }
+            } catch (e) {
+              console.warn('Failed to fetch count for ID generation', e);
+            }
 
-            const { error: createError } = await supabase.from('profiles').insert({
+            // Fallback username from email if not in metadata
+            const emailPrefix = currentUser.email ? currentUser.email.split('@')[0] : 'user';
+            const fallbackUsername = `${emailPrefix}${Math.floor(Math.random() * 10000)}`;
+            const username = meta.username || meta.preferred_username || fallbackUsername;
+
+            const newProfile = {
               id: currentUser.id,
-              username: meta.username || '',
-              full_name: meta.full_name || '',
+              username: username,
+              full_name: meta.full_name || meta.name || '',
               phone: meta.phone || '',
-              avatar_url: meta.avatar_url || '',
+              avatar_url: meta.avatar_url || meta.picture || '',
               gender: meta.gender || '',
               social_links: meta.social_links || { linkedin: '', github: '', linktree: '' },
               role: 'student',
               extra_details: { id_number: idNumber },
               updated_at: new Date().toISOString(),
-            });
-            if (!createError) {
-              resolvedProfile = await fetchProfile(currentUser.id);
+            };
+
+            const { error: createError } = await supabase.from('profiles').insert(newProfile);
+            
+            if (createError) {
+              console.error('Profile creation error (Retrying with absolute fallback):', createError);
+              // Handle potential unique constraint violation for username
+              if (createError.code === '23505') {
+                const absoluteFallback = `${emailPrefix}_${Math.random().toString(36).slice(2, 7)}`;
+                await supabase.from('profiles').insert({ 
+                  ...newProfile, 
+                  username: absoluteFallback 
+                });
+              }
             }
+            
+            // Final check/sync
+            resolvedProfile = await fetchProfile(currentUser.id);
           } else if (!resolvedProfile.extra_details?.id_number) {
             // Backfill ID if missing
-            const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-            const serial = ((count || 0) + 1).toString().padStart(4, '0');
-            
-            let prefix = '70326';
-            if (resolvedProfile.role === 'faculty') prefix = '70326-FAC';
-            if (resolvedProfile.role === 'admin') prefix = '70326-FND';
-            
-            const idNumber = `${prefix}-${serial}`;
-            const updatedDetails = { ...(resolvedProfile.extra_details || {}), id_number: idNumber };
-            
-            await supabase.from('profiles').update({ extra_details: updatedDetails }).eq('id', currentUser.id);
-            resolvedProfile.extra_details = updatedDetails;
-            setProfile({ ...resolvedProfile });
+            try {
+              const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+              const serial = ((count || 0) + 1).toString().padStart(4, '0');
+              
+              let prefix = '70326';
+              if (resolvedProfile.role === 'faculty') prefix = '70326-FAC';
+              if (resolvedProfile.role === 'admin') prefix = '70326-FND';
+              
+              const idNumber = `${prefix}-${serial}`;
+              const updatedDetails = { ...(resolvedProfile.extra_details || {}), id_number: idNumber };
+              
+              await supabase.from('profiles').update({ extra_details: updatedDetails }).eq('id', currentUser.id);
+              resolvedProfile.extra_details = updatedDetails;
+              setProfile({ ...resolvedProfile });
+            } catch (e) {
+              console.warn('Failed to backfill ID', e);
+            }
           }
         } else {
           setProfile(null);

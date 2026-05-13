@@ -154,9 +154,13 @@ const Navbar = () => {
             </button>
             {isAvatarMenuOpen && (
               <div className={cn("absolute bottom-full mb-2 w-48 bg-card/95 backdrop-blur-xl border border-white/10 rounded-xl p-2 shadow-2xl z-[100] flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-2 duration-200", collapsed ? "left-12 bottom-0" : "left-0")}>
-                {profile?.username && (
+                {profile?.username ? (
                   <button onClick={() => { setIsAvatarMenuOpen(false); navigate(`/profile/${profile.username}`); }} className="w-full text-left px-3 py-2.5 text-[10px] font-black uppercase text-primary hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-2">
                     <UserCircle size={14} /> View My Profile
+                  </button>
+                ) : (
+                  <button onClick={() => { setIsAvatarMenuOpen(false); navigate('/student-zone?tab=settings'); }} className="w-full text-left px-3 py-2.5 text-[10px] font-black uppercase text-amber-500 hover:bg-amber-500/5 rounded-lg transition-colors flex items-center gap-2">
+                    <Settings size={14} /> Setup Profile
                   </button>
                 )}
                 {role === 'admin' && (
@@ -275,13 +279,21 @@ const Navbar = () => {
                   </button>
                 ) : (
                   <div className="flex flex-col gap-3">
-                    {profile?.username && (
+                    {profile?.username ? (
                       <NavLink 
                         to={`/profile/${profile.username}`} 
                         onClick={() => setIsMobileMenuOpen(false)}
                         className="w-full py-4 rounded-xl bg-primary/10 text-primary font-black uppercase tracking-widest text-center text-[10px]"
                       >
                         View My Profile
+                      </NavLink>
+                    ) : (
+                      <NavLink 
+                        to="/student-zone?tab=settings" 
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="w-full py-4 rounded-xl bg-amber-500/10 text-amber-500 font-black uppercase tracking-widest text-center text-[10px]"
+                      >
+                        Setup Profile
                       </NavLink>
                     )}
                     {role === 'admin' && (
@@ -354,6 +366,34 @@ const Navbar = () => {
                     {isLoginBusy ? 'Processing...' : (isSignUpMode ? 'Register' : 'Login')}
                   </button>
                 </form>
+
+                <div className="relative my-8">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border"></span>
+                  </div>
+                  <div className="relative flex justify-center text-[10px] font-black uppercase">
+                    <span className="bg-card px-4 text-muted-foreground tracking-[0.3em]">Or Secure Access</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={async () => {
+                    setLoginError('');
+                    setIsLoginBusy(true);
+                    try {
+                      await signInWithGoogle();
+                    } catch (error) {
+                      setLoginError(error.message || 'Google login failed');
+                    } finally {
+                      setIsLoginBusy(false);
+                    }
+                  }}
+                  disabled={isLoginBusy}
+                  className="w-full flex items-center justify-center gap-3 py-4 rounded-xl border border-border bg-white/5 hover:bg-white/10 transition-all font-black uppercase tracking-widest text-[10px] disabled:opacity-50"
+                >
+                  <i className="ri-google-fill text-lg"></i>
+                  <span>Continue with Google</span>
+                </button>
                 
                 <button onClick={() => setIsSignUpMode(!isSignUpMode)} className="w-full mt-6 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
                   {isSignUpMode ? 'Already have an account? Login' : 'New here? Create account'}
