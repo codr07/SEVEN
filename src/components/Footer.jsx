@@ -29,7 +29,7 @@ const Footer = () => {
             <p className="text-muted-foreground leading-relaxed max-w-sm">
               Boost your academia in a completely new way. Where innovation meets education, and your potential knows no bounds. We are dedicated to bridging the gap between learning and industry excellence.
             </p>
-            <div className="flex items-center gap-4 mt-2">
+            {/* <div className="flex items-center gap-4 mt-2">
               {[
                 { icon: 'ri-linkedin-fill', href: '#', bg: 'bg-[#0A66C2]/10', border: 'border-[#0A66C2]/20', text: 'text-[#0A66C2]', hoverBg: 'hover:bg-[#0A66C2]', shadow: 'shadow-[#0A66C2]/10' },
                 { icon: 'ri-twitter-x-line', href: '#', bg: 'bg-foreground/5', border: 'border-foreground/10', text: 'text-foreground', hoverBg: 'hover:bg-foreground', shadow: 'shadow-foreground/5' },
@@ -49,7 +49,7 @@ const Footer = () => {
                   <i className={`${social.icon} ${social.icon.includes('twitter') ? 'text-lg' : 'text-xl'}`}></i>
                 </motion.a>
               ))}
-            </div>
+            </div> */}
           </div>
 
           {/* Quick Links */}
