@@ -23,6 +23,7 @@ const SevenMod = lazy(() => import('./pages/SevenMod'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const UpdateDetail = lazy(() => import('./pages/UpdateDetail'));
+const PaymentGateway = lazy(() => import('./pages/PaymentGateway'));
 
 import Footer from './components/Footer';
 import FloatingUpdates from './components/FloatingUpdates';
@@ -99,6 +100,11 @@ const AppContent = ({ loading, setLoading }) => {
       '/developers': {
         title: 'Developer Portal',
         description: 'Build with 5EVEN. Documentation and API resources for institutional developers.',
+        image: 'https://5even.netlify.app/assets/images/img/banner.png'
+      },
+      '/payment': {
+        title: 'Payment Gateway',
+        description: 'Secure payment gateway for 5EVEN Institution powered by Slice Bank.',
         image: 'https://5even.netlify.app/assets/images/img/banner.png'
       }
     };
@@ -179,6 +185,7 @@ const AppContent = ({ loading, setLoading }) => {
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/updates/:slug" element={<UpdateDetail />} />
+                  <Route path="/payment" element={<PaymentGateway />} />
                 </Routes>
               </Suspense>
             </main>
