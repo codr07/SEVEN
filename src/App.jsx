@@ -24,6 +24,9 @@ const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const UpdateDetail = lazy(() => import('./pages/UpdateDetail'));
 const PaymentGateway = lazy(() => import('./pages/PaymentGateway'));
+const ContiCMS = lazy(() => import('./pages/ContiCMS'));
+const CourseViewer = lazy(() => import('./pages/CourseViewer'));
+const NoteViewer = lazy(() => import('./pages/NoteViewer'));
 
 import Footer from './components/Footer';
 import FloatingUpdates from './components/FloatingUpdates';
@@ -43,7 +46,7 @@ const AppContent = ({ loading, setLoading }) => {
   const { loading: authLoading } = useAuth();
   const { loading: dataLoading } = useData();
   const location = useLocation();
-  const isAdminPage = location.pathname === '/seven-mod';
+  const isAdminPage = location.pathname === '/seven-mod' || location.pathname === '/conti';
 
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -181,6 +184,9 @@ const AppContent = ({ loading, setLoading }) => {
                       <DeveloperDocs />
                     </AdminRoute>
                   } />
+                  <Route path="/conti" element={<ContiCMS />} />
+                  <Route path="/learn/course/:id" element={<CourseViewer />} />
+                  <Route path="/learn/note/:id" element={<NoteViewer />} />
                   <Route path="/seven-mod" element={<SevenMod />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />

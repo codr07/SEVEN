@@ -31,6 +31,7 @@ import { useAlert } from '../context/AlertContext';
 import { supabase, withTimeout, uploadFile } from '../lib/supabase';
 import SignatureButton from '../components/SignatureButton';
 import { X as CloseIcon } from 'lucide-react';
+import { generateInvoicePDF } from '../lib/invoiceGenerator';
 
 const INITIAL_SIGNUP = {
   username: '',
@@ -67,6 +68,7 @@ const StudentZone = () => {
   const [editableProfile, setEditableProfile] = useState(null);
   const [publicPosts, setPublicPosts] = useState([]);
   const [myPosts, setMyPosts] = useState([]);
+  const [myPayments, setMyPayments] = useState([]);
   const [postForm, setPostForm] = useState(INITIAL_POST);
   const [loadingData, setLoadingData] = useState(true);
 
@@ -76,7 +78,7 @@ const StudentZone = () => {
     const requestedTab = searchParams.get('tab');
     if (!requestedTab) return;
 
-    if (requestedTab === 'dashboard' || requestedTab === 'settings' || requestedTab === 'publish') {
+    if (requestedTab === 'dashboard' || requestedTab === 'settings' || requestedTab === 'publish' || requestedTab === 'payments') {
       setActiveTab(requestedTab);
     }
   }, [searchParams]);
@@ -104,7 +106,7 @@ const StudentZone = () => {
       setLoadingData(true);
       try {
         await withTimeout(
-          Promise.all([fetchPublicPosts(), user ? fetchMyPosts() : Promise.resolve()]),
+          Promise.all([fetchPublicPosts(), user ? fetchMyPosts() : Promise.resolve(), user ? fetchMyPayments() : Promise.resolve()]),
           10000,
           'Connection timed out. Trying to fetch the latest work...'
         );
@@ -171,6 +173,26 @@ const StudentZone = () => {
     }
 
     setMyPosts(data || []);
+  };
+
+  const fetchMyPayments = async () => {
+    if (!user?.id) {
+      setMyPayments([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Failed to load my payments:', error);
+      return;
+    }
+
+    setMyPayments(data || []);
   };
 
   const handleAuthSubmit = async (e) => {
@@ -455,6 +477,11 @@ const StudentZone = () => {
     };
   }, [myPosts]);
 
+  const purchasedCourses = useMemo(() => myPayments.filter(p => p.status === 'paid' && p.purpose.includes('[Course]')), [myPayments]);
+  const purchasedServices = useMemo(() => myPayments.filter(p => p.status === 'paid' && p.purpose.includes('[Service]')), [myPayments]);
+  const purchasedAcademics = useMemo(() => myPayments.filter(p => p.status === 'paid' && p.purpose.includes('[Academic]')), [myPayments]);
+
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -667,6 +694,9 @@ const StudentZone = () => {
               <TabButton icon={Globe} active={activeTab === 'explore'} onClick={() => setActiveTab('explore')}>
                 Explore Hall
               </TabButton>
+              <TabButton icon={Activity} active={activeTab === 'payments'} onClick={() => setActiveTab('payments')}>
+                Payments & Alerts
+              </TabButton>
               <TabButton icon={Settings} active={activeTab === 'settings'} onClick={() => setActiveTab('settings')}>
                 Profile Settings
               </TabButton>
@@ -719,6 +749,59 @@ const StudentZone = () => {
                     <StatCard title="Pushed" value={String(stats.pushed)} />
                     <StatCard title="On Hold" value={String(stats.onHold)} />
                   </div>
+
+                  {/* My Digital Access Section */}
+                  {(purchasedCourses.length > 0 || purchasedServices.length > 0 || purchasedAcademics.length > 0) && (
+                    <div className="p-8 rounded-[40px] border border-primary/20 bg-card shadow-2xl relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <FolderGit2 size={120} className="rotate-12" />
+                      </div>
+                      <div className="relative z-10 space-y-6">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-2xl font-black italic tracking-tighter uppercase text-animate-gradient">My Digital Access</h3>
+                          <span className="px-4 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20">
+                            Purchased Products
+                          </span>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          {[
+                            ...purchasedCourses.map(item => {
+                              const title = item.purpose.replace(/\[.*?\]\s*/g, '');
+                              return { ...item, category: 'Course', link: `/learn/course/${encodeURIComponent(title)}` };
+                            }),
+                            ...purchasedServices.map(item => ({ ...item, category: 'Service', link: '/services' })), // Services might still redirect to main since no viewer yet
+                            ...purchasedAcademics.map(item => ({ ...item, category: 'Academic', link: '/academics' })), // Same for academics
+                            // Handle Notes if present in payments
+                            ...myPayments.filter(p => p.status === 'paid' && p.purpose.includes('[Note]')).map(item => {
+                              const title = item.purpose.replace(/\[.*?\]\s*/g, '');
+                              return { ...item, category: 'Note', link: `/learn/note/${encodeURIComponent(title)}` };
+                            })
+                          ].map((item, idx) => {
+                            const title = item.purpose.replace(/\[.*?\]\s*/g, '');
+                            return (
+                              <div key={idx} className="p-5 rounded-2xl border border-border bg-background/50 hover:border-primary/40 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20">
+                                      {item.category}
+                                    </span>
+                                  </div>
+                                  <p className="font-bold text-lg leading-tight uppercase tracking-tight">{title}</p>
+                                </div>
+                                <Link 
+                                  to={item.link}
+                                  className="px-6 py-3 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+                                >
+                                  Access Product <ExternalLink size={14} />
+                                </Link>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Tasks Manifesto Section */}
                   {profile?.extra_details?.academics?.tasks?.length > 0 && (
@@ -788,6 +871,75 @@ const StudentZone = () => {
                               <p className="text-xs text-muted-foreground uppercase tracking-widest mt-1">{item.submission_type}</p>
                             </div>
                             <StatusBadge pushed={item.is_pushed} status={item.moderation_status} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'payments' && (
+                <motion.div key="payments" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+                  <div className="p-6 rounded-3xl border border-border bg-card shadow-xl">
+                    <h3 className="text-xl font-black mb-4">Payment History & Alerts</h3>
+                    {myPayments.length === 0 ? (
+                      <p className="text-muted-foreground text-sm">No payments found.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {myPayments.map((item) => (
+                          <div key={item.id} className="p-4 rounded-2xl border border-border bg-background flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden group">
+                            {item.status === 'paid' && <div className="absolute top-0 right-0 w-24 h-24 bg-green-500/5 rounded-bl-full pointer-events-none" />}
+                            <div>
+                              <p className="font-bold text-lg">₹{item.amount}</p>
+                              {(() => {
+                                const cleanPurpose = item.purpose ? item.purpose.replace(/\[.*?\]\s*/g, '').trim() : '';
+                                const isCourse = item.purpose ? item.purpose.toLowerCase().includes('[course]') : false;
+                                const isNote = item.purpose ? item.purpose.toLowerCase().includes('[note]') : false;
+                                const hasCert = item.purpose ? item.purpose.toLowerCase().includes('[cert]') : false;
+                                return (
+                                  <div className="flex flex-col gap-1.5 mt-1">
+                                    <p className="text-sm font-bold text-foreground">{cleanPurpose}</p>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      {isCourse && (
+                                        <span className="px-2 py-0.5 rounded text-[8px] font-black bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider">
+                                          Course
+                                        </span>
+                                      )}
+                                      {isNote && (
+                                        <span className="px-2 py-0.5 rounded text-[8px] font-black bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase tracking-wider">
+                                          Study Material
+                                        </span>
+                                      )}
+                                      {hasCert && (
+                                        <span className="px-2 py-0.5 rounded text-[8px] font-black bg-secondary/10 text-secondary border border-secondary/20 uppercase tracking-wider">
+                                          Certification Included
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                              <div className="flex items-center gap-4 flex-wrap mt-2">
+                                <p className="text-[10px] text-muted-foreground opacity-50 uppercase tracking-widest">TXN ID: {item.transaction_id}</p>
+                                <button 
+                                  onClick={async () => await generateInvoicePDF(item, profile || { full_name: user?.email?.split('@')[0], email: user?.email })}
+                                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest text-primary border border-primary/20 hover:bg-primary hover:text-white hover:border-primary active:scale-[0.98] transition-all duration-300"
+                                >
+                                  <FileText size={10} /> {item.status === 'paid' ? 'Tax Invoice' : 'Proforma Bill'}
+                                </button>
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-2 shrink-0">
+                              <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
+                                  item.status === 'paid' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
+                                  item.status === 'unpaid' ? 'bg-destructive/10 text-destructive border-destructive/20' : 
+                                  'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                }`}>
+                                  {item.status}
+                              </span>
+                              <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{new Date(item.created_at).toLocaleDateString()}</p>
+                            </div>
                           </div>
                         ))}
                       </div>

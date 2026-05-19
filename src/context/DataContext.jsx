@@ -45,7 +45,23 @@ export const DataProvider = ({ children }) => {
 
       setAcademics(filterVisible(aca.data || []));
       setCourses(filterVisible(crs.data || []));
-      setNotes(filterVisible(nts.data || []));
+      
+      const notesWithPrice = (nts.data || []).map(n => {
+        let priceVal = null;
+        if (n.extra_details) {
+          let details = n.extra_details;
+          if (typeof details === 'string') {
+            try { details = JSON.parse(details); } catch {}
+          }
+          priceVal = details?.price;
+        }
+        return {
+          ...n,
+          price: priceVal || null
+        };
+      });
+      setNotes(filterVisible(notesWithPrice));
+      
       setServices(filterVisible(srv.data || []));
       setFaculty(filterVisible(fac.data || []));
       setFounders(filterVisible(fnd.data || []));

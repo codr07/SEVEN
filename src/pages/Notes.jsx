@@ -5,6 +5,7 @@ import { supabase, withTimeout, filterVisible, orderedFetch } from '../lib/supab
 import { useData } from '../context/DataContext';
 import { Link } from 'react-router-dom';
 import { useAlert } from '../context/AlertContext';
+import { useAuth } from '../context/AuthContext';
 import MergedShape from '../components/MergedShape';
 import SignatureButton from '../components/SignatureButton';
 import SignatureShareButton from '../components/SignatureShareButton';
@@ -12,9 +13,22 @@ import SignatureShareButton from '../components/SignatureShareButton';
 const Notes = () => {
   const { showAlert } = useAlert();
   const { notes, loading, error: errorMsg } = useData();
+  const { user, role } = useAuth();
+  const [payments, setPayments] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      supabase.from('payments').select('status, purpose').eq('user_id', user.id)
+        .then(({ data }) => {
+          if (data) setPayments(data);
+        });
+    } else {
+      setPayments([]);
+    }
+  }, [user]);
 
   const filteredNotes = notes.filter(note => {
     const matchesSearch = !searchQuery || 
@@ -133,6 +147,11 @@ const Notes = () => {
                     ? note.extra_details.details 
                     : (note.short_desc ? [note.short_desc] : []);
 
+                  const isPrivileged = role === 'admin' || role === 'faculty' || role === 'visionary' || role === 'founder';
+                  const targetPurpose = `[Note] ${note.title}`;
+                  const hasPaid = payments.some(p => p.status === 'paid' && (p.purpose === targetPurpose || p.purpose.includes(note.title)));
+                  const linkTarget = (hasPaid || isPrivileged) ? `/learn/note/${encodeURIComponent(note.id)}` : `/notes/${note.id}`;
+
                   return (
                     <motion.div
                       key={note.id}
@@ -142,7 +161,7 @@ const Notes = () => {
                       transition={{ duration: 0.5, delay: idx * 0.1 }}
                       className="flex justify-center"
                     >
-                      <Link to={`/notes/${note.id}`} className="group relative block transition-all duration-500 hover:scale-[1.02]">
+                      <Link to={linkTarget} className="group relative block transition-all duration-500 hover:scale-[1.02]">
                         <MergedShape height={520}>
                            {/* Category Vertical Indicator (Left Side) */}
                            <div className="absolute left-0 top-0 bottom-0 w-10 flex flex-col items-center py-8 bg-accent/5 border-r border-white/10 z-10 rounded-l-[32px]">
@@ -194,7 +213,13 @@ const Notes = () => {
                                     <Clock size={14} />
                                     <span>{note.date || 'Jan 2026'}</span>
                                   </div>
-                                  <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Digital Vault Entry</span>
+                                  <span className="text-xl font-black text-white">
+                                    {note.price && note.price !== 'FREE'
+                                      ? (note.price.includes('₹') || note.price.toLowerCase().includes('inr')
+                                          ? note.price 
+                                          : `₹${note.price}`)
+                                      : 'FREE'}
+                                  </span>
                                 </div>
                                 <SignatureButton label="Enter" />
                               </div>

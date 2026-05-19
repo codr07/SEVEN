@@ -72,6 +72,7 @@ let globalSessionPromise = null;
               id: currentUser.id,
               username: username,
               full_name: meta.full_name || meta.name || '',
+              email: currentUser.email,
               phone: meta.phone || '',
               avatar_url: meta.avatar_url || meta.picture || '',
               gender: meta.gender || '',
@@ -97,8 +98,21 @@ let globalSessionPromise = null;
             
             // Final check/sync
             resolvedProfile = await fetchProfile(currentUser.id);
-          } else if (!resolvedProfile.extra_details?.id_number) {
-            // Backfill ID if missing
+          }
+
+          // Backfill email if missing in profiles table
+          if (resolvedProfile && !resolvedProfile.email && currentUser.email) {
+            try {
+              await supabase.from('profiles').update({ email: currentUser.email }).eq('id', currentUser.id);
+              resolvedProfile.email = currentUser.email;
+              setProfile({ ...resolvedProfile });
+            } catch (e) {
+              console.warn('Failed to backfill email', e);
+            }
+          }
+
+          // Backfill ID if missing
+          if (resolvedProfile && !resolvedProfile.extra_details?.id_number) {
             try {
               const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
               const serial = ((count || 0) + 1).toString().padStart(4, '0');

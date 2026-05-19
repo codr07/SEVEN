@@ -139,10 +139,10 @@ const ServiceDetail = () => {
               </div>
 
               <Link
-                to="/contact"
+                to={`/payment?amount=${String(service.price || '').replace(/[^0-9.]/g, '')}&purpose=${encodeURIComponent('[Service] ' + (view.title || service.title))}`}
                 className="inline-flex w-full items-center justify-center rounded-xl bg-foreground px-6 py-5 text-base font-black uppercase tracking-widest text-background shadow-lg hover:-translate-y-1 hover:bg-secondary transition-all duration-300"
               >
-                Inquire Now
+                Purchase Now
               </Link>
             </aside>
           </div>

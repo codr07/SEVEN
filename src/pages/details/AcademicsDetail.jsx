@@ -156,7 +156,7 @@ const AcademicsDetail = () => {
               </div>
 
               <Link
-                to="/contact"
+                to={`/payment?amount=${String(academic.price || '').replace(/[^0-9.]/g, '')}&purpose=${encodeURIComponent('[Academic] ' + academic.title)}`}
                 className="inline-flex w-full items-center justify-center rounded-xl bg-green-600 px-6 py-5 text-base font-black uppercase tracking-widest text-white shadow-xl shadow-primary/20 hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
               >
                 Enroll Now

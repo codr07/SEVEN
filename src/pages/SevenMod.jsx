@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
+
 import GlassSelect from '../components/GlassSelect';
 import {
   AlertCircle,
@@ -78,7 +79,8 @@ const CONTENT_TABLES = [
 const ALL_TABLES = [
   ...CONTENT_TABLES,
   { id: 'profiles', name: 'Users' },
-  { id: 'student_submissions', name: 'Submissions' }
+  { id: 'student_submissions', name: 'Submissions' },
+  { id: 'payments', name: 'Payments' }
 ];
 
 const ADMIN_TABS = [
@@ -87,6 +89,7 @@ const ADMIN_TABS = [
   { id: 'workflow_designer', name: 'Workflow Designer', icon: Settings },
   { id: 'users', name: 'Users & Roles', icon: Users },
   { id: 'student_submissions', name: 'Student Submissions', icon: Upload },
+  { id: 'payments', name: 'Payments', icon: Activity },
 ];
 
 const LoginScreen = ({ onLogin }) => {
@@ -165,6 +168,7 @@ const SevenMod = () => {
   const [tableData, setTableData] = useState([]);
   const [users, setUsers] = useState([]);
   const [submissions, setSubmissions] = useState([]);
+  const [paymentsList, setPaymentsList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState([]);
   const [graphTimeframes, setGraphTimeframes] = useState({});
@@ -269,6 +273,10 @@ const SevenMod = () => {
     }
     if (activeTab === 'student_submissions') {
       fetchSubmissions();
+      return;
+    }
+    if (activeTab === 'payments') {
+      fetchPayments();
       return;
     }
 
@@ -453,6 +461,83 @@ const SevenMod = () => {
     }
   };
 
+  const fetchPayments = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await fetchRowsWithCreatedAtFallback('payments');
+      if (error) throw error;
+      
+      const userIds = [...new Set((data || []).map((item) => item.user_id).filter(Boolean))];
+      let profilesMap = {};
+      
+      if (userIds.length) {
+        const { data: profileRows } = await adminSupabase
+          .from('profiles')
+          .select('id, full_name, username, email')
+          .in('id', userIds);
+          
+        profilesMap = (profileRows || []).reduce((acc, row) => {
+          acc[row.id] = row;
+          return acc;
+        }, {});
+      }
+      
+      setPaymentsList((data || []).map(item => ({
+        ...item,
+        user_profile: profilesMap[item.user_id] || null
+      })));
+    } catch (err) {
+      console.error('Failed to fetch payments:', err);
+      setPaymentsList([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updatePaymentStatus = async (id, status) => {
+    const { error } = await adminSupabase
+      .from('payments')
+      .update({ status })
+      .eq('id', id);
+      
+    if (error) {
+      showAlert(error.message, 'error');
+      return;
+    }
+
+    // If status is 'paid', find the payment in paymentsList and send email
+    if (status === 'paid') {
+      const paymentItem = paymentsList.find(p => p.id === id);
+      if (paymentItem && paymentItem.user_profile?.email) {
+        const title = paymentItem.purpose.replace(/\[.*?\]\s*/g, '');
+        const amount = paymentItem.amount;
+        const user_email = paymentItem.user_profile.email;
+        const user_name = paymentItem.user_profile.full_name || paymentItem.user_profile.username || 'Student';
+        
+        adminSupabase.functions.invoke('send-email', {
+          body: {
+            type: 'purchase_confirmation',
+            email: user_email,
+            name: user_name,
+            purpose: paymentItem.purpose,
+            amount: `₹${amount}`,
+            transaction_id: paymentItem.transaction_id || paymentItem.id,
+            origin: window.location.origin
+          }
+        })
+        .then((res) => {
+          if (res.error) throw res.error;
+          console.log('Purchase confirmation email sent successfully via Supabase!', res.data);
+        })
+        .catch((err) => {
+          console.error('Failed to send email via Supabase:', err);
+        });
+      }
+    }
+    
+    setPaymentsList(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+  };
+
   const removeItem = async (tableName, id) => {
     showConfirm('Delete this item?', async () => {
       const { error } = await adminSupabase.from(tableName).delete().eq('id', id);
@@ -465,6 +550,8 @@ const SevenMod = () => {
         fetchSubmissions();
       } else if (tableName === 'profiles') {
         fetchUsers();
+      } else if (tableName === 'payments') {
+        fetchPayments();
       } else {
         fetchTable(tableName);
       }
@@ -1025,6 +1112,96 @@ const SevenMod = () => {
             )}
           </section>
         )}
+
+        {activeTab === 'payments' && (
+          <section>
+            {loading ? (
+              <div className="h-56 flex items-center justify-center">
+                <Loader2 className="animate-spin text-primary" />
+              </div>
+            ) : paymentsList.length === 0 ? (
+              <EmptyState text="No payments found." />
+            ) : (
+              <div className="space-y-3">
+                {paymentsList.map((item) => (
+                  <div key={item.id} className="p-4 rounded-2xl border border-border bg-card flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-black text-lg">₹{item.amount}</p>
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                          item.status === 'paid' ? 'bg-green-500/10 text-green-500' : 
+                          item.status === 'unpaid' ? 'bg-destructive/10 text-destructive' : 
+                          'bg-amber-500/10 text-amber-500'
+                        }`}>
+                          {item.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1 mb-2">
+                        {item.purpose?.toLowerCase().includes('[course]') && (
+                          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 text-[8px] font-black uppercase tracking-widest border border-blue-500/20">
+                            Course
+                          </span>
+                        )}
+                        {item.purpose?.toLowerCase().includes('[note]') && (
+                          <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-500 text-[8px] font-black uppercase tracking-widest border border-indigo-500/20">
+                            Note
+                          </span>
+                        )}
+                        {item.purpose?.toLowerCase().includes('[service]') && (
+                          <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-500 text-[8px] font-black uppercase tracking-widest border border-purple-500/20">
+                            Service
+                          </span>
+                        )}
+                        {item.purpose?.toLowerCase().includes('[academic]') && (
+                          <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest border border-emerald-500/20">
+                            Academic
+                          </span>
+                        )}
+                        {item.purpose?.toLowerCase().includes('[cert]') && (
+                          <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[8px] font-black uppercase tracking-widest border border-amber-500/20">
+                            Certification
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-bold text-foreground text-sm uppercase tracking-tight mb-1">
+                        {item.purpose ? item.purpose.replace(/\[.*?\]\s*/g, '').trim() : ''}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        User: {item.user_profile?.full_name || item.user_profile?.username || 'Unknown'} • TXN ID: {item.transaction_id}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="text-[9px] font-bold text-muted-foreground mb-2">
+                        {new Date(item.created_at).toLocaleString()}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <GlassSelect
+                          value={item.status || 'pending'}
+                          onChange={(val) => updatePaymentStatus(item.id, val)}
+                          options={[
+                            { value: 'pending', label: 'Pending' },
+                            { value: 'paid', label: 'Paid' },
+                            { value: 'unpaid', label: 'Unpaid' }
+                          ]}
+                          className="w-32 h-9 text-xs"
+                        />
+                        <button
+                          onClick={() => removeItem('payments', item.id)}
+                          className="px-3 py-2 rounded-xl border border-destructive/40 text-destructive hover:bg-destructive/10 transition-all"
+                          title="Delete payment"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
         {activeTab === 'workflow_designer' && (
           <section className="space-y-8">
             <div className="flex flex-col gap-2">
@@ -1823,6 +2000,7 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
           { name: 'date', type: 'text', label: 'Date' },
           { name: 'link', type: 'text', label: 'Link' },
           { name: 'cover_image', type: 'text', label: 'Cover Image URL' },
+          { name: 'extra_details.price', type: 'text', label: 'Price (e.g. ₹499 or FREE)', required: true },
           { name: 'extra_details.details', type: 'string_array', label: 'Note Highlights (Comma separated)' },
           { name: 'extra_details.detailed_description', type: 'textarea', label: 'Detailed Note Details' },
         ];

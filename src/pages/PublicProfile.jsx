@@ -389,6 +389,42 @@ const PublicProfile = () => {
           data.extra_details.projects = data.extra_details.projects || [];
         }
 
+        // Fetch Payments for Products
+        const { data: paymentsData } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('user_id', data.id)
+          .eq('status', 'paid');
+
+        if (paymentsData) {
+          const courses = paymentsData
+            .filter(p => p.purpose.includes('[Course]'))
+            .map(p => ({
+              name: p.purpose.replace(/\[.*?\]\s*/g, ''),
+              progress: 0
+            }));
+          
+          if (courses.length > 0) {
+            data.extra_details.enrolled_courses = courses;
+          }
+
+          const services = paymentsData
+            .filter(p => p.purpose.includes('[Service]'))
+            .map(p => p.purpose.replace(/\[.*?\]\s*/g, ''));
+
+          if (services.length > 0) {
+            data.extra_details.services = services;
+          }
+
+          const academicsData = paymentsData.filter(p => p.purpose.includes('[Academic]'));
+          if (academicsData.length > 0) {
+              data.extra_details.academics = { 
+                ...(data.extra_details.academics || {}), 
+                attendance: data.extra_details.academics?.attendance ?? 100 
+              };
+          }
+        }
+
         setProfile(data);
 
         // Update Metadata

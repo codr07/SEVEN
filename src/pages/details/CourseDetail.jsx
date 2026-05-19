@@ -1,16 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase, withTimeout } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 import { updateMetadata } from '../../lib/seo';
 import { Loader2, ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
 
 const CourseDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [includeCert, setIncludeCert] = useState(false);
+  const { user, role } = useAuth();
+  const [paymentStatus, setPaymentStatus] = useState(null);
+
+  const isPrivileged = role === 'admin' || role === 'faculty' || role === 'visionary' || role === 'founder';
+  const isPaid = paymentStatus === 'paid' || isPrivileged;
 
   useEffect(() => {
-    async function fetchCourse() {
+    if (!loading && course && isPaid) {
+      navigate(`/learn/course/${encodeURIComponent(course.id)}`, { replace: true });
+    }
+  }, [loading, course, isPaid, navigate]);
+
+  useEffect(() => {
+    async function fetchCourseAndPayment() {
       try {
         const { data, error } = await withTimeout(
           supabase.from('courses').select('*').eq('id', id).single(),
@@ -26,14 +40,32 @@ const CourseDetail = () => {
           description: data.extra_details?.short_desc || data.short_desc || 'Enroll in this mastery program at 5EVEN Institution.',
           image: data.extra_details?.cover || data.thumbnail || 'https://5even.netlify.app/assets/images/img/banner.png'
         });
+
+        // Fetch payment status
+        if (user && data) {
+          const { data: payments, error: paymentError } = await supabase
+            .from('payments')
+            .select('status, purpose')
+            .eq('user_id', user.id);
+            
+          if (!paymentError && payments) {
+            const targetPurpose = `[Course] ${data.name}`;
+            const targetCertPurpose = `[Course] [Cert] ${data.name}`;
+            
+            const match = payments.find(p => p.purpose === targetPurpose || p.purpose === targetCertPurpose || p.purpose.includes(data.name));
+            if (match) {
+              setPaymentStatus(match.status);
+            }
+          }
+        }
       } catch (err) {
         console.error('Error fetching course detail:', err);
       } finally {
         setLoading(false);
       }
     }
-    fetchCourse();
-  }, [id]);
+    fetchCourseAndPayment();
+  }, [id, user]);
 
   if (loading) {
     return (
@@ -58,6 +90,11 @@ const CourseDetail = () => {
   // Parse extra_details block
   const view = course.extra_details || {};
   const coverUrl = view.cover || course.thumbnail || course.image_url || course.cover_image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop';
+  
+  const basePriceNum = parseFloat(String(course.price || '0').replace(/[^0-9.]/g, '')) || 0;
+  const certPriceNum = parseFloat(String(view.certification_cost || '0').replace(/[^0-9.]/g, '')) || 0;
+  const finalPrice = includeCert && view.certification_available ? basePriceNum + certPriceNum : basePriceNum;
+  const finalPurpose = `[Course] ${includeCert && view.certification_available ? '[Cert] ' : ''}${view.title || course.name}`;
 
   return (
     <div className="min-h-screen w-full bg-background pb-20 pt-32 px-4 md:px-8 text-foreground">
@@ -138,7 +175,7 @@ const CourseDetail = () => {
                   <div className="text-6xl font-black">₹</div>
                 </div>
                 <p className="text-xs font-bold uppercase tracking-widest text-primary">Total Price</p>
-                <p className="mt-2 text-4xl font-black text-foreground">{course.price}</p>
+                <p className="mt-2 text-4xl font-black text-foreground">₹{finalPrice.toFixed(2)}</p>
               </div>
 
               <div className="rounded-2xl border border-border bg-background p-6 shadow-sm">
@@ -154,16 +191,48 @@ const CourseDetail = () => {
                   <p className="text-sm font-medium text-muted-foreground">Exam Cost</p>
                   <p className="font-bold text-foreground">{view.certification_cost || "N/A"}</p>
                 </div>
+                
+                {view.certification_available && (
+                  <label className="mt-4 pt-4 border-t border-border flex items-start gap-3 cursor-pointer group">
+                    <div className="relative flex items-center justify-center shrink-0 mt-0.5">
+                      <input 
+                        type="checkbox" 
+                        className="peer appearance-none w-5 h-5 border-2 border-muted-foreground/30 rounded checked:bg-primary checked:border-primary transition-all"
+                        checked={includeCert}
+                        onChange={(e) => setIncludeCert(e.target.checked)}
+                      />
+                      <CheckCircle2 size={14} className="absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">Include Official Certification</p>
+                      <p className="text-[10px] font-medium text-muted-foreground mt-1">Get an official, verifiable certificate upon passing the final exam.</p>
+                    </div>
+                  </label>
+                )}
               </div>
 
-              <a
-                href={course.link || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex w-full items-center justify-center rounded-xl bg-green-600 px-6 py-5 text-base font-black uppercase tracking-widest text-white shadow-xl shadow-primary/20 hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
-              >
-                Enroll Now
-              </a>
+              {isPaid ? (
+                <Link
+                  to={`/learn/course/${encodeURIComponent(course.id)}`}
+                  className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-6 py-5 text-base font-black uppercase tracking-widest text-white shadow-xl shadow-primary/20 hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+                >
+                  Access Course
+                </Link>
+              ) : paymentStatus === 'pending' ? (
+                <button
+                  disabled
+                  className="inline-flex w-full items-center justify-center rounded-xl bg-amber-500/20 border border-amber-500/40 px-6 py-5 text-base font-black uppercase tracking-widest text-amber-500 cursor-not-allowed shadow-none"
+                >
+                  Payment Pending Approval
+                </button>
+              ) : (
+                <Link
+                  to={`/payment?amount=${finalPrice}&purpose=${encodeURIComponent(finalPurpose)}`}
+                  className="inline-flex w-full items-center justify-center rounded-xl bg-green-600 px-6 py-5 text-base font-black uppercase tracking-widest text-white shadow-xl shadow-primary/20 hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+                >
+                  Enroll Now
+                </Link>
+              )}
             </aside>
           </div>
         </section>

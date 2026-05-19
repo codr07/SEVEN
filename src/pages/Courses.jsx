@@ -5,6 +5,7 @@ import { Loader2, BookOpen, Clock, Star, Share2, Search, Filter, ArrowRight, Che
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useAlert } from '../context/AlertContext';
+import { useAuth } from '../context/AuthContext';
 import MergedShape from '../components/MergedShape';
 import SignatureButton from '../components/SignatureButton';
 import SignatureShareButton from '../components/SignatureShareButton';
@@ -12,9 +13,22 @@ import SignatureShareButton from '../components/SignatureShareButton';
 const Courses = () => {
   const { showAlert } = useAlert();
   const { courses, loading, error: errorMsg } = useData();
+  const { user, role } = useAuth();
+  const [payments, setPayments] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      supabase.from('payments').select('status, purpose').eq('user_id', user.id)
+        .then(({ data }) => {
+          if (data) setPayments(data);
+        });
+    } else {
+      setPayments([]);
+    }
+  }, [user]);
 
   const filteredCourses = courses.filter(course => {
     const matchesSearch = !searchQuery || 
@@ -125,9 +139,12 @@ const Courses = () => {
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24">
                 {items.map((course, idx) => {
-                  const details = Array.isArray(course.extra_details?.details) 
-                    ? course.extra_details.details 
-                    : (course.short_desc ? [course.short_desc] : []);
+                  const isPrivileged = role === 'admin' || role === 'faculty' || role === 'visionary' || role === 'founder';
+                  const targetPurpose = `[Course] ${course.name}`;
+                  const targetCertPurpose = `[Course] [Cert] ${course.name}`;
+                  const hasPaid = payments.some(p => p.status === 'paid' && (p.purpose === targetPurpose || p.purpose === targetCertPurpose || p.purpose.includes(course.name)));
+                  const linkTarget = (hasPaid || isPrivileged) ? `/learn/course/${encodeURIComponent(course.id)}` : `/courses/${course.id}`;
+                  const details = course.extra_details?.details || [course.short_desc] || [];
 
                   return (
                     <motion.div
@@ -138,7 +155,7 @@ const Courses = () => {
                       transition={{ duration: 0.5, delay: idx * 0.1 }}
                       className="flex justify-center"
                     >
-                      <Link to={`/courses/${course.id}`} className="group relative block transition-all duration-500 hover:scale-[1.02]">
+                      <Link to={linkTarget} className="group relative block transition-all duration-500 hover:scale-[1.02]">
                         <MergedShape height={520}>
                            {/* Category Vertical Indicator (Left Side) */}
                            <div className="absolute left-0 top-0 bottom-0 w-10 flex flex-col items-center py-8 bg-accent/5 border-r border-white/10 z-10 rounded-l-[32px]">
@@ -192,7 +209,13 @@ const Courses = () => {
                                      <Clock size={14} />
                                      <span>{course.duration || '8 Weeks'}</span>
                                    </div>
-                                   <span className="text-xl font-black text-white">{course.price || 'FREE'}</span>
+                                   <span className="text-xl font-black text-white">
+                                     {course.price && course.price !== 'FREE'
+                                       ? (course.price.includes('₹') || course.price.toLowerCase().includes('inr')
+                                           ? course.price 
+                                           : `₹${course.price}`)
+                                       : 'FREE'}
+                                   </span>
                                  </div>
                                  <SignatureButton label="Enroll" />
                                </div>

@@ -1,16 +1,29 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase, withTimeout } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 import { updateMetadata } from '../../lib/seo';
 import { Loader2, ArrowLeft, ExternalLink } from 'lucide-react';
 
 const NoteDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [note, setNote] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { user, role } = useAuth();
+  const [paymentStatus, setPaymentStatus] = useState(null);
+
+  const isPrivileged = role === 'admin' || role === 'faculty' || role === 'visionary' || role === 'founder';
+  const isPaid = paymentStatus === 'paid' || isPrivileged;
 
   useEffect(() => {
-    async function fetchNote() {
+    if (!loading && note && isPaid) {
+      navigate(`/learn/note/${encodeURIComponent(note.id)}`, { replace: true });
+    }
+  }, [loading, note, isPaid, navigate]);
+
+  useEffect(() => {
+    async function fetchNoteAndPayment() {
       try {
         const { data, error } = await withTimeout(
           supabase.from('notes').select('*').eq('id', id).single(),
@@ -18,7 +31,20 @@ const NoteDetail = () => {
           'Could not load note details. Please try again.'
         );
         if (error) throw error;
-        setNote(data);
+        
+        let priceVal = null;
+        if (data.extra_details) {
+          let details = data.extra_details;
+          if (typeof details === 'string') {
+            try { details = JSON.parse(details); } catch {}
+          }
+          priceVal = details?.price;
+        }
+        const noteWithPrice = {
+          ...data,
+          price: priceVal || data.price
+        };
+        setNote(noteWithPrice);
         
         // Update Metadata
         updateMetadata({
@@ -26,14 +52,30 @@ const NoteDetail = () => {
           description: data.extra_details?.short_desc || data.short_desc || 'Access this premium study resource at 5EVEN Institution.',
           image: data.extra_details?.cover || data.thumbnail || 'https://5even.netlify.app/assets/images/img/banner.png'
         });
+
+        // Fetch payment status
+        if (user && data) {
+          const { data: payments, error: paymentError } = await supabase
+            .from('payments')
+            .select('status, purpose')
+            .eq('user_id', user.id);
+            
+          if (!paymentError && payments) {
+            const targetPurpose = `[Note] ${data.title}`;
+            const match = payments.find(p => p.purpose === targetPurpose || p.purpose.includes(data.title));
+            if (match) {
+              setPaymentStatus(match.status);
+            }
+          }
+        }
       } catch (err) {
         console.error('Error fetching note detail:', err);
       } finally {
         setLoading(false);
       }
     }
-    fetchNote();
-  }, [id]);
+    fetchNoteAndPayment();
+  }, [id, user]);
 
   if (loading) {
     return (
@@ -136,14 +178,28 @@ const NoteDetail = () => {
                 <p className="mt-3 text-sm font-medium text-muted-foreground">Digital files will be shared securely via standard Topmate protocol upon clicking Open Resource.</p>
               </div>
 
-              <a 
-                href={note.link || "#"} 
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="inline-flex w-full items-center justify-center gap-3 rounded-xl bg-foreground px-6 py-5 text-base font-black uppercase tracking-widest text-background shadow-lg hover:-translate-y-1 hover:bg-accent transition-all duration-300"
-              >
-                <ExternalLink size={20} /> Open Resource
-              </a>
+              {isPaid ? (
+                <Link 
+                  to={`/learn/note/${encodeURIComponent(note.id)}`}
+                  className="inline-flex w-full items-center justify-center gap-3 rounded-xl bg-primary px-6 py-5 text-base font-black uppercase tracking-widest text-white shadow-lg hover:-translate-y-1 transition-all duration-300"
+                >
+                  Access Note
+                </Link>
+              ) : paymentStatus === 'pending' ? (
+                <button
+                  disabled
+                  className="inline-flex w-full items-center justify-center rounded-xl bg-amber-500/20 border border-amber-500/40 px-6 py-5 text-base font-black uppercase tracking-widest text-amber-500 cursor-not-allowed shadow-none"
+                >
+                  Payment Pending Approval
+                </button>
+              ) : (
+                <Link 
+                  to={`/payment?amount=${String(note.price || '0').replace(/[^0-9.]/g, '')}&purpose=${encodeURIComponent('[Note] ' + (view.title || note.title))}`}
+                  className="inline-flex w-full items-center justify-center gap-3 rounded-xl bg-foreground px-6 py-5 text-base font-black uppercase tracking-widest text-background shadow-lg hover:-translate-y-1 hover:bg-accent transition-all duration-300"
+                >
+                  Purchase Access
+                </Link>
+              )}
             </aside>
           </div>
         </section>
