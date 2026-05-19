@@ -28,6 +28,13 @@ import {
   GraduationCap,
   Briefcase,
   Target,
+  Mail,
+  Lock,
+  ChevronRight,
+  ChevronLeft,
+  ArrowRight,
+  ArrowLeft,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
@@ -209,13 +216,34 @@ const StudentZone = () => {
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
 
-    if (authMode === 'signup' && signupStep === 1) {
-      if (!signupData.username || !signupData.fullName || !signupData.phone || !email || !password) {
-        setMessage({ text: 'Please fill in all credential fields.', type: 'error' });
+    if (authMode === 'signup') {
+      if (signupStep === 1) {
+        if (!signupData.fullName || !signupData.username || !signupData.phone) {
+          setMessage({ text: 'Please fill in all identity fields.', type: 'error' });
+          return;
+        }
+        setMessage({ text: '', type: '' });
+        setSignupStep(2);
         return;
       }
-      setSignupStep(2);
-      return;
+      if (signupStep === 2) {
+        if (!email || !password) {
+          setMessage({ text: 'Please fill in your email and password.', type: 'error' });
+          return;
+        }
+        setMessage({ text: '', type: '' });
+        setSignupStep(3);
+        return;
+      }
+      if (signupStep === 3) {
+        if (!signupData.user_type) {
+          setMessage({ text: 'Please select your profile persona track.', type: 'error' });
+          return;
+        }
+        setMessage({ text: '', type: '' });
+        setSignupStep(4);
+        return;
+      }
     }
 
     setIsBusy(true);
@@ -594,205 +622,456 @@ const StudentZone = () => {
                   Sign Up
                 </button>
               </div>
+              {authMode === 'signup' && (
+                <div className="flex items-center justify-between mb-8 relative px-2">
+                  {/* Background Track Line */}
+                  <div className="absolute top-1/2 left-4 right-4 h-[2px] bg-border/40 -translate-y-1/2 z-0" />
+                  {/* Active Progress Line */}
+                  <div 
+                    className="absolute top-1/2 left-4 h-[2px] bg-gradient-to-r from-primary to-violet-500 -translate-y-1/2 z-0 transition-all duration-500 shadow-[0_0_10px_rgba(139,92,246,0.3)]" 
+                    style={{ width: `${((signupStep - 1) / 3) * 88}%` }}
+                  />
+                  
+                  {[
+                    { step: 1, label: 'Identity' },
+                    { step: 2, label: 'Access' },
+                    { step: 3, label: 'Track' },
+                    { step: 4, label: 'Specialty' }
+                  ].map((s) => (
+                    <div key={s.step} className="flex flex-col items-center relative z-10">
+                      <motion.div 
+                        animate={{
+                          scale: signupStep === s.step ? 1.15 : 1.0,
+                        }}
+                        transition={{ duration: 0.3 }}
+                        className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs border transition-all duration-300 ${
+                          signupStep === s.step 
+                            ? 'bg-primary border-primary text-white shadow-lg shadow-primary/25' 
+                            : signupStep > s.step 
+                              ? 'bg-foreground border-foreground text-background' 
+                              : 'bg-background border-border text-muted-foreground'
+                        }`}
+                      >
+                        {signupStep > s.step ? '✓' : s.step}
+                      </motion.div>
+                      <span className={`text-[8px] font-black uppercase tracking-widest mt-2 hidden sm:block ${signupStep === s.step ? 'text-primary' : 'text-muted-foreground'}`}>
+                        {s.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <form onSubmit={handleAuthSubmit} className="space-y-4">
                 {authMode === 'signup' ? (
-                  signupStep === 1 ? (
-                    <>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Name</label>
-                        <input
-                          type="text"
-                          required
-                          value={signupData.fullName}
-                          onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
-                          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                          placeholder="John Doe"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Username</label>
-                        <input
-                          type="text"
-                          required
-                          value={signupData.username}
-                          onChange={(e) => setSignupData({ ...signupData, username: e.target.value })}
-                          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                          placeholder="johndoe"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Phone</label>
-                        <input
-                          type="text"
-                          required
-                          value={signupData.phone}
-                          onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
-                          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                          placeholder="+91 ..."
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email</label>
-                        <input
-                          type="email"
-                          required
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                          placeholder="email@example.com"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Password</label>
-                        <input
-                          type="password"
-                          required
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                          placeholder="••••••••"
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        className="w-full py-4 bg-foreground text-background rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all mt-4"
+                  <AnimatePresence mode="wait">
+                    {signupStep === 1 && (
+                      <motion.div
+                        key="step1"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="space-y-4"
                       >
-                        Next: Choose Track
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="space-y-4">
-                        <div className="text-center space-y-1">
-                          <h4 className="text-[11px] font-black uppercase tracking-widest text-primary">Step 2: Choose Your Profile Track</h4>
-                          <p className="text-[9px] text-muted-foreground uppercase font-medium">Select your professional or academic track.</p>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 gap-3">
-                          {/* Student Card */}
-                          <button
-                            type="button"
-                            onClick={() => setSignupData(prev => ({ ...prev, user_type: 'student', user_subtype: '' }))}
-                            className={`p-4 rounded-2xl border text-left transition-all duration-300 flex items-start gap-3 hover:-translate-y-0.5 hover:shadow-lg ${
-                              signupData.user_type === 'student'
-                                ? 'border-primary bg-primary/5 shadow-md shadow-primary/5'
-                                : 'border-border bg-card/50 hover:border-primary/40'
-                            }`}
-                          >
-                            <div className={`p-2 rounded-xl border ${signupData.user_type === 'student' ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground'}`}>
-                              <GraduationCap size={18} />
-                            </div>
-                            <div className="flex-1">
-                              <h5 className="text-[11px] font-black uppercase tracking-wider text-foreground">Student</h5>
-                              <p className="text-[9px] text-muted-foreground mt-0.5 font-medium leading-relaxed">School, college, or university tracks</p>
-                            </div>
-                          </button>
-
-                          {/* Working Professional Card */}
-                          <button
-                            type="button"
-                            onClick={() => setSignupData(prev => ({ ...prev, user_type: 'professional', user_subtype: '' }))}
-                            className={`p-4 rounded-2xl border text-left transition-all duration-300 flex items-start gap-3 hover:-translate-y-0.5 hover:shadow-lg ${
-                              signupData.user_type === 'professional'
-                                ? 'border-primary bg-primary/5 shadow-md shadow-primary/5'
-                                : 'border-border bg-card/50 hover:border-primary/40'
-                            }`}
-                          >
-                            <div className={`p-2 rounded-xl border ${signupData.user_type === 'professional' ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground'}`}>
-                              <Briefcase size={18} />
-                            </div>
-                            <div className="flex-1">
-                              <h5 className="text-[11px] font-black uppercase tracking-wider text-foreground">Working Professional</h5>
-                              <p className="text-[9px] text-muted-foreground mt-0.5 font-medium leading-relaxed">Industry, research, enterprise engineering</p>
-                            </div>
-                          </button>
-
-                          {/* Aspirant Card */}
-                          <button
-                            type="button"
-                            onClick={() => setSignupData(prev => ({ ...prev, user_type: 'aspirant', user_subtype: '' }))}
-                            className={`p-4 rounded-2xl border text-left transition-all duration-300 flex items-start gap-3 hover:-translate-y-0.5 hover:shadow-lg ${
-                              signupData.user_type === 'aspirant'
-                                ? 'border-primary bg-primary/5 shadow-md shadow-primary/5'
-                                : 'border-border bg-card/50 hover:border-primary/40'
-                            }`}
-                          >
-                            <div className={`p-2 rounded-xl border ${signupData.user_type === 'aspirant' ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground'}`}>
-                              <Target size={18} />
-                            </div>
-                            <div className="flex-1">
-                              <h5 className="text-[11px] font-black uppercase tracking-wider text-foreground">Aspirant</h5>
-                              <p className="text-[9px] text-muted-foreground mt-0.5 font-medium leading-relaxed">Preparing for competitive exams or jobs</p>
-                            </div>
-                          </button>
+                        <div className="text-center space-y-1 mb-4">
+                          <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center justify-center gap-1.5">
+                            <User size={12} /> Step 1: Create Operative Profile
+                          </h4>
+                          <p className="text-[9px] text-muted-foreground uppercase font-medium">Define your username and identity credentials.</p>
                         </div>
 
-                        {/* Student Subtype Choice */}
-                        {signupData.user_type === 'student' && (
-                          <div className="space-y-2 pt-1">
-                            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Select Student Category</label>
-                            <div className="grid grid-cols-3 gap-2">
-                              {['school', 'college', 'other'].map((sub) => (
-                                <button
-                                  key={sub}
-                                  type="button"
-                                  onClick={() => setSignupData(prev => ({ ...prev, user_subtype: sub }))}
-                                  className={`py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
-                                    signupData.user_subtype === sub
-                                      ? 'bg-primary border-primary text-white shadow-md shadow-primary/20'
-                                      : 'border-border bg-background hover:bg-muted text-foreground'
-                                  }`}
-                                >
-                                  {sub}
-                                </button>
-                              ))}
-                            </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Name</label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              required
+                              value={signupData.fullName}
+                              onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
+                              className="w-full pl-10 pr-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none text-xs transition-colors"
+                              placeholder="John Doe"
+                            />
+                            <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
                           </div>
-                        )}
+                        </div>
 
-                        {/* Aspirant Subtype Choice */}
-                        {signupData.user_type === 'aspirant' && (
-                          <div className="space-y-2 pt-1">
-                            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Select Prep Track</label>
-                            <div className="grid grid-cols-3 gap-2">
-                              {['competitive exam', 'job interview', 'other'].map((sub) => (
-                                <button
-                                  key={sub}
-                                  type="button"
-                                  onClick={() => setSignupData(prev => ({ ...prev, user_subtype: sub }))}
-                                  className={`py-2 px-1 rounded-xl border text-[9px] font-black uppercase tracking-wide transition-all leading-tight ${
-                                    signupData.user_subtype === sub
-                                      ? 'bg-primary border-primary text-white shadow-md shadow-primary/20'
-                                      : 'border-border bg-background hover:bg-muted text-foreground'
-                                  }`}
-                                >
-                                  {sub}
-                                </button>
-                              ))}
-                            </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Username</label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              required
+                              value={signupData.username}
+                              onChange={(e) => setSignupData({ ...signupData, username: e.target.value })}
+                              className="w-full pl-10 pr-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none text-xs transition-colors"
+                              placeholder="johndoe"
+                            />
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground font-black text-xs">@</span>
                           </div>
-                        )}
-                      </div>
+                        </div>
 
-                      <div className="flex gap-2 pt-4">
-                        <button
-                          type="button"
-                          onClick={() => setSignupStep(1)}
-                          className="flex-1 py-4 border border-border text-foreground rounded-xl font-black uppercase tracking-widest text-xs hover:bg-muted transition-all"
-                        >
-                          Back
-                        </button>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Phone</label>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              required
+                              value={signupData.phone}
+                              onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
+                              className="w-full pl-10 pr-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none text-xs transition-colors"
+                              placeholder="+91 ..."
+                            />
+                            <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                          </div>
+                        </div>
+
                         <button
                           type="submit"
-                          disabled={isBusy}
-                          className="flex-1 py-4 bg-foreground text-background rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all disabled:opacity-50"
+                          className="w-full py-4 bg-foreground text-background rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all mt-4 flex items-center justify-center gap-1.5"
                         >
-                          {isBusy ? <Loader2 className="animate-spin mx-auto" size={16} /> : 'Register'}
+                          Next: Account Access <ArrowRight size={14} />
                         </button>
-                      </div>
-                    </>
-                  )
+                      </motion.div>
+                    )}
+
+                    {signupStep === 2 && (
+                      <motion.div
+                        key="step2"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="space-y-4"
+                      >
+                        <div className="text-center space-y-1 mb-4">
+                          <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center justify-center gap-1.5">
+                            <Mail size={12} /> Step 2: Security & Access
+                          </h4>
+                          <p className="text-[9px] text-muted-foreground uppercase font-medium">Verify your network entry point and password.</p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email</label>
+                          <div className="relative">
+                            <input
+                              type="email"
+                              required
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              className="w-full pl-10 pr-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none text-xs transition-colors"
+                              placeholder="email@example.com"
+                            />
+                            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Password</label>
+                          <div className="relative">
+                            <input
+                              type="password"
+                              required
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              className="w-full pl-10 pr-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none text-xs transition-colors"
+                              placeholder="••••••••"
+                            />
+                            <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-4">
+                          <button
+                            type="button"
+                            onClick={() => setSignupStep(1)}
+                            className="flex-1 py-4 border border-border text-foreground rounded-xl font-black uppercase tracking-widest text-xs hover:bg-muted active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <ArrowLeft size={14} /> Back
+                          </button>
+                          <button
+                            type="submit"
+                            className="flex-1 py-4 bg-foreground text-background rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                          >
+                            Next: Profile Track <ArrowRight size={14} />
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {signupStep === 3 && (
+                      <motion.div
+                        key="step3"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="space-y-4"
+                      >
+                        <div className="text-center space-y-1 mb-4">
+                          <h4 className="text-[11px] font-black uppercase tracking-widest text-primary flex items-center justify-center gap-1.5">
+                            <Sparkles size={12} className="animate-pulse" /> Step 3: Choose Profile Persona Track
+                          </h4>
+                          <p className="text-[9px] text-muted-foreground uppercase font-medium">Select your professional or academic track.</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3">
+                          {/* Student Card */}
+                          <motion.button
+                            whileHover={{ y: -2, scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                            type="button"
+                            onClick={() => setSignupData(prev => ({ ...prev, user_type: 'student', user_subtype: '' }))}
+                            className={`p-4 rounded-2xl border text-left transition-all duration-300 flex items-start gap-4 relative overflow-hidden ${
+                              signupData.user_type === 'student'
+                                ? 'border-violet-500 bg-violet-500/5 shadow-[0_0_20px_-5px_rgba(139,92,246,0.2)]'
+                                : 'border-border bg-card/50 hover:border-violet-500/40'
+                            }`}
+                          >
+                            {signupData.user_type === 'student' && (
+                              <div className="absolute top-0 right-0 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl pointer-events-none" />
+                            )}
+                            <div className={`p-2.5 rounded-xl border transition-colors ${
+                              signupData.user_type === 'student'
+                                ? 'border-violet-500/30 bg-violet-500/10 text-violet-400'
+                                : 'border-border bg-background text-muted-foreground'
+                            }`}>
+                              <GraduationCap size={20} />
+                            </div>
+                            <div className="flex-1">
+                              <h5 className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                                Student
+                                {signupData.user_type === 'student' && <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-ping" />}
+                              </h5>
+                              <p className="text-[9px] text-muted-foreground mt-0.5 font-medium leading-relaxed">School, college, or university tracks</p>
+                            </div>
+                            {signupData.user_type === 'student' && (
+                              <div className="text-violet-400 font-bold text-xs self-center">✓</div>
+                            )}
+                          </motion.button>
+
+                          {/* Working Professional Card */}
+                          <motion.button
+                            whileHover={{ y: -2, scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                            type="button"
+                            onClick={() => setSignupData(prev => ({ ...prev, user_type: 'professional', user_subtype: '' }))}
+                            className={`p-4 rounded-2xl border text-left transition-all duration-300 flex items-start gap-4 relative overflow-hidden ${
+                              signupData.user_type === 'professional'
+                                ? 'border-amber-500 bg-amber-500/5 shadow-[0_0_20px_-5px_rgba(245,158,11,0.2)]'
+                                : 'border-border bg-card/50 hover:border-amber-500/40'
+                            }`}
+                          >
+                            {signupData.user_type === 'professional' && (
+                              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+                            )}
+                            <div className={`p-2.5 rounded-xl border transition-colors ${
+                              signupData.user_type === 'professional'
+                                ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+                                : 'border-border bg-background text-muted-foreground'
+                            }`}>
+                              <Briefcase size={20} />
+                            </div>
+                            <div className="flex-1">
+                              <h5 className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                                Working Professional
+                                {signupData.user_type === 'professional' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />}
+                              </h5>
+                              <p className="text-[9px] text-muted-foreground mt-0.5 font-medium leading-relaxed">Industry, research, enterprise engineering</p>
+                            </div>
+                            {signupData.user_type === 'professional' && (
+                              <div className="text-amber-400 font-bold text-xs self-center">✓</div>
+                            )}
+                          </motion.button>
+
+                          {/* Aspirant Card */}
+                          <motion.button
+                            whileHover={{ y: -2, scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                            type="button"
+                            onClick={() => setSignupData(prev => ({ ...prev, user_type: 'aspirant', user_subtype: '' }))}
+                            className={`p-4 rounded-2xl border text-left transition-all duration-300 flex items-start gap-4 relative overflow-hidden ${
+                              signupData.user_type === 'aspirant'
+                                ? 'border-emerald-500 bg-emerald-500/5 shadow-[0_0_20px_-5px_rgba(16,185,129,0.2)]'
+                                : 'border-border bg-card/50 hover:border-emerald-500/40'
+                            }`}
+                          >
+                            {signupData.user_type === 'aspirant' && (
+                              <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+                            )}
+                            <div className={`p-2.5 rounded-xl border transition-colors ${
+                              signupData.user_type === 'aspirant'
+                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                                : 'border-border bg-background text-muted-foreground'
+                            }`}>
+                              <Target size={20} />
+                            </div>
+                            <div className="flex-1">
+                              <h5 className="text-xs font-black uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                                Aspirant
+                                {signupData.user_type === 'aspirant' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />}
+                              </h5>
+                              <p className="text-[9px] text-muted-foreground mt-0.5 font-medium leading-relaxed">Preparing for competitive exams or jobs</p>
+                            </div>
+                            {signupData.user_type === 'aspirant' && (
+                              <div className="text-emerald-400 font-bold text-xs self-center">✓</div>
+                            )}
+                          </motion.button>
+                        </div>
+
+                        <div className="flex gap-2 pt-4">
+                          <button
+                            type="button"
+                            onClick={() => setSignupStep(2)}
+                            className="flex-1 py-4 border border-border text-foreground rounded-xl font-black uppercase tracking-widest text-xs hover:bg-muted active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <ArrowLeft size={14} /> Back
+                          </button>
+                          <button
+                            type="submit"
+                            className="flex-1 py-4 bg-foreground text-background rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                          >
+                            Next: Specialty <ArrowRight size={14} />
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {signupStep === 4 && (
+                      <motion.div
+                        key="step4"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="space-y-4"
+                      >
+                        {/* Student Specialty */}
+                        {signupData.user_type === 'student' && (
+                          <div className="space-y-4">
+                            <div className="text-center space-y-1 mb-4">
+                              <h4 className="text-[11px] font-black uppercase tracking-widest text-violet-400 flex items-center justify-center gap-1.5">
+                                <GraduationCap size={12} /> Student Specialization
+                              </h4>
+                              <p className="text-[9px] text-muted-foreground uppercase font-medium">Select your current educational level.</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              {[
+                                { value: 'school', title: 'School', desc: 'Primary or high school student' },
+                                { value: 'college', title: 'College', desc: 'University or college academic level' },
+                                { value: 'other', title: 'Other', desc: 'Specialized academy or research' }
+                              ].map((sub) => (
+                                <motion.button
+                                  whileHover={{ y: -2 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  key={sub.value}
+                                  type="button"
+                                  onClick={() => setSignupData(prev => ({ ...prev, user_subtype: sub.value }))}
+                                  className={`p-4 rounded-2xl border text-center transition-all duration-300 flex flex-col items-center justify-center gap-2 ${
+                                    signupData.user_subtype === sub.value
+                                      ? 'border-violet-500 bg-violet-500/10 shadow-[0_0_15px_-5px_rgba(139,92,246,0.3)]'
+                                      : 'border-border bg-card/40 hover:border-violet-500/30'
+                                  }`}
+                                >
+                                  <span className="text-xs font-black uppercase tracking-wider text-foreground">{sub.title}</span>
+                                  <span className="text-[8px] text-muted-foreground leading-normal font-medium">{sub.desc}</span>
+                                  {signupData.user_subtype === sub.value && (
+                                    <div className="w-1.5 h-1.5 rounded-full bg-violet-400 mt-1" />
+                                  )}
+                                </motion.button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Aspirant Specialty */}
+                        {signupData.user_type === 'aspirant' && (
+                          <div className="space-y-4">
+                            <div className="text-center space-y-1 mb-4">
+                              <h4 className="text-[11px] font-black uppercase tracking-widest text-emerald-400 flex items-center justify-center gap-1.5">
+                                <Target size={12} /> Preparation Track
+                              </h4>
+                              <p className="text-[9px] text-muted-foreground uppercase font-medium">Select your primary preparation objective.</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              {[
+                                { value: 'competitive exam', title: 'Competitive Exam', desc: 'JEE, NEET, GATE, Civil Services, etc.' },
+                                { value: 'job interview', title: 'Job Interview', desc: 'Corporate, tech, coding placement interviews' },
+                                { value: 'other', title: 'Other', desc: 'Career changes or general preparation' }
+                              ].map((sub) => (
+                                <motion.button
+                                  whileHover={{ y: -2 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  key={sub.value}
+                                  type="button"
+                                  onClick={() => setSignupData(prev => ({ ...prev, user_subtype: sub.value }))}
+                                  className={`p-4 rounded-2xl border text-center transition-all duration-300 flex flex-col items-center justify-center gap-2 ${
+                                    signupData.user_subtype === sub.value
+                                      ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_15px_-5px_rgba(16,185,129,0.3)]'
+                                      : 'border-border bg-card/40 hover:border-emerald-500/30'
+                                  }`}
+                                >
+                                  <span className="text-xs font-black uppercase tracking-wider text-foreground">{sub.title}</span>
+                                  <span className="text-[8px] text-muted-foreground leading-normal font-medium">{sub.desc}</span>
+                                  {signupData.user_subtype === sub.value && (
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1" />
+                                  )}
+                                </motion.button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Working Professional specialty (no subtypes needed, show final preview card) */}
+                        {signupData.user_type === 'professional' && (
+                          <div className="space-y-4">
+                            <div className="text-center space-y-1 mb-4">
+                              <h4 className="text-[11px] font-black uppercase tracking-widest text-amber-400 flex items-center justify-center gap-1.5">
+                                <Briefcase size={12} /> Professional Credentials
+                              </h4>
+                              <p className="text-[9px] text-muted-foreground uppercase font-medium">Verify your profile metadata summary.</p>
+                            </div>
+
+                            <div className="p-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 space-y-3 relative overflow-hidden">
+                              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl pointer-events-none" />
+                              <h5 className="text-[10px] font-black uppercase tracking-widest text-amber-400">Operative Verification Profile</h5>
+                              <div className="space-y-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                <p>Role Type: <span className="text-foreground">Working Professional</span></p>
+                                <p>Full Name: <span className="text-foreground">{signupData.fullName}</span></p>
+                                <p>Username: <span className="text-foreground">@{signupData.username}</span></p>
+                                <p>Phone: <span className="text-foreground">{signupData.phone}</span></p>
+                              </div>
+                              <p className="text-[9px] text-muted-foreground font-medium italic mt-2">"As a working professional, you gain access to network resource portfolios, enterprise forums, and advisory channels."</p>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex gap-2 pt-4">
+                          <button
+                            type="button"
+                            onClick={() => setSignupStep(3)}
+                            className="flex-1 py-4 border border-border text-foreground rounded-xl font-black uppercase tracking-widest text-xs hover:bg-muted active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <ArrowLeft size={14} /> Back
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={isBusy}
+                            className="flex-1 py-4 bg-foreground text-background rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 shadow-lg"
+                          >
+                            {isBusy ? <Loader2 className="animate-spin mx-auto" size={16} /> : (
+                              <>
+                                <span>Register Account</span>
+                                <ChevronRight size={14} />
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 ) : (
                   <>
                     <div className="space-y-1">

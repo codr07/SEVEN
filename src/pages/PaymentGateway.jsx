@@ -166,6 +166,73 @@ const PaymentGateway = () => {
     setErrorMsg('');
 
     try {
+      // Re-verify coupon if one was applied to prevent race conditions or manual bypass
+      if (appliedPromo) {
+        const { data: promoData, error: promoErr } = await supabase
+          .from('coupons')
+          .select('*')
+          .eq('code', appliedPromo)
+          .eq('is_active', true)
+          .limit(1)
+          .single();
+
+        if (promoErr || !promoData) {
+          throw new Error('The applied coupon code is no longer active.');
+        }
+
+        // Expiry check
+        if (!promoData.never_expires && promoData.expires_at && new Date(promoData.expires_at) < new Date()) {
+          throw new Error('The applied coupon code has expired.');
+        }
+
+        // Category check
+        const purposeLower = purpose.toLowerCase();
+        if (promoData.applies_to !== 'all') {
+          if (!purposeLower.includes(`[${promoData.applies_to}]`)) {
+            throw new Error(`The applied coupon is only valid for ${promoData.applies_to} purchases.`);
+          }
+        }
+
+        // Min amount check
+        if (baseAmount <= parseFloat(promoData.min_amount || 0)) {
+          throw new Error(`The applied coupon requires a minimum bill of ₹${parseFloat(promoData.min_amount).toFixed(0)}.`);
+        }
+
+        // Once per user check
+        const { data: userRedemptions, error: userRedemptionsError } = await supabase
+          .from('payments')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('coupon_code', appliedPromo)
+          .in('status', ['paid', 'pending', 'verifying']);
+
+        if (userRedemptionsError) {
+          throw new Error('Failed to verify coupon usage history.');
+        }
+
+        if (userRedemptions && userRedemptions.length > 0) {
+          throw new Error('You have already used this coupon code once.');
+        }
+
+        // Global limit check
+        if (promoData.max_uses !== null && promoData.max_uses !== undefined) {
+          const { count: globalUses, error: globalUsesError } = await supabase
+            .from('payments')
+            .select('*', { count: 'exact', head: true })
+            .eq('coupon_code', appliedPromo)
+            .in('status', ['paid', 'pending', 'verifying']);
+
+          if (globalUsesError) {
+            throw new Error('Failed to verify coupon total usage limit.');
+          }
+
+          if (globalUses >= promoData.max_uses) {
+            throw new Error('The applied coupon code has reached its maximum usage limit.');
+          }
+        }
+      }
+
+      // If we reach here, coupon is fully valid (or no coupon was applied)
       const { error } = await supabase.from('payments').insert([{
         user_id: user.id,
         amount: finalTotalAmount,
@@ -179,7 +246,8 @@ const PaymentGateway = () => {
         billing_city: billingDetails.city,
         billing_state: billingDetails.state,
         billing_pin: billingDetails.pin,
-        payer_upi_id: payerUpiId
+        payer_upi_id: payerUpiId,
+        coupon_code: appliedPromo || null
       }]);
 
       if (error) {
@@ -191,7 +259,8 @@ const PaymentGateway = () => {
           amount: finalTotalAmount,
           purpose: purpose,
           transaction_id: transactionId,
-          status: 'pending'
+          status: 'pending',
+          coupon_code: appliedPromo || null
         }]);
         if (basicError) throw basicError;
       }
@@ -199,7 +268,7 @@ const PaymentGateway = () => {
       setPaymentStatus('success');
     } catch (err) {
       console.error(err);
-      setErrorMsg('Failed to submit payment. Please ensure the database table is created or try again later.');
+      setErrorMsg(err.message || 'Failed to submit payment. Please ensure the database table is created or try again later.');
       setPaymentStatus('pending');
     } finally {
       setIsBusy(false);
@@ -476,6 +545,38 @@ const PaymentGateway = () => {
                                     setPromoStatus('error');
                                     return;
                                   }
+
+                                  // Once per user check
+                                  if (user) {
+                                    const { data: userRedemptions, error: userRedemptionsError } = await supabase
+                                      .from('payments')
+                                      .select('id')
+                                      .eq('user_id', user.id)
+                                      .eq('coupon_code', cleaned)
+                                      .in('status', ['paid', 'pending', 'verifying']);
+
+                                    if (!userRedemptionsError && userRedemptions && userRedemptions.length > 0) {
+                                      setPromoMessage('You have already used this coupon code once.');
+                                      setPromoStatus('error');
+                                      return;
+                                    }
+                                  }
+
+                                  // Global limit check
+                                  if (data.max_uses !== null && data.max_uses !== undefined) {
+                                    const { count: globalUses, error: globalUsesError } = await supabase
+                                      .from('payments')
+                                      .select('*', { count: 'exact', head: true })
+                                      .eq('coupon_code', cleaned)
+                                      .in('status', ['paid', 'pending', 'verifying']);
+
+                                    if (!globalUsesError && globalUses >= data.max_uses) {
+                                      setPromoMessage('This coupon code has reached its maximum usage limit.');
+                                      setPromoStatus('error');
+                                      return;
+                                    }
+                                  }
+
                                   // All checks passed
                                   const discPct = parseFloat(data.discount_pct) / 100;
                                   setAppliedPromo(cleaned);
@@ -498,10 +599,17 @@ const PaymentGateway = () => {
                           )}
                         </div>
                         {promoMessage && (
-                          <div className={`mt-2.5 text-[10px] font-black uppercase tracking-widest ${
-                            promoStatus === 'success' ? 'text-green-500' : 'text-destructive'
-                          }`}>
-                            {promoStatus === 'success' ? '✓ ' : '✗ '} {promoMessage}
+                          <div className="space-y-1 mt-2.5">
+                            <div className={`text-[10px] font-black uppercase tracking-widest ${
+                              promoStatus === 'success' ? 'text-green-500' : 'text-destructive'
+                            }`}>
+                              {promoStatus === 'success' ? '✓ ' : '✗ '} {promoMessage}
+                            </div>
+                            {promoStatus === 'success' && (
+                              <div className="text-[9px] text-muted-foreground/80 font-bold uppercase tracking-widest flex items-center gap-1">
+                                <span>•</span> Note: All coupon codes can only be used once per user.
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>

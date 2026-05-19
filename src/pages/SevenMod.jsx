@@ -201,7 +201,7 @@ const SevenMod = () => {
   const [submissions, setSubmissions] = useState([]);
   const [paymentsList, setPaymentsList] = useState([]);
   const [couponsList, setCouponsList] = useState([]);
-  const [couponForm, setCouponForm] = useState({ code: '', discount_pct: 15, min_amount: 0, applies_to: 'all', never_expires: true, expires_at: '', is_active: true });
+  const [couponForm, setCouponForm] = useState({ code: '', discount_pct: 15, min_amount: 0, applies_to: 'all', never_expires: true, expires_at: '', is_active: true, is_infinite_uses: true, max_uses: '' });
   const [couponEditId, setCouponEditId] = useState(null);
   const [couponSaving, setCouponSaving] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -514,12 +514,34 @@ const SevenMod = () => {
   const fetchCoupons = async () => {
     setLoading(true);
     try {
-      const { data, error } = await adminSupabase
+      const { data: couponsData, error: couponsError } = await adminSupabase
         .from('coupons')
         .select('*')
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      setCouponsList(data || []);
+      if (couponsError) throw couponsError;
+
+      // Fetch payments containing coupon codes to count uses
+      const { data: paymentsData, error: paymentsError } = await adminSupabase
+        .from('payments')
+        .select('coupon_code, status')
+        .not('coupon_code', 'is', null);
+
+      const usageCounts = {};
+      if (!paymentsError && paymentsData) {
+        paymentsData.forEach(p => {
+          if (p.status === 'paid' || p.status === 'pending' || p.status === 'verifying') {
+            const code = (p.coupon_code || '').trim().toUpperCase();
+            if (code) {
+              usageCounts[code] = (usageCounts[code] || 0) + 1;
+            }
+          }
+        });
+      }
+
+      setCouponsList((couponsData || []).map(c => ({
+        ...c,
+        uses_count: usageCounts[c.code.toUpperCase()] || 0
+      })));
     } catch (err) {
       console.error('Failed to fetch coupons:', err);
       setCouponsList([]);
@@ -541,6 +563,10 @@ const SevenMod = () => {
       showAlert('Please set an expiry date/time or enable Never Expires.', 'error');
       return;
     }
+    if (!couponForm.is_infinite_uses && (!couponForm.max_uses || parseInt(couponForm.max_uses) <= 0)) {
+      showAlert('Please enter a valid maximum uses count.', 'error');
+      return;
+    }
     setCouponSaving(true);
     try {
       const payload = {
@@ -550,7 +576,8 @@ const SevenMod = () => {
         applies_to: couponForm.applies_to,
         never_expires: couponForm.never_expires,
         expires_at: couponForm.never_expires ? null : new Date(couponForm.expires_at).toISOString(),
-        is_active: couponForm.is_active
+        is_active: couponForm.is_active,
+        max_uses: couponForm.is_infinite_uses ? null : parseInt(couponForm.max_uses)
       };
       let error;
       if (couponEditId) {
@@ -560,7 +587,17 @@ const SevenMod = () => {
       }
       if (error) throw error;
       showAlert(couponEditId ? 'Coupon updated successfully.' : 'Coupon created successfully.', 'success');
-      setCouponForm({ code: '', discount_pct: 15, min_amount: 0, applies_to: 'all', never_expires: true, expires_at: '', is_active: true });
+      setCouponForm({
+        code: '',
+        discount_pct: 15,
+        min_amount: 0,
+        applies_to: 'all',
+        never_expires: true,
+        expires_at: '',
+        is_active: true,
+        is_infinite_uses: true,
+        max_uses: ''
+      });
       setCouponEditId(null);
       fetchCoupons();
     } catch (err) {
@@ -587,13 +624,25 @@ const SevenMod = () => {
       applies_to: c.applies_to,
       never_expires: c.never_expires,
       expires_at: c.expires_at ? new Date(c.expires_at).toISOString().slice(0, 16) : '',
-      is_active: c.is_active
+      is_active: c.is_active,
+      is_infinite_uses: c.max_uses === null || c.max_uses === undefined,
+      max_uses: c.max_uses !== null && c.max_uses !== undefined ? c.max_uses : ''
     });
   };
 
   const cancelCouponEdit = () => {
     setCouponEditId(null);
-    setCouponForm({ code: '', discount_pct: 15, min_amount: 0, applies_to: 'all', never_expires: true, expires_at: '', is_active: true });
+    setCouponForm({
+      code: '',
+      discount_pct: 15,
+      min_amount: 0,
+      applies_to: 'all',
+      never_expires: true,
+      expires_at: '',
+      is_active: true,
+      is_infinite_uses: true,
+      max_uses: ''
+    });
   };
 
   const fetchPayments = async () => {
@@ -1166,11 +1215,22 @@ const SevenMod = () => {
                             if (typeof extra === 'string') {
                               try { extra = JSON.parse(extra); } catch { extra = {}; }
                             }
-                            return extra?.user_type ? (
-                              <span className="px-2 py-0.5 rounded-lg bg-primary/10 text-primary font-black uppercase text-[8px] tracking-widest border border-primary/20">
-                                {extra.user_type} ({extra.user_subtype || 'general'})
+                            if (!extra?.user_type) return null;
+                            const type = extra.user_type;
+                            const subtype = extra.user_subtype || 'general';
+                            let badgeStyle = "bg-primary/10 text-primary border-primary/20";
+                            if (type === 'student') {
+                              badgeStyle = "bg-violet-500/10 text-violet-400 border-violet-500/25";
+                            } else if (type === 'professional') {
+                              badgeStyle = "bg-amber-500/10 text-amber-400 border-amber-500/25";
+                            } else if (type === 'aspirant') {
+                              badgeStyle = "bg-emerald-500/10 text-emerald-400 border-emerald-500/25";
+                            }
+                            return (
+                              <span className={`px-2 py-0.5 rounded-lg font-black uppercase text-[8px] tracking-widest border ${badgeStyle}`}>
+                                {type} ({subtype})
                               </span>
-                            ) : null;
+                            );
                           })()}
                         </div>
                         <p className="text-xs text-muted-foreground">{item.phone || 'No phone'} • {item.id.slice(0, 8)}...</p>
@@ -1333,6 +1393,11 @@ const SevenMod = () => {
                             Certification
                           </span>
                         )}
+                        {item.coupon_code && (
+                          <span className="px-2 py-0.5 rounded bg-green-500/10 text-green-500 text-[8px] font-black uppercase tracking-widest border border-green-500/20">
+                            Coupon: {item.coupon_code}
+                          </span>
+                        )}
                       </div>
                       <p className="font-bold text-foreground text-sm uppercase tracking-tight mb-1">
                         {item.purpose ? item.purpose.replace(/\[.*?\]\s*/g, '').trim() : ''}
@@ -1346,6 +1411,11 @@ const SevenMod = () => {
                         <div><strong className="text-white">Email:</strong> {item.billing_email || 'N/A'}</div>
                         <div><strong className="text-white">UPI ID:</strong> {item.payer_upi_id || 'N/A'}</div>
                         <div className="sm:col-span-2"><strong className="text-white">Address:</strong> {item.billing_address ? `${item.billing_address}, ${item.billing_city}, ${item.billing_state} - ${item.billing_pin}` : 'N/A'}</div>
+                        {item.coupon_code && (
+                          <div className="sm:col-span-2 text-green-500 font-bold">
+                            <strong className="text-white">Coupon Used:</strong> {item.coupon_code}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -1491,6 +1561,38 @@ const SevenMod = () => {
                   </div>
                 )}
 
+                {/* Usage Limit Toggle */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Usage Limit</label>
+                  <button
+                    type="button"
+                    onClick={() => setCouponForm(f => ({ ...f, is_infinite_uses: !f.is_infinite_uses }))}
+                    className={`w-full h-11 flex items-center gap-3 px-4 rounded-xl border font-black text-xs uppercase tracking-widest transition-all ${
+                      couponForm.is_infinite_uses
+                        ? 'bg-primary/10 border-primary/40 text-primary'
+                        : 'bg-background border-border text-muted-foreground hover:border-primary/40'
+                    }`}
+                  >
+                    {couponForm.is_infinite_uses ? <Infinity size={16} /> : <Users size={16} />}
+                    {couponForm.is_infinite_uses ? 'Infinite Uses' : 'Limit Usage Count'}
+                  </button>
+                </div>
+
+                {/* Max Uses */}
+                {!couponForm.is_infinite_uses && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Max Times Redeemable</label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 100"
+                      value={couponForm.max_uses}
+                      onChange={(e) => setCouponForm(f => ({ ...f, max_uses: e.target.value }))}
+                      className="w-full h-11 bg-background border border-border rounded-xl px-4 text-sm font-bold outline-none focus:border-primary transition-colors text-white"
+                    />
+                  </div>
+                )}
+
                 {/* Active Toggle */}
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Status</label>
@@ -1518,6 +1620,8 @@ const SevenMod = () => {
                   <span className="text-muted-foreground">→ {couponForm.applies_to === 'all' ? 'All Products' : couponForm.applies_to}</span>
                   <span className={couponForm.is_active ? 'text-green-500' : 'text-destructive'}>{couponForm.is_active ? '● Active' : '● Inactive'}</span>
                   <span className="text-muted-foreground">{couponForm.never_expires ? '∞ Never Expires' : couponForm.expires_at ? `Expires ${new Date(couponForm.expires_at).toLocaleString()}` : 'No expiry set'}</span>
+                  <span className="text-muted-foreground">{couponForm.is_infinite_uses ? '∞ Infinite Uses' : `Max Uses: ${couponForm.max_uses || '—'}`}</span>
+                  <span className="text-muted-foreground">● Once Per User</span>
                 </div>
               )}
 
@@ -1541,6 +1645,7 @@ const SevenMod = () => {
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">{couponsList.length} Coupon{couponsList.length !== 1 ? 's' : ''}</p>
                 {couponsList.map((c) => {
                   const isExpired = !c.never_expires && c.expires_at && new Date(c.expires_at) < new Date();
+                  const isExhausted = c.max_uses !== null && c.max_uses !== undefined && c.uses_count >= c.max_uses;
                   return (
                     <div key={c.id} className={`p-5 rounded-2xl border bg-card flex flex-col sm:flex-row sm:items-center gap-4 transition-all ${couponEditId === c.id ? 'border-primary/50 shadow-[0_0_24px_rgba(var(--primary-rgb),0.1)]' : 'border-border'}`}>
                       <div className="flex-1 space-y-2">
@@ -1550,11 +1655,11 @@ const SevenMod = () => {
                             {c.discount_pct}% OFF
                           </span>
                           <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${
-                            c.is_active && !isExpired
+                            c.is_active && !isExpired && !isExhausted
                               ? 'bg-green-500/10 text-green-500 border-green-500/20'
                               : 'bg-destructive/10 text-destructive border-destructive/20'
                           }`}>
-                            {isExpired ? 'Expired' : c.is_active ? 'Active' : 'Inactive'}
+                            {isExpired ? 'Expired' : isExhausted ? 'Exhausted' : c.is_active ? 'Active' : 'Inactive'}
                           </span>
                           <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[9px] font-black uppercase tracking-widest border border-blue-500/20">
                             {c.applies_to === 'all' ? 'All' : c.applies_to}
@@ -1565,7 +1670,11 @@ const SevenMod = () => {
                           <span className="flex items-center gap-1">
                             {c.never_expires ? <><Infinity size={10} /> Never Expires</> : isExpired ? `Expired ${new Date(c.expires_at).toLocaleString()}` : `Expires ${new Date(c.expires_at).toLocaleString()}`}
                           </span>
+                          <span className="flex items-center gap-1">
+                            Uses: {c.uses_count} / {c.max_uses !== null && c.max_uses !== undefined ? c.max_uses : '∞'}
+                          </span>
                           <span>Created {new Date(c.created_at).toLocaleDateString()}</span>
+                          <span>• Once Per User</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">

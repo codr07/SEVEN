@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }) => {
     return resolvedProfile;
   };
 
-let globalSessionPromise = null;
+  let globalSessionPromise = null;
 
   useEffect(() => {
     let mounted = true;
@@ -46,11 +46,11 @@ let globalSessionPromise = null;
         setUser(currentUser);
         if (currentUser) {
           let resolvedProfile = await fetchProfile(currentUser.id);
-          
+
           if (!resolvedProfile) {
             // Attempt to create the profile from user metadata if it's missing
             const meta = currentUser.user_metadata || {};
-            
+
             // Generate initial ID
             let idNumber = '70326-0001';
             try {
@@ -78,7 +78,7 @@ let globalSessionPromise = null;
               gender: meta.gender || '',
               social_links: meta.social_links || { linkedin: '', github: '', linktree: '' },
               role: 'student',
-              extra_details: { 
+              extra_details: {
                 id_number: idNumber,
                 user_type: meta.user_type || '',
                 user_subtype: meta.user_subtype || '',
@@ -87,19 +87,19 @@ let globalSessionPromise = null;
             };
 
             const { error: createError } = await supabase.from('profiles').insert(newProfile);
-            
+
             if (createError) {
               console.error('Profile creation error (Retrying with absolute fallback):', createError);
               // Handle potential unique constraint violation for username
               if (createError.code === '23505') {
                 const absoluteFallback = `${emailPrefix}_${Math.random().toString(36).slice(2, 7)}`;
-                await supabase.from('profiles').insert({ 
-                  ...newProfile, 
-                  username: absoluteFallback 
+                await supabase.from('profiles').insert({
+                  ...newProfile,
+                  username: absoluteFallback
                 });
               }
             }
-            
+
             // Final check/sync
             resolvedProfile = await fetchProfile(currentUser.id);
           }
@@ -120,19 +120,36 @@ let globalSessionPromise = null;
             try {
               const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
               const serial = ((count || 0) + 1).toString().padStart(4, '0');
-              
+
               let prefix = '70326';
               if (resolvedProfile.role === 'faculty') prefix = '70326-FAC';
               if (resolvedProfile.role === 'admin') prefix = '70326-FND';
-              
+
               const idNumber = `${prefix}-${serial}`;
               const updatedDetails = { ...(resolvedProfile.extra_details || {}), id_number: idNumber };
-              
+
               await supabase.from('profiles').update({ extra_details: updatedDetails }).eq('id', currentUser.id);
               resolvedProfile.extra_details = updatedDetails;
               setProfile({ ...resolvedProfile });
             } catch (e) {
               console.warn('Failed to backfill ID', e);
+            }
+          }
+
+          // Backfill user_type and user_subtype if missing
+          const meta = currentUser.user_metadata || {};
+          if (resolvedProfile && meta.user_type && !resolvedProfile.extra_details?.user_type) {
+            try {
+              const updatedDetails = {
+                ...(resolvedProfile.extra_details || {}),
+                user_type: meta.user_type,
+                user_subtype: meta.user_subtype || '',
+              };
+              await supabase.from('profiles').update({ extra_details: updatedDetails }).eq('id', currentUser.id);
+              resolvedProfile.extra_details = updatedDetails;
+              setProfile({ ...resolvedProfile });
+            } catch (e) {
+              console.warn('Failed to backfill user_type/user_subtype', e);
             }
           }
         } else {
@@ -143,7 +160,7 @@ let globalSessionPromise = null;
         console.error('Failed to load session profile, possible corrupted JWT:', err);
         // If the server rejects the JWT (e.g. PGRST301) or any fatal profile error occurs,
         // we MUST purge the corrupted local session so public queries don't continue to fail!
-        await supabase.auth.signOut().catch(() => {});
+        await supabase.auth.signOut().catch(() => { });
         setSession(null);
         setUser(null);
         setProfile(null);
@@ -273,7 +290,7 @@ let globalSessionPromise = null;
     // Attempt to invoke a custom Postgres function 'delete_user'
     // This is the recommended approach for true account deletion in Supabase from the client
     const { error } = await supabase.rpc('delete_user');
-    
+
     if (error) {
       console.warn("RPC 'delete_user' failed or not configured, falling back to deleting the profile...", error);
       // Fallback: Delete the user's profile row
@@ -284,7 +301,7 @@ let globalSessionPromise = null;
         throw error;
       }
     }
-    
+
     // Log them out regardless
     await logout();
   };
