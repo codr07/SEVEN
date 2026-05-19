@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, Cpu, BookOpen, Layers, Sparkles, Loader2 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import MarkdownText from '../components/MarkdownText';
+
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -108,14 +110,8 @@ const UpdateDetail = () => {
           </div>
         </header>
 
-        <div className="prose prose-invert prose-primary max-w-none prose-h3:text-primary prose-h3:uppercase prose-h3:tracking-widest prose-h2:italic prose-h2:tracking-tighter prose-h2:text-3xl">
-          {update.content?.split('\n').map((line, i) => {
-            if (line.startsWith('###')) return <h3 key={i} className="text-lg font-black text-primary mt-8 mb-4 tracking-widest uppercase">{line.replace('###', '').trim()}</h3>;
-            if (line.startsWith('##')) return <h2 key={i} className="text-3xl font-black italic tracking-tighter mb-8 mt-12">{line.replace('##', '').trim()}</h2>;
-            if (line.startsWith('-')) return <li key={i} className="text-muted-foreground mb-2 ml-4 list-disc">{line.replace('-', '').trim()}</li>;
-            if (line.trim() === '') return <br key={i} />;
-            return <p key={i} className="text-muted-foreground leading-relaxed text-lg mb-4">{line}</p>;
-          })}
+        <div className="prose prose-invert prose-primary max-w-none">
+          <MarkdownText text={update.content} />
         </div>
 
         <div className="mt-20 pt-10 border-t border-white/5 flex items-center justify-between">

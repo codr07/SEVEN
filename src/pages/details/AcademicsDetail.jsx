@@ -3,11 +3,14 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase, withTimeout } from '../../lib/supabase';
 import { updateMetadata } from '../../lib/seo';
 import { ArrowLeft, CheckCircle2, XCircle, Loader2, GraduationCap } from 'lucide-react';
+import MarkdownText from '../../components/MarkdownText';
+import UniversalEnquiryModal from '../../components/UniversalEnquiryModal';
 
 const AcademicsDetail = () => {
   const { id } = useParams();
   const [academic, setAcademic] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showEnquiry, setShowEnquiry] = useState(false);
 
   useEffect(() => {
     async function fetchDetail() {
@@ -89,9 +92,9 @@ const AcademicsDetail = () => {
               <h1 className="text-3xl font-black sm:text-5xl lg:text-6xl drop-shadow-md text-animate-gradient">
                 {academic.title}
               </h1>
-              <p className="mt-4 max-w-3xl text-white/90 text-base sm:text-lg font-medium drop-shadow leading-relaxed">
-                {academic.description}
-              </p>
+              <div className="mt-4 max-w-3xl text-white/90 text-base sm:text-lg font-medium drop-shadow leading-relaxed">
+                <MarkdownText text={academic.description} />
+              </div>
             </div>
           </div>
 
@@ -115,16 +118,16 @@ const AcademicsDetail = () => {
 
               <div className="rounded-2xl border border-border bg-background p-6 lg:p-8 shadow-sm">
                 <h2 className="text-2xl font-bold text-foreground border-b border-border pb-4 mb-6">Course Description</h2>
-                <p className="text-base leading-relaxed text-muted-foreground font-medium">
-                  {view.detailed_description || academic.description || "Expert solutions tailored to scale with your educational needs."}
-                </p>
+                <div className="text-base leading-relaxed text-muted-foreground font-medium">
+                  <MarkdownText text={view.detailed_description || academic.description || "Expert solutions tailored to scale with your educational needs."} />
+                </div>
               </div>
 
               {view.public_review && (
                 <div className="rounded-2xl border border-border bg-background p-6 lg:p-8 shadow-sm">
                   <h2 className="text-2xl font-bold text-foreground border-b border-border pb-4 mb-6">Student Review</h2>
                   <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 italic text-muted-foreground relative">
-                    "{view.public_review}"
+                    <MarkdownText text={`"${view.public_review}"`} />
                   </div>
                 </div>
               )}
@@ -155,16 +158,23 @@ const AcademicsDetail = () => {
                 </div>
               </div>
 
-              <Link
-                to={`/payment?amount=${String(academic.price || '').replace(/[^0-9.]/g, '')}&purpose=${encodeURIComponent('[Academic] ' + academic.title)}`}
-                className="inline-flex w-full items-center justify-center rounded-xl bg-green-600 px-6 py-5 text-base font-black uppercase tracking-widest text-white shadow-xl shadow-primary/20 hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+              <button
+                onClick={() => setShowEnquiry(true)}
+                className="inline-flex w-full items-center justify-center rounded-xl bg-green-600 px-6 py-5 text-base font-black uppercase tracking-widest text-white shadow-xl shadow-primary/20 hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer"
               >
-                Enroll Now
-              </Link>
+                Enroll Now / Enquire
+              </button>
             </aside>
           </div>
         </section>
       </div>
+
+      <UniversalEnquiryModal
+        isOpen={showEnquiry}
+        onClose={() => setShowEnquiry(false)}
+        item={academic}
+        itemType="academic"
+      />
     </div>
   );
 };

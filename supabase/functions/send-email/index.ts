@@ -9,7 +9,7 @@ const corsHeaders = {
 }
 
 interface EmailRequest {
-  type: 'purchase_confirmation' | 'course_completion';
+  type: 'purchase_confirmation' | 'course_completion' | 'service_enquiry';
   email: string;
   name: string;
   course_name?: string;
@@ -19,6 +19,9 @@ interface EmailRequest {
   certificate_url?: string;
   has_certificate?: boolean;
   origin?: string;
+  service_name?: string;
+  phone?: string;
+  message?: string;
 }
 
 // Helper function to generate a beautifully styled PDF invoice using pdf-lib
@@ -64,10 +67,23 @@ async function generateInvoicePdf(payload: any, name: string): Promise<Uint8Arra
   page.drawText("RECEIPT ID:", { x: 420, y: height - 88, size: 8, font: fontBold, color: rgb(0.5, 0.55, 0.65) })
   page.drawText(payload.transaction_id || "N/A", { x: 420, y: height - 101, size: 9, font: fontRegular, color: rgb(1, 1, 1) })
 
+  if (payload.billing?.payer_upi_id) {
+    page.drawText("PAYMENT METHOD:", { x: 420, y: height - 121, size: 8, font: fontBold, color: rgb(0.5, 0.55, 0.65) })
+    page.drawText(`UPI: ${payload.billing.payer_upi_id}`, { x: 420, y: height - 134, size: 9, font: fontRegular, color: rgb(1, 1, 1) })
+  }
+
   // Billing Details
   page.drawText("BILLED TO:", { x: 40, y: height - 180, size: 9, font: fontBold, color: rgb(0.4, 0.45, 0.55) })
-  page.drawText(name, { x: 40, y: height - 200, size: 14, font: fontBold, color: rgb(0.043, 0.051, 0.086) })
-  page.drawText(payload.email || "N/A", { x: 40, y: height - 215, size: 9, font: fontRegular, color: rgb(0.4, 0.45, 0.55) })
+  page.drawText(payload.billing?.name || name, { x: 40, y: height - 200, size: 14, font: fontBold, color: rgb(0.043, 0.051, 0.086) })
+  page.drawText(payload.billing?.email || payload.email || "N/A", { x: 40, y: height - 215, size: 9, font: fontRegular, color: rgb(0.4, 0.45, 0.55) })
+  
+  if (payload.billing?.phone) {
+    page.drawText(payload.billing.phone, { x: 40, y: height - 227, size: 9, font: fontRegular, color: rgb(0.4, 0.45, 0.55) })
+  }
+  if (payload.billing?.address) {
+    page.drawText(`${payload.billing.address}`, { x: 40, y: height - 239, size: 9, font: fontRegular, color: rgb(0.4, 0.45, 0.55) })
+    page.drawText(`${payload.billing.city || ''}, ${payload.billing.state || ''} - ${payload.billing.pin || ''}`, { x: 40, y: height - 251, size: 9, font: fontRegular, color: rgb(0.4, 0.45, 0.55) })
+  }
 
   // Divider
   page.drawLine({
@@ -245,6 +261,14 @@ serve(async (req) => {
           <div style="color: #94a3b8; margin-bottom: 6px;"><strong>Course/Track:</strong> <span style="color: #f8fafc;">${payload.purpose}</span></div>
           <div style="color: #94a3b8; margin-bottom: 6px;"><strong>Amount Paid:</strong> <span style="color: #8b5cf6; font-weight: 700;">${payload.amount}</span></div>
           <div style="color: #94a3b8;"><strong>Transaction ID:</strong> <code style="font-family: monospace; font-size: 12px; color: #a78bfa;">${payload.transaction_id}</code></div>
+          ${payload.billing ? `
+          <div style="margin-top: 12px; border-top: 1px solid #1e2030; padding-top: 12px;">
+            <div style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #8b5cf6; margin-bottom: 8px; letter-spacing: 1px;">Billing Details</div>
+            <div style="color: #94a3b8; margin-bottom: 4px;"><strong>Address:</strong> <span style="color: #f8fafc;">${payload.billing.address || 'N/A'}, ${payload.billing.city || ''}, ${payload.billing.state || ''} - ${payload.billing.pin || ''}</span></div>
+            <div style="color: #94a3b8; margin-bottom: 4px;"><strong>Phone:</strong> <span style="color: #f8fafc;">${payload.billing.phone || 'N/A'}</span></div>
+            <div style="color: #94a3b8;"><strong>UPI ID Used:</strong> <code style="font-family: monospace; font-size: 12px; color: #a78bfa;">${payload.billing.payer_upi_id || 'N/A'}</code></div>
+          </div>
+          ` : ''}
         </div>`
 
       const buttonsHtml = `<a href="${siteUrl}/student-zone" style="display: inline-block; background-color: #8b5cf6; color: #f8fafc; text-decoration: none; padding: 16px 36px; border-radius: 20px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; border: 1px solid rgba(139, 92, 246, 0.8); box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.4);">Dashboard</a>`
@@ -259,18 +283,30 @@ serve(async (req) => {
       textContent = `Hello ${name}, your transaction has been successfully processed!\n\nCourse/Track: ${payload.purpose}\nAmount Paid: ${payload.amount}\nTransaction ID: ${payload.transaction_id}\n\nPlease access your student dashboard at: ${siteUrl}/student-zone`
 
       try {
-        console.log("Generating dynamic invoice PDF...")
-        const pdfBytes = await generateInvoicePdf(payload, name)
-        attachments = [
-          {
-            filename: `Invoice-5EVEN-${payload.transaction_id || 'receipt'}.pdf`,
-            content: pdfBytes,
-            contentType: 'application/pdf'
-          }
-        ]
+        if (payload.invoice_pdf_base64) {
+          console.log("Using provided base64 invoice PDF from website generator...")
+          attachments = [
+            {
+              filename: `Invoice-5EVEN-${payload.transaction_id || 'receipt'}.pdf`,
+              content: payload.invoice_pdf_base64,
+              encoding: 'base64',
+              contentType: 'application/pdf'
+            }
+          ]
+        } else {
+          console.log("Generating dynamic invoice PDF via pdf-lib fallback...")
+          const pdfBytes = await generateInvoicePdf(payload, name)
+          attachments = [
+            {
+              filename: `Invoice-5EVEN-${payload.transaction_id || 'receipt'}.pdf`,
+              content: pdfBytes,
+              contentType: 'application/pdf'
+            }
+          ]
+        }
         console.log("Invoice PDF successfully generated and attached.")
       } catch (pdfErr) {
-        console.error("Error generating PDF invoice:", pdfErr)
+        console.error("Error generating/attaching PDF invoice:", pdfErr)
       }
 
     } else if (type === 'course_completion') {
@@ -318,6 +354,70 @@ serve(async (req) => {
         })
 
       }
+    } else if (type === 'service_enquiry') {
+      // --- Email 1: Admin Alert ---
+      subject = `[New Enquiry] Service Interest: ${payload.service_name || 'General'}`
+
+      const adminBodyHtml = `A new service enquiry has been received from the 5EVEN website.<br><br>
+        <div style="background-color: #06070d; border: 1px solid #1e2030; border-radius: 12px; padding: 20px; margin: 24px 0; text-align: left; font-size: 13px; line-height: 1.6;">
+          <div style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #8b5cf6; margin-bottom: 12px; letter-spacing: 1px;">Enquiry Details</div>
+          <div style="color: #94a3b8; margin-bottom: 6px;"><strong>Name:</strong> <span style="color: #f8fafc;">${name}</span></div>
+          <div style="color: #94a3b8; margin-bottom: 6px;"><strong>Email:</strong> <span style="color: #f8fafc;">${email}</span></div>
+          <div style="color: #94a3b8; margin-bottom: 6px;"><strong>Phone:</strong> <span style="color: #f8fafc;">${payload.phone || 'Not provided'}</span></div>
+          <div style="color: #94a3b8; margin-bottom: 6px;"><strong>Service:</strong> <span style="color: #8b5cf6; font-weight: 700;">${payload.service_name}</span></div>
+          ${payload.message ? `<div style="color: #94a3b8; margin-top: 12px; padding-top: 12px; border-top: 1px solid #1e2030;"><strong>Message:</strong><br><span style="color: #f8fafc;">${payload.message}</span></div>` : ''}
+        </div>`
+
+      const adminButtonsHtml = `<a href="${siteUrl}/seven-mod" style="display: inline-block; background-color: #8b5cf6; color: #f8fafc; text-decoration: none; padding: 16px 36px; border-radius: 20px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; border: 1px solid rgba(139, 92, 246, 0.8); box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.4);">Open Admin Panel</a>`
+
+      htmlContent = buildEmailHtml({
+        subtitle: "New Enquiry Received",
+        title: "Service Interest",
+        bodyHtml: adminBodyHtml,
+        buttonsHtml: adminButtonsHtml
+      })
+
+      textContent = `New service enquiry from ${name}\n\nEmail: ${email}\nPhone: ${payload.phone || 'N/A'}\nService: ${payload.service_name}\nMessage: ${payload.message || 'N/A'}\n\nView in admin panel: ${siteUrl}/seven-mod`
+
+      // --- Email 2: User Confirmation ---
+      const userBodyHtml = `
+        <div style="font-size: 14px; color: #e2e8f0; line-height: 1.7;">
+          Hi <strong>${name}</strong>,<br><br>
+          Thank you for reaching out to <strong style="color: #8b5cf6;">5EVEN Institution</strong>! We have successfully received your service enquiry and our team is reviewing it right now.
+        </div>
+        <div style="background-color: #06070d; border: 1px solid #1e2030; border-radius: 16px; padding: 24px; margin: 28px 0; text-align: left; font-size: 13px; line-height: 1.7;">
+          <div style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #8b5cf6; margin-bottom: 16px; letter-spacing: 2px;">Your Enquiry Summary</div>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr><td style="color: #64748b; padding: 6px 0; font-weight: 600; width: 120px; vertical-align: top;">Service</td><td style="color: #f8fafc; padding: 6px 0; font-weight: 700;">${payload.service_name}</td></tr>
+            <tr><td style="color: #64748b; padding: 6px 0; font-weight: 600; vertical-align: top;">Name</td><td style="color: #f8fafc; padding: 6px 0;">${name}</td></tr>
+            <tr><td style="color: #64748b; padding: 6px 0; font-weight: 600; vertical-align: top;">Email</td><td style="color: #f8fafc; padding: 6px 0;">${email}</td></tr>
+            <tr><td style="color: #64748b; padding: 6px 0; font-weight: 600; vertical-align: top;">Phone</td><td style="color: #f8fafc; padding: 6px 0;">${payload.phone || 'Not provided'}</td></tr>
+            ${payload.message ? `<tr><td style="color: #64748b; padding: 6px 0; font-weight: 600; vertical-align: top;">Message</td><td style="color: #f8fafc; padding: 6px 0;">${payload.message}</td></tr>` : ''}
+          </table>
+        </div>
+        <div style="font-size: 13px; color: #94a3b8; line-height: 1.7;">
+          <strong style="color: #e2e8f0;">What happens next?</strong><br>
+          &#8226; Our team will review your enquiry within <strong>24 hours</strong>.<br>
+          &#8226; A dedicated team member will contact you via email or phone to discuss your requirements in detail.<br>
+          &#8226; We&#8217;ll provide a tailored quote and timeline based on your specific needs.<br><br>
+          If you have any urgent questions, feel free to reply to this email directly.
+        </div>`
+
+      const userButtonsHtml = `<a href="${siteUrl}/services" style="display: inline-block; background-color: #8b5cf6; color: #f8fafc; text-decoration: none; padding: 16px 36px; border-radius: 20px; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; border: 1px solid rgba(139, 92, 246, 0.8); box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.4);">Explore More Services</a>`
+
+      // Store user confirmation email for sending after admin alert
+      // @ts-ignore
+      globalThis.__enquiryUserEmail = {
+        to: email,
+        subject: `Thank you for your enquiry &#8212; ${payload.service_name} | 5EVEN`,
+        html: buildEmailHtml({
+          subtitle: "Enquiry Confirmed",
+          title: "We Got Your Request",
+          bodyHtml: userBodyHtml,
+          buttonsHtml: userButtonsHtml
+        }),
+        text: `Hi ${name},\n\nThank you for your enquiry about ${payload.service_name} at 5EVEN Institution.\n\nWe have received your request and our team will review it within 24 hours. A dedicated team member will reach out to discuss your requirements.\n\nEnquiry Summary:\n- Service: ${payload.service_name}\n- Name: ${name}\n- Email: ${email}\n- Phone: ${payload.phone || 'N/A'}\n- Message: ${payload.message || 'N/A'}\n\nVisit us: ${siteUrl}/services`
+      }
     }
 
     const smtpPassword = Deno.env.get("SMTP_PASSWORD")
@@ -341,9 +441,11 @@ serve(async (req) => {
       });
 
       // @ts-ignore: Nodemailer types inside Deno environment
+      const primaryTo = type === 'service_enquiry' ? senderEmail : email
+      // @ts-ignore: Nodemailer types inside Deno environment
       await transporter.sendMail({
         from: `"5EVEN Institution" <${username}>`,
-        to: email,
+        to: primaryTo,
         cc: ccEmail,
         bcc: bccEmail,
         subject: subject,
@@ -353,6 +455,25 @@ serve(async (req) => {
       });
 
       console.log("Email sent successfully via Gmail SMTP!");
+
+      // If a user confirmation email was queued (service_enquiry flow), send it now
+      // @ts-ignore
+      if (globalThis.__enquiryUserEmail) {
+        // @ts-ignore
+        const userMail = globalThis.__enquiryUserEmail
+        console.log("Sending user confirmation email...")
+        // @ts-ignore
+        await transporter.sendMail({
+          from: `"5EVEN Institution" <${username}>`,
+          to: userMail.to,
+          subject: userMail.subject,
+          text: userMail.text,
+          html: userMail.html,
+        });
+        console.log("User confirmation email sent!")
+        // @ts-ignore
+        delete globalThis.__enquiryUserEmail
+      }
       
       return new Response(
         JSON.stringify({ success: true, message: "Email sent successfully via SMTP!" }),

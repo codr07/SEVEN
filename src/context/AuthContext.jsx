@@ -78,7 +78,11 @@ let globalSessionPromise = null;
               gender: meta.gender || '',
               social_links: meta.social_links || { linkedin: '', github: '', linktree: '' },
               role: 'student',
-              extra_details: { id_number: idNumber },
+              extra_details: { 
+                id_number: idNumber,
+                user_type: meta.user_type || '',
+                user_subtype: meta.user_subtype || '',
+              },
               updated_at: new Date().toISOString(),
             };
 
@@ -199,6 +203,8 @@ let globalSessionPromise = null;
       gender = '',
       avatarUrl = '',
       socialLinks = { linkedin: '', github: '', linktree: '' },
+      user_type = '',
+      user_subtype = '',
     } = profileData || {};
 
     const { data, error } = await supabase.auth.signUp({
@@ -213,6 +219,8 @@ let globalSessionPromise = null;
           gender,
           avatar_url: avatarUrl,
           social_links: socialLinks,
+          user_type,
+          user_subtype,
         },
       },
     });

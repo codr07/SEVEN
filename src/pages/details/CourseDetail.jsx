@@ -4,6 +4,7 @@ import { supabase, withTimeout } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { updateMetadata } from '../../lib/seo';
 import { Loader2, ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
+import MarkdownText from '../../components/MarkdownText';
 
 const CourseDetail = () => {
   const { id } = useParams();
@@ -126,9 +127,9 @@ const CourseDetail = () => {
               <h1 className="text-3xl font-black sm:text-5xl lg:text-6xl drop-shadow-md text-animate-gradient">
                 {view.title || course.name}
               </h1>
-              <p className="mt-4 max-w-3xl text-white/90 text-base sm:text-lg font-medium drop-shadow leading-relaxed">
-                {view.short_desc || course.short_desc}
-              </p>
+              <div className="mt-4 max-w-3xl text-white/90 text-base sm:text-lg font-medium drop-shadow leading-relaxed">
+                <MarkdownText text={view.short_desc || course.short_desc} />
+              </div>
             </div>
           </div>
 
@@ -150,15 +151,15 @@ const CourseDetail = () => {
 
               <div className="rounded-2xl border border-border bg-background p-6 lg:p-8 shadow-sm">
                 <h2 className="text-2xl font-bold text-foreground border-b border-border pb-4 mb-6">Why Choose This Course?</h2>
-                <p className="text-base leading-relaxed text-muted-foreground font-medium">
-                  {view.why_choose_this_course || "Hands-on learning path designed for practical outcomes and career readiness."}
-                </p>
+                <div className="text-base leading-relaxed text-muted-foreground font-medium">
+                  <MarkdownText text={view.why_choose_this_course || "Hands-on learning path designed for practical outcomes and career readiness."} />
+                </div>
               </div>
 
               <div className="rounded-2xl border border-border bg-background p-6 lg:p-8 shadow-sm">
                 <h2 className="text-2xl font-bold text-foreground border-b border-border pb-4 mb-6">Student Review</h2>
                 <div className="bg-primary/5 border border-primary/20 rounded-xl p-5 italic text-muted-foreground relative">
-                  "{view.public_review || "Learners love the practical structure and expert mentor support."}"
+                  <MarkdownText text={view.public_review ? `"${view.public_review}"` : '"Learners love the practical structure and expert mentor support."'} />
                 </div>
               </div>
             </div>

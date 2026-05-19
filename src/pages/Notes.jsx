@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import MergedShape from '../components/MergedShape';
 import SignatureButton from '../components/SignatureButton';
 import SignatureShareButton from '../components/SignatureShareButton';
+import GlassSearch from '../components/GlassSearch';
 
 const Notes = () => {
   const { showAlert } = useAlert();
@@ -73,16 +74,13 @@ const Notes = () => {
         </div>
 
         <div className="flex gap-4 items-center max-w-2xl">
-          <div className="relative flex-1">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-primary" size={18} />
-            <input
-              type="text"
-              placeholder="Topic..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-14 pr-8 py-4 bg-white/5 border border-white/10 rounded-[24px] outline-none focus:border-primary/50 transition-all text-sm backdrop-blur-xl shadow-2xl"
-            />
-          </div>
+          <GlassSearch
+            placeholder="Topic..."
+            value={searchQuery}
+            onChange={setSearchQuery}
+            suggestions={notes.map(n => n.title)}
+            className="flex-1"
+          />
           
           <div className="relative">
             <motion.button

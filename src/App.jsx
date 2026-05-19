@@ -42,6 +42,13 @@ const AdminRoute = ({ children }) => {
   return children;
 };
 
+const FacultyAdminRoute = ({ children }) => {
+  const { role, loading } = useAuth();
+  if (loading) return null;
+  if (role !== 'admin' && role !== 'faculty') return <Navigate to="/" replace />;
+  return children;
+};
+
 const AppContent = ({ loading, setLoading }) => {
   const { loading: authLoading } = useAuth();
   const { loading: dataLoading } = useData();
@@ -184,10 +191,18 @@ const AppContent = ({ loading, setLoading }) => {
                       <DeveloperDocs />
                     </AdminRoute>
                   } />
-                  <Route path="/conti" element={<ContiCMS />} />
+                  <Route path="/conti" element={
+                    <FacultyAdminRoute>
+                      <ContiCMS />
+                    </FacultyAdminRoute>
+                  } />
                   <Route path="/learn/course/:id" element={<CourseViewer />} />
                   <Route path="/learn/note/:id" element={<NoteViewer />} />
-                  <Route path="/seven-mod" element={<SevenMod />} />
+                  <Route path="/seven-mod" element={
+                    <AdminRoute>
+                      <SevenMod />
+                    </AdminRoute>
+                  } />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsOfService />} />
                   <Route path="/updates/:slug" element={<UpdateDetail />} />

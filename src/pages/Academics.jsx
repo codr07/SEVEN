@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import MergedShape from '../components/MergedShape';
 import SignatureButton from '../components/SignatureButton';
 import SignatureShareButton from '../components/SignatureShareButton';
+import GlassSearch from '../components/GlassSearch';
 
 const Academics = () => {
   const { showAlert } = useAlert();
@@ -53,16 +54,13 @@ const Academics = () => {
           </p>
         </div>
 
-        <div className="relative max-w-xl">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-primary" size={16} />
-          <input
-            type="text"
-            placeholder="Explore tracks..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-14 pr-8 py-4 bg-white/5 border border-white/10 rounded-[24px] outline-none focus:border-primary/50 transition-all text-sm backdrop-blur-xl shadow-2xl"
-          />
-        </div>
+        <GlassSearch
+          placeholder="Explore tracks..."
+          value={searchQuery}
+          onChange={setSearchQuery}
+          suggestions={academics.map(a => a.title)}
+          className="max-w-xl"
+        />
       </div>
 
       {loading ? (

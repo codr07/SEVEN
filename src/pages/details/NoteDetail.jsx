@@ -4,6 +4,7 @@ import { supabase, withTimeout } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { updateMetadata } from '../../lib/seo';
 import { Loader2, ArrowLeft, ExternalLink } from 'lucide-react';
+import MarkdownText from '../../components/MarkdownText';
 
 const NoteDetail = () => {
   const { id } = useParams();
@@ -140,9 +141,9 @@ const NoteDetail = () => {
               <h1 className="text-3xl font-black sm:text-5xl lg:text-6xl drop-shadow-md text-animate-gradient">
                 {view.title || note.title}
               </h1>
-              <p className="mt-4 max-w-3xl text-base text-white/90 sm:text-lg font-medium drop-shadow">
-                {view.short_desc || note.short_desc}
-              </p>
+              <div className="mt-4 max-w-3xl text-base text-white/90 sm:text-lg font-medium drop-shadow">
+                <MarkdownText text={view.short_desc || note.short_desc} />
+              </div>
             </div>
           </div>
 
@@ -165,7 +166,7 @@ const NoteDetail = () => {
               <div className="rounded-2xl border border-border bg-background p-6 lg:p-8 shadow-sm">
                 <h2 className="text-2xl font-bold text-foreground border-b border-border pb-4 mb-6">Student Peer Review</h2>
                 <div className="bg-accent/5 border border-accent/20 rounded-xl p-5 italic text-muted-foreground relative">
-                   "{view.public_review || "Highly requested notes among the peer circle."}"
+                  <MarkdownText text={view.public_review ? `"${view.public_review}"` : '"Highly requested notes among the peer circle."'} />
                 </div>
               </div>
             </div>

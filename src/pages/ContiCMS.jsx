@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
 import { useAlert } from '../context/AlertContext';
-import { Loader2, Plus, Trash2, Save, X, Edit2, Play, FileText, Settings, LogOut, LayoutDashboard, FolderOpen, Menu, User, BookOpen, UploadCloud, RefreshCw } from 'lucide-react';
+import { Loader2, Plus, Trash2, Save, X, Edit2, Play, FileText, Settings, LogOut, LayoutDashboard, FolderOpen, Menu, User, BookOpen, UploadCloud, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import GlassSelect from '../components/GlassSelect';
 import logoMain from '../assets/seven.svg';
 
@@ -42,13 +42,33 @@ const Field = ({ label, children, required }) => (
 );
 
 const MessageBox = ({ type, children }) => (
-  <div className={`p-4 rounded-xl text-sm font-medium border ${
-    type === 'error' ? 'bg-destructive/10 text-destructive border-destructive/20' : 
-    type === 'success' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
-    'bg-primary/10 text-primary border-primary/20'
-  }`}>
-    {children}
-  </div>
+  <motion.div
+    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+    animate={{ 
+      opacity: 1, 
+      scale: 1, 
+      y: 0,
+      x: type === 'error' ? [0, -6, 6, -6, 6, -3, 3, 0] : 0
+    }}
+    transition={{ duration: 0.4 }}
+    className={`p-4 rounded-2xl border text-sm font-semibold flex items-start gap-3 backdrop-blur-md relative overflow-hidden ${
+      type === 'success'
+        ? 'border-green-500/20 bg-green-500/5 text-green-600 dark:text-green-400 shadow-[0_4px_20px_rgba(34,197,94,0.05)] border-l-4 border-l-green-500'
+        : 'border-destructive/20 bg-destructive/5 text-destructive shadow-[0_4px_20px_rgba(239,68,68,0.05)] border-l-4 border-l-destructive'
+    }`}
+  >
+    <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center relative ${
+      type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-destructive/10 text-destructive'
+    }`}>
+      {type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+    </div>
+    <div className="flex-1 pt-1.5 leading-tight text-left">
+      <span className="block text-[8px] font-black uppercase tracking-widest opacity-50 mb-0.5">
+        {type === 'success' ? 'TRANSACTION COMPLETE / SUCCESS' : 'SYSTEM EXCEPTION / WARNING'}
+      </span>
+      {children}
+    </div>
+  </motion.div>
 );
 
 const LoginScreen = ({ onLogin }) => {
@@ -219,9 +239,9 @@ const ContiCMS = () => {
       .eq('id', data.user.id)
       .single();
 
-    if (profileError || !['admin', 'visionary', 'founder'].includes(profileData?.role)) {
+    if (profileError || !['admin', 'faculty', 'visionary', 'founder'].includes(profileData?.role)) {
       await adminSupabase.auth.signOut();
-      throw new Error('Unauthorized access. Admin privileges required.');
+      throw new Error('Unauthorized access. Admin or Faculty privileges required.');
     }
   };
 
@@ -229,7 +249,7 @@ const ContiCMS = () => {
     await adminSupabase.auth.signOut();
   };
 
-  const isAdmin = ['admin', 'visionary', 'founder'].includes(adminRole);
+  const isAdmin = ['admin', 'faculty', 'visionary', 'founder'].includes(adminRole);
 
   const fetchData = async () => {
     setLoading(true);

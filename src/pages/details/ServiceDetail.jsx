@@ -2,12 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase, withTimeout } from '../../lib/supabase';
 import { updateMetadata } from '../../lib/seo';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckCircle2, X, MessageSquarePlus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAlert } from '../../context/AlertContext';
+import MarkdownText from '../../components/MarkdownText';
+import UniversalEnquiryModal from '../../components/UniversalEnquiryModal';
 
 const ServiceDetail = () => {
   const { id } = useParams();
+  const { showAlert } = useAlert();
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showEnquiry, setShowEnquiry] = useState(false);
 
   useEffect(() => {
     async function fetchService() {
@@ -86,9 +92,9 @@ const ServiceDetail = () => {
               <h1 className="text-3xl font-black sm:text-5xl lg:text-6xl drop-shadow-md text-animate-gradient">
                 {view.title || service.title}
               </h1>
-              <p className="mt-4 max-w-3xl text-base text-white/90 sm:text-lg font-medium drop-shadow">
-                {view.short_desc || service.description?.[0] || ""}
-              </p>
+              <div className="mt-4 max-w-3xl text-base text-white/90 sm:text-lg font-medium drop-shadow">
+                <MarkdownText text={view.short_desc || service.description?.[0] || ""} />
+              </div>
             </div>
           </div>
 
@@ -110,15 +116,15 @@ const ServiceDetail = () => {
 
               <div className="rounded-2xl border border-border bg-background p-6 lg:p-8 shadow-sm">
                 <h2 className="text-2xl font-bold text-foreground border-b border-border pb-4 mb-6">Why Choose This Service?</h2>
-                <p className="text-base leading-relaxed text-muted-foreground font-medium">
-                  {view.why_choose_this_course || "Expert solutions tailored to scale with your business or academic needs."}
-                </p>
+                <div className="text-base leading-relaxed text-muted-foreground font-medium">
+                  <MarkdownText text={view.why_choose_this_course || "Expert solutions tailored to scale with your business or academic needs."} />
+                </div>
               </div>
 
               <div className="rounded-2xl border border-border bg-background p-6 lg:p-8 shadow-sm">
                 <h2 className="text-2xl font-bold text-foreground border-b border-border pb-4 mb-6">Client Review</h2>
                 <div className="bg-secondary/5 border border-secondary/20 rounded-xl p-5 italic text-muted-foreground relative">
-                  "{view.public_review || "Clients highly recommend this service for robust execution and quantifiable results."}"
+                  <MarkdownText text={view.public_review ? `"${view.public_review}"` : '"Clients highly recommend this service for robust execution and quantifiable results."'} />
                 </div>
               </div>
             </div>
@@ -138,16 +144,25 @@ const ServiceDetail = () => {
                 <p className="pt-2 text-sm font-medium text-muted-foreground">Standard deployment cycles vary between 2-12 weeks depending on tier selected. Reach out for custom enterprise quotes.</p>
               </div>
 
-              <Link
-                to={`/payment?amount=${String(service.price || '').replace(/[^0-9.]/g, '')}&purpose=${encodeURIComponent('[Service] ' + (view.title || service.title))}`}
-                className="inline-flex w-full items-center justify-center rounded-xl bg-foreground px-6 py-5 text-base font-black uppercase tracking-widest text-background shadow-lg hover:-translate-y-1 hover:bg-secondary transition-all duration-300"
+              <button
+                onClick={() => setShowEnquiry(true)}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-6 py-5 text-base font-black uppercase tracking-widest text-background shadow-lg hover:-translate-y-1 hover:bg-secondary transition-all duration-300"
               >
-                Purchase Now
-              </Link>
+                <MessageSquarePlus size={20} />
+                Enquire Now
+              </button>
             </aside>
           </div>
         </section>
       </div>
+
+
+      <UniversalEnquiryModal
+        isOpen={showEnquiry}
+        onClose={() => setShowEnquiry(false)}
+        item={service}
+        itemType="service"
+      />
     </div>
   );
 };

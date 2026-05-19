@@ -15,7 +15,7 @@ const loadImage = (src) => {
  * @param {Object} payment - The payment transaction object
  * @param {Object} userProfile - The logged-in user profile object
  */
-export const generateInvoicePDF = async (payment, userProfile) => {
+export const generateInvoicePDF = async (payment, userProfile, returnBase64 = false) => {
   const sign1 = await loadImage('/assets/images/sign/sign1.png');
   const sign2 = await loadImage('/assets/images/sign/sign2.png');
   
@@ -119,8 +119,13 @@ export const generateInvoicePDF = async (payment, userProfile) => {
   
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.text(`Name: ${userProfile?.full_name || userProfile?.username || 'Student'}`, margin + 16, infoY + 18);
-  doc.text(`Email: ${userProfile?.email || 'N/A'}`, margin + 16, infoY + 32);
+  doc.text(`Name: ${payment.billing_name || userProfile?.full_name || userProfile?.username || 'Student'}`, margin + 16, infoY + 18);
+  doc.text(`Email: ${payment.billing_email || userProfile?.email || 'N/A'}`, margin + 16, infoY + 32);
+  if (payment.billing_phone) doc.text(`Phone: ${payment.billing_phone}`, margin + 16, infoY + 46);
+  if (payment.billing_address) {
+    const addressLines = doc.splitTextToSize(`${payment.billing_address}, ${payment.billing_city}, ${payment.billing_state} - ${payment.billing_pin}`, 180);
+    doc.text(addressLines, margin + 16, infoY + 60);
+  }
   
   // Invoice Details (Right)
   const rightX = pageWidth - margin - 220;
@@ -138,7 +143,7 @@ export const generateInvoicePDF = async (payment, userProfile) => {
   doc.setFont('helvetica', 'normal');
   doc.text(`Invoice No: INV-${payment.transaction_id || payment.id}`, rightX + 16, infoY + 18);
   doc.text(`Date: ${new Date(payment.created_at || Date.now()).toLocaleString()}`, rightX + 16, infoY + 32);
-  doc.text(`Payment Mode: UPI / Digital Gateway`, rightX + 16, infoY + 46);
+  doc.text(`Payment Mode: UPI ${payment.payer_upi_id ? `(${payment.payer_upi_id})` : ''}`, rightX + 16, infoY + 46);
   doc.text(`Txn Ref ID: ${payment.transaction_id || 'N/A'}`, rightX + 16, infoY + 60);
 
   // --- TABLE SECTION ---
@@ -389,5 +394,9 @@ export const generateInvoicePDF = async (payment, userProfile) => {
 
   // Save the document
   const safeTxnId = (payment.transaction_id || payment.id || 'INV').replace(/[^a-zA-Z0-9]/g, '');
-  doc.save(`Invoice_${safeTxnId}.pdf`);
+  if (returnBase64) {
+    return doc.output('datauristring').split(',')[1];
+  } else {
+    doc.save(`Invoice_${safeTxnId}.pdf`);
+  }
 };

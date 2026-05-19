@@ -46,7 +46,16 @@ export const AlertProvider = ({ children }) => {
               key={alert.id}
               layout
               initial={{ opacity: 0, x: 50, scale: 0.9 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
+              animate={
+                alert.type === 'error'
+                  ? {
+                      opacity: 1,
+                      x: [50, -10, 10, -8, 8, -4, 4, 0],
+                      scale: 1,
+                      transition: { duration: 0.6 }
+                    }
+                  : { opacity: 1, x: 0, scale: 1 }
+              }
               exit={{ opacity: 0, x: 20, scale: 0.95 }}
               className="pointer-events-auto"
             >
@@ -69,9 +78,11 @@ export const AlertProvider = ({ children }) => {
                 </div>
                 
                 <div className="flex-1 min-w-0 relative z-10">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-1">
+                  <p className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 ${
+                    alert.type === 'error' ? 'text-destructive opacity-80 animate-pulse' : 'opacity-40'
+                  }`}>
                     {alert.type === 'success' ? 'Protocol Success' :
-                     alert.type === 'error' ? 'System Warning' :
+                     alert.type === 'error' ? 'CRITICAL FAULT WARNING' :
                      'Intelligence Update'}
                   </p>
                   <p className="text-sm font-bold text-foreground leading-tight">

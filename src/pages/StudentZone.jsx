@@ -25,6 +25,9 @@ import {
   History,
   Activity,
   Search,
+  GraduationCap,
+  Briefcase,
+  Target,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
@@ -41,6 +44,8 @@ const INITIAL_SIGNUP = {
   linkedin: '',
   github: '',
   linktree: '',
+  user_type: '',
+  user_subtype: '',
 };
 
 const INITIAL_POST = {
@@ -58,6 +63,7 @@ const StudentZone = () => {
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [authMode, setAuthMode] = useState('login');
+  const [signupStep, setSignupStep] = useState(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [signupData, setSignupData] = useState(INITIAL_SIGNUP);
@@ -82,6 +88,11 @@ const StudentZone = () => {
       setActiveTab(requestedTab);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    setSignupStep(1);
+    setMessage({ text: '', type: '' });
+  }, [authMode]);
 
   useEffect(() => {
     if (profile) {
@@ -197,6 +208,16 @@ const StudentZone = () => {
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
+
+    if (authMode === 'signup' && signupStep === 1) {
+      if (!signupData.username || !signupData.fullName || !signupData.phone || !email || !password) {
+        setMessage({ text: 'Please fill in all credential fields.', type: 'error' });
+        return;
+      }
+      setSignupStep(2);
+      return;
+    }
+
     setIsBusy(true);
     setMessage({ text: '', type: '' });
 
@@ -206,7 +227,13 @@ const StudentZone = () => {
         setMessage({ text: 'Logged in successfully.', type: 'success' });
       } else {
         if (!signupData.username || !signupData.fullName || !signupData.phone) {
-          throw new Error('Username, full name, and phone number are required for signup.');
+          throw new Error('Username, full name, and phone number are required.');
+        }
+        if (!signupData.user_type) {
+          throw new Error('Please select your profile persona track.');
+        }
+        if ((signupData.user_type === 'student' || signupData.user_type === 'aspirant') && !signupData.user_subtype) {
+          throw new Error('Please select your specific sub-track.');
         }
 
         await signup(email, password, {
@@ -219,6 +246,8 @@ const StudentZone = () => {
             github: signupData.github,
             linktree: signupData.linktree,
           },
+          user_type: signupData.user_type,
+          user_subtype: signupData.user_subtype,
         });
 
         setMessage({ text: 'Signup successful. Check your email for verification.', type: 'success' });
@@ -567,73 +596,236 @@ const StudentZone = () => {
               </div>
 
               <form onSubmit={handleAuthSubmit} className="space-y-4">
-                {authMode === 'signup' && (
+                {authMode === 'signup' ? (
+                  signupStep === 1 ? (
+                    <>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={signupData.fullName}
+                          onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
+                          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                          placeholder="John Doe"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Username</label>
+                        <input
+                          type="text"
+                          required
+                          value={signupData.username}
+                          onChange={(e) => setSignupData({ ...signupData, username: e.target.value })}
+                          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                          placeholder="johndoe"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Phone</label>
+                        <input
+                          type="text"
+                          required
+                          value={signupData.phone}
+                          onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
+                          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                          placeholder="+91 ..."
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email</label>
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                          placeholder="email@example.com"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Password</label>
+                        <input
+                          type="password"
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                          placeholder="••••••••"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        className="w-full py-4 bg-foreground text-background rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all mt-4"
+                      >
+                        Next: Choose Track
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-4">
+                        <div className="text-center space-y-1">
+                          <h4 className="text-[11px] font-black uppercase tracking-widest text-primary">Step 2: Choose Your Profile Track</h4>
+                          <p className="text-[9px] text-muted-foreground uppercase font-medium">Select your professional or academic track.</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 gap-3">
+                          {/* Student Card */}
+                          <button
+                            type="button"
+                            onClick={() => setSignupData(prev => ({ ...prev, user_type: 'student', user_subtype: '' }))}
+                            className={`p-4 rounded-2xl border text-left transition-all duration-300 flex items-start gap-3 hover:-translate-y-0.5 hover:shadow-lg ${
+                              signupData.user_type === 'student'
+                                ? 'border-primary bg-primary/5 shadow-md shadow-primary/5'
+                                : 'border-border bg-card/50 hover:border-primary/40'
+                            }`}
+                          >
+                            <div className={`p-2 rounded-xl border ${signupData.user_type === 'student' ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground'}`}>
+                              <GraduationCap size={18} />
+                            </div>
+                            <div className="flex-1">
+                              <h5 className="text-[11px] font-black uppercase tracking-wider text-foreground">Student</h5>
+                              <p className="text-[9px] text-muted-foreground mt-0.5 font-medium leading-relaxed">School, college, or university tracks</p>
+                            </div>
+                          </button>
+
+                          {/* Working Professional Card */}
+                          <button
+                            type="button"
+                            onClick={() => setSignupData(prev => ({ ...prev, user_type: 'professional', user_subtype: '' }))}
+                            className={`p-4 rounded-2xl border text-left transition-all duration-300 flex items-start gap-3 hover:-translate-y-0.5 hover:shadow-lg ${
+                              signupData.user_type === 'professional'
+                                ? 'border-primary bg-primary/5 shadow-md shadow-primary/5'
+                                : 'border-border bg-card/50 hover:border-primary/40'
+                            }`}
+                          >
+                            <div className={`p-2 rounded-xl border ${signupData.user_type === 'professional' ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground'}`}>
+                              <Briefcase size={18} />
+                            </div>
+                            <div className="flex-1">
+                              <h5 className="text-[11px] font-black uppercase tracking-wider text-foreground">Working Professional</h5>
+                              <p className="text-[9px] text-muted-foreground mt-0.5 font-medium leading-relaxed">Industry, research, enterprise engineering</p>
+                            </div>
+                          </button>
+
+                          {/* Aspirant Card */}
+                          <button
+                            type="button"
+                            onClick={() => setSignupData(prev => ({ ...prev, user_type: 'aspirant', user_subtype: '' }))}
+                            className={`p-4 rounded-2xl border text-left transition-all duration-300 flex items-start gap-3 hover:-translate-y-0.5 hover:shadow-lg ${
+                              signupData.user_type === 'aspirant'
+                                ? 'border-primary bg-primary/5 shadow-md shadow-primary/5'
+                                : 'border-border bg-card/50 hover:border-primary/40'
+                            }`}
+                          >
+                            <div className={`p-2 rounded-xl border ${signupData.user_type === 'aspirant' ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground'}`}>
+                              <Target size={18} />
+                            </div>
+                            <div className="flex-1">
+                              <h5 className="text-[11px] font-black uppercase tracking-wider text-foreground">Aspirant</h5>
+                              <p className="text-[9px] text-muted-foreground mt-0.5 font-medium leading-relaxed">Preparing for competitive exams or jobs</p>
+                            </div>
+                          </button>
+                        </div>
+
+                        {/* Student Subtype Choice */}
+                        {signupData.user_type === 'student' && (
+                          <div className="space-y-2 pt-1">
+                            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Select Student Category</label>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['school', 'college', 'other'].map((sub) => (
+                                <button
+                                  key={sub}
+                                  type="button"
+                                  onClick={() => setSignupData(prev => ({ ...prev, user_subtype: sub }))}
+                                  className={`py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
+                                    signupData.user_subtype === sub
+                                      ? 'bg-primary border-primary text-white shadow-md shadow-primary/20'
+                                      : 'border-border bg-background hover:bg-muted text-foreground'
+                                  }`}
+                                >
+                                  {sub}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Aspirant Subtype Choice */}
+                        {signupData.user_type === 'aspirant' && (
+                          <div className="space-y-2 pt-1">
+                            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground ml-1">Select Prep Track</label>
+                            <div className="grid grid-cols-3 gap-2">
+                              {['competitive exam', 'job interview', 'other'].map((sub) => (
+                                <button
+                                  key={sub}
+                                  type="button"
+                                  onClick={() => setSignupData(prev => ({ ...prev, user_subtype: sub }))}
+                                  className={`py-2 px-1 rounded-xl border text-[9px] font-black uppercase tracking-wide transition-all leading-tight ${
+                                    signupData.user_subtype === sub
+                                      ? 'bg-primary border-primary text-white shadow-md shadow-primary/20'
+                                      : 'border-border bg-background hover:bg-muted text-foreground'
+                                  }`}
+                                >
+                                  {sub}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex gap-2 pt-4">
+                        <button
+                          type="button"
+                          onClick={() => setSignupStep(1)}
+                          className="flex-1 py-4 border border-border text-foreground rounded-xl font-black uppercase tracking-widest text-xs hover:bg-muted transition-all"
+                        >
+                          Back
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isBusy}
+                          className="flex-1 py-4 bg-foreground text-background rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all disabled:opacity-50"
+                        >
+                          {isBusy ? <Loader2 className="animate-spin mx-auto" size={16} /> : 'Register'}
+                        </button>
+                      </div>
+                    </>
+                  )
+                ) : (
                   <>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Name</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email</label>
                       <input
-                        type="text"
+                        type="email"
                         required
-                        value={signupData.fullName}
-                        onChange={(e) => setSignupData({ ...signupData, fullName: e.target.value })}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                        placeholder="John Doe"
+                        placeholder="email@example.com"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Username</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Password</label>
                       <input
-                        type="text"
+                        type="password"
                         required
-                        value={signupData.username}
-                        onChange={(e) => setSignupData({ ...signupData, username: e.target.value })}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                        placeholder="johndoe"
+                        placeholder="••••••••"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Phone</label>
-                      <input
-                        type="text"
-                        required
-                        value={signupData.phone}
-                        onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                        placeholder="+91 ..."
-                      />
-                    </div>
+                    <button
+                      type="submit"
+                      disabled={isBusy}
+                      className="w-full py-4 bg-foreground text-background rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all disabled:opacity-50 mt-4"
+                    >
+                      {isBusy ? <Loader2 className="animate-spin mx-auto" size={16} /> : 'Login'}
+                    </button>
                   </>
                 )}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                    placeholder="email@example.com"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
-                    placeholder="••••••••"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isBusy}
-                  className="w-full py-4 bg-foreground text-background rounded-xl font-black uppercase tracking-widest text-xs hover:scale-[1.02] transition-all disabled:opacity-50 mt-4"
-                >
-                  {isBusy ? <Loader2 className="animate-spin mx-auto" size={16} /> : authMode === 'login' ? 'Login' : 'Create Account'}
-                </button>
                 
                 {message.text && (
                   <div className={`p-4 rounded-xl text-[10px] font-bold uppercase tracking-widest text-center ${message.type === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-green-500/10 text-green-500'}`}>
@@ -1072,6 +1264,68 @@ const StudentZone = () => {
                           className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
                         />
                       </Field>
+                      <Field label="Profile Persona Type">
+                        <GlassSelect
+                          value={editableProfile.extra_details?.user_type || ''}
+                          onChange={(val) => setEditableProfile((p) => ({
+                            ...p,
+                            extra_details: {
+                              ...(p.extra_details || {}),
+                              user_type: val,
+                              user_subtype: ''
+                            }
+                          }))}
+                          options={[
+                            { value: '', label: 'Not Specified' },
+                            { value: 'student', label: 'Student' },
+                            { value: 'professional', label: 'Working Professional' },
+                            { value: 'aspirant', label: 'Aspirant' }
+                          ]}
+                          className="w-full text-xs font-bold text-foreground"
+                        />
+                      </Field>
+                      {editableProfile.extra_details?.user_type === 'student' && (
+                        <Field label="Student Track Subtype">
+                          <GlassSelect
+                            value={editableProfile.extra_details?.user_subtype || ''}
+                            onChange={(val) => setEditableProfile((p) => ({
+                              ...p,
+                              extra_details: {
+                                ...(p.extra_details || {}),
+                                user_subtype: val
+                              }
+                            }))}
+                            options={[
+                              { value: '', label: 'Select Subtype' },
+                              { value: 'school', label: 'School' },
+                              { value: 'college', label: 'College' },
+                              { value: 'other', label: 'Other' }
+                            ]}
+                            className="w-full text-xs font-bold text-foreground"
+                          />
+                        </Field>
+                      )}
+                      {editableProfile.extra_details?.user_type === 'aspirant' && (
+                        <Field label="Aspirant Prep Track">
+                          <GlassSelect
+                            value={editableProfile.extra_details?.user_subtype || ''}
+                            onChange={(val) => setEditableProfile((p) => ({
+                              ...p,
+                              extra_details: {
+                                ...(p.extra_details || {}),
+                                user_subtype: val
+                              }
+                            }))}
+                            options={[
+                              { value: '', label: 'Select Track' },
+                              { value: 'competitive exam', label: 'Competitive Exam' },
+                              { value: 'job interview', label: 'Job Interview' },
+                              { value: 'other', label: 'Other' }
+                            ]}
+                            className="w-full text-xs font-bold text-foreground"
+                          />
+                        </Field>
+                      )}
                       <Field label="Location">
                         <input
                           type="text"
@@ -1345,15 +1599,33 @@ const Field = ({ label, required, children }) => (
 );
 
 const MessageBox = ({ type, children }) => (
-  <div
-    className={`p-3 rounded-xl border text-sm font-semibold flex items-center gap-2 ${type === 'success'
-        ? 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400'
-        : 'border-destructive/30 bg-destructive/10 text-destructive'
-      }`}
+  <motion.div
+    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+    animate={{ 
+      opacity: 1, 
+      scale: 1, 
+      y: 0,
+      x: type === 'error' ? [0, -6, 6, -6, 6, -3, 3, 0] : 0
+    }}
+    transition={{ duration: 0.4 }}
+    className={`p-4 rounded-2xl border text-sm font-semibold flex items-start gap-3 backdrop-blur-md relative overflow-hidden ${
+      type === 'success'
+        ? 'border-green-500/20 bg-green-500/5 text-green-600 dark:text-green-400 shadow-[0_4px_20px_rgba(34,197,94,0.05)] border-l-4 border-l-green-500'
+        : 'border-destructive/20 bg-destructive/5 text-destructive shadow-[0_4px_20px_rgba(239,68,68,0.05)] border-l-4 border-l-destructive'
+    }`}
   >
-    {type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-    {children}
-  </div>
+    <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center relative ${
+      type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-destructive/10 text-destructive'
+    }`}>
+      {type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+    </div>
+    <div className="flex-1 pt-1.5 leading-tight text-left">
+      <span className="block text-[8px] font-black uppercase tracking-widest opacity-50 mb-0.5">
+        {type === 'success' ? 'TRANSACTION COMPLETE / SUCCESS' : 'SYSTEM EXCEPTION / WARNING'}
+      </span>
+      {children}
+    </div>
+  </motion.div>
 );
 
 const StatCard = ({ title, value }) => (

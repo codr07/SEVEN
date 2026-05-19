@@ -30,7 +30,36 @@ import {
   ChevronRight,
   TrendingUp,
   History,
-  Activity
+  Activity,
+  Sparkles,
+  Bold,
+  Italic,
+  Underline,
+  Heading1,
+  Heading2,
+  List,
+  Link,
+  Eraser,
+  Undo,
+  Redo,
+  Strikethrough,
+  Type,
+  Quote,
+  ListOrdered,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  Subscript,
+  Superscript,
+  Minus,
+  Palette,
+  Highlighter,
+  Tag,
+  ToggleLeft,
+  ToggleRight,
+  Calendar,
+  Infinity
 } from 'lucide-react';
 import {
   BarChart,
@@ -51,6 +80,7 @@ import {
 } from 'recharts';
 import { useAlert } from '../context/AlertContext';
 import { orderedFetch } from '../lib/supabase';
+import { generateInvoicePDF } from '../lib/invoiceGenerator';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -90,6 +120,7 @@ const ADMIN_TABS = [
   { id: 'users', name: 'Users & Roles', icon: Users },
   { id: 'student_submissions', name: 'Student Submissions', icon: Upload },
   { id: 'payments', name: 'Payments', icon: Activity },
+  { id: 'coupons', name: 'Coupon Codes', icon: Tag },
 ];
 
 const LoginScreen = ({ onLogin }) => {
@@ -169,6 +200,10 @@ const SevenMod = () => {
   const [users, setUsers] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [paymentsList, setPaymentsList] = useState([]);
+  const [couponsList, setCouponsList] = useState([]);
+  const [couponForm, setCouponForm] = useState({ code: '', discount_pct: 15, min_amount: 0, applies_to: 'all', never_expires: true, expires_at: '', is_active: true });
+  const [couponEditId, setCouponEditId] = useState(null);
+  const [couponSaving, setCouponSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState([]);
   const [graphTimeframes, setGraphTimeframes] = useState({});
@@ -243,8 +278,19 @@ const SevenMod = () => {
   }, []);
 
   const handleAdminLogin = async (email, password) => {
-    const { error } = await adminSupabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    const { data, error: authError } = await adminSupabase.auth.signInWithPassword({ email, password });
+    if (authError) throw authError;
+
+    const { data: profileData, error: profileError } = await adminSupabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .single();
+
+    if (profileError || profileData?.role !== 'admin') {
+      await adminSupabase.auth.signOut();
+      throw new Error('Unauthorized access. Admin privileges required.');
+    }
   };
 
   const handleLogout = async () => {
@@ -277,6 +323,10 @@ const SevenMod = () => {
     }
     if (activeTab === 'payments') {
       fetchPayments();
+      return;
+    }
+    if (activeTab === 'coupons') {
+      fetchCoupons();
       return;
     }
 
@@ -412,7 +462,7 @@ const SevenMod = () => {
     try {
       const { data, error } = await fetchRowsWithCreatedAtFallback(
         'profiles',
-        'id, username, full_name, phone, avatar_url, role, created_at'
+        'id, username, full_name, phone, avatar_url, role, extra_details, created_at'
       );
 
       if (error) throw error;
@@ -459,6 +509,91 @@ const SevenMod = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchCoupons = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await adminSupabase
+        .from('coupons')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setCouponsList(data || []);
+    } catch (err) {
+      console.error('Failed to fetch coupons:', err);
+      setCouponsList([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveCoupon = async () => {
+    if (!couponForm.code.trim()) {
+      showAlert('Coupon code cannot be empty.', 'error');
+      return;
+    }
+    if (couponForm.discount_pct <= 0 || couponForm.discount_pct > 100) {
+      showAlert('Discount must be between 1% and 100%.', 'error');
+      return;
+    }
+    if (!couponForm.never_expires && !couponForm.expires_at) {
+      showAlert('Please set an expiry date/time or enable Never Expires.', 'error');
+      return;
+    }
+    setCouponSaving(true);
+    try {
+      const payload = {
+        code: couponForm.code.trim().toUpperCase(),
+        discount_pct: parseFloat(couponForm.discount_pct),
+        min_amount: parseFloat(couponForm.min_amount) || 0,
+        applies_to: couponForm.applies_to,
+        never_expires: couponForm.never_expires,
+        expires_at: couponForm.never_expires ? null : new Date(couponForm.expires_at).toISOString(),
+        is_active: couponForm.is_active
+      };
+      let error;
+      if (couponEditId) {
+        ({ error } = await adminSupabase.from('coupons').update(payload).eq('id', couponEditId));
+      } else {
+        ({ error } = await adminSupabase.from('coupons').insert([payload]));
+      }
+      if (error) throw error;
+      showAlert(couponEditId ? 'Coupon updated successfully.' : 'Coupon created successfully.', 'success');
+      setCouponForm({ code: '', discount_pct: 15, min_amount: 0, applies_to: 'all', never_expires: true, expires_at: '', is_active: true });
+      setCouponEditId(null);
+      fetchCoupons();
+    } catch (err) {
+      showAlert(err.message || 'Failed to save coupon.', 'error');
+    } finally {
+      setCouponSaving(false);
+    }
+  };
+
+  const deleteCoupon = (id) => {
+    showConfirm('Delete this coupon?', async () => {
+      const { error } = await adminSupabase.from('coupons').delete().eq('id', id);
+      if (error) { showAlert(error.message, 'error'); return; }
+      fetchCoupons();
+    });
+  };
+
+  const startEditCoupon = (c) => {
+    setCouponEditId(c.id);
+    setCouponForm({
+      code: c.code,
+      discount_pct: c.discount_pct,
+      min_amount: c.min_amount,
+      applies_to: c.applies_to,
+      never_expires: c.never_expires,
+      expires_at: c.expires_at ? new Date(c.expires_at).toISOString().slice(0, 16) : '',
+      is_active: c.is_active
+    });
+  };
+
+  const cancelCouponEdit = () => {
+    setCouponEditId(null);
+    setCouponForm({ code: '', discount_pct: 15, min_amount: 0, applies_to: 'all', never_expires: true, expires_at: '', is_active: true });
   };
 
   const fetchPayments = async () => {
@@ -509,10 +644,22 @@ const SevenMod = () => {
     if (status === 'paid') {
       const paymentItem = paymentsList.find(p => p.id === id);
       if (paymentItem && paymentItem.user_profile?.email) {
+        
+        let pdfBase64 = null;
+        try {
+          const userProfileForPdf = {
+            full_name: paymentItem.billing_name || paymentItem.user_profile.full_name || paymentItem.user_profile.username || 'Student',
+            email: paymentItem.billing_email || paymentItem.user_profile.email || ''
+          };
+          pdfBase64 = await generateInvoicePDF(paymentItem, userProfileForPdf, true);
+        } catch (err) {
+          console.error('Failed to generate base64 PDF for email:', err);
+        }
+
         const title = paymentItem.purpose.replace(/\[.*?\]\s*/g, '');
         const amount = paymentItem.amount;
-        const user_email = paymentItem.user_profile.email;
-        const user_name = paymentItem.user_profile.full_name || paymentItem.user_profile.username || 'Student';
+        const user_email = paymentItem.billing_email || paymentItem.user_profile.email;
+        const user_name = paymentItem.billing_name || paymentItem.user_profile.full_name || paymentItem.user_profile.username || 'Student';
         
         adminSupabase.functions.invoke('send-email', {
           body: {
@@ -522,7 +669,18 @@ const SevenMod = () => {
             purpose: paymentItem.purpose,
             amount: `₹${amount}`,
             transaction_id: paymentItem.transaction_id || paymentItem.id,
-            origin: window.location.origin
+            origin: window.location.origin,
+            invoice_pdf_base64: pdfBase64,
+            billing: {
+              name: paymentItem.billing_name,
+              email: paymentItem.billing_email,
+              phone: paymentItem.billing_phone,
+              address: paymentItem.billing_address,
+              city: paymentItem.billing_city,
+              state: paymentItem.billing_state,
+              pin: paymentItem.billing_pin,
+              payer_upi_id: paymentItem.payer_upi_id
+            }
           }
         })
         .then((res) => {
@@ -1001,7 +1159,20 @@ const SevenMod = () => {
                         {item.avatar_url ? <img src={item.avatar_url} alt="avatar" className="w-full h-full object-cover" /> : <User size={18} className="text-primary" />}
                       </div>
                       <div>
-                        <p className="font-bold">{item.full_name || item.username || item.id}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-bold">{item.full_name || item.username || item.id}</p>
+                          {(() => {
+                            let extra = item.extra_details;
+                            if (typeof extra === 'string') {
+                              try { extra = JSON.parse(extra); } catch { extra = {}; }
+                            }
+                            return extra?.user_type ? (
+                              <span className="px-2 py-0.5 rounded-lg bg-primary/10 text-primary font-black uppercase text-[8px] tracking-widest border border-primary/20">
+                                {extra.user_type} ({extra.user_subtype || 'general'})
+                              </span>
+                            ) : null;
+                          })()}
+                        </div>
                         <p className="text-xs text-muted-foreground">{item.phone || 'No phone'} • {item.id.slice(0, 8)}...</p>
                       </div>
                     </div>
@@ -1169,6 +1340,13 @@ const SevenMod = () => {
                       <p className="text-[10px] text-muted-foreground mt-1">
                         User: {item.user_profile?.full_name || item.user_profile?.username || 'Unknown'} • TXN ID: {item.transaction_id}
                       </p>
+                      <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-muted-foreground border-t border-border/50 pt-2">
+                        <div><strong className="text-white">Billing Name:</strong> {item.billing_name || 'N/A'}</div>
+                        <div><strong className="text-white">Phone:</strong> {item.billing_phone || 'N/A'}</div>
+                        <div><strong className="text-white">Email:</strong> {item.billing_email || 'N/A'}</div>
+                        <div><strong className="text-white">UPI ID:</strong> {item.payer_upi_id || 'N/A'}</div>
+                        <div className="sm:col-span-2"><strong className="text-white">Address:</strong> {item.billing_address ? `${item.billing_address}, ${item.billing_city}, ${item.billing_state} - ${item.billing_pin}` : 'N/A'}</div>
+                      </div>
                     </div>
 
                     <div className="flex flex-col items-end gap-2">
@@ -1197,6 +1375,216 @@ const SevenMod = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === 'coupons' && (
+          <section className="space-y-8">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-3xl font-black italic tracking-tighter text-animate-gradient">Coupon Code Manager</h2>
+              <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Create, edit, and control discount coupon codes</p>
+            </div>
+
+            {/* Create / Edit Form */}
+            <div className="p-6 rounded-3xl border border-border bg-card shadow-xl space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-black uppercase tracking-widest text-primary">
+                  {couponEditId ? '✎ Edit Coupon' : '＋ New Coupon'}
+                </h3>
+                {couponEditId && (
+                  <button onClick={cancelCouponEdit} className="text-xs font-black text-muted-foreground hover:text-white uppercase tracking-widest transition-colors">
+                    Cancel
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Code */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Coupon Code</label>
+                  <input
+                    type="text"
+                    value={couponForm.code}
+                    onChange={(e) => setCouponForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
+                    className="w-full h-11 bg-background border border-border rounded-xl px-4 text-sm font-black uppercase tracking-widest outline-none focus:border-primary transition-colors"
+                  />
+                </div>
+
+                {/* Discount % */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Discount %</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      step="0.5"
+                      value={couponForm.discount_pct}
+                      onChange={(e) => setCouponForm(f => ({ ...f, discount_pct: e.target.value }))}
+                      className="w-full h-11 bg-background border border-border rounded-xl px-4 pr-10 text-sm font-bold outline-none focus:border-primary transition-colors"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground">%</span>
+                  </div>
+                </div>
+
+                {/* Min Amount */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Min. Bill Amount (₹)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-muted-foreground">₹</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={couponForm.min_amount}
+                      onChange={(e) => setCouponForm(f => ({ ...f, min_amount: e.target.value }))}
+                      className="w-full h-11 bg-background border border-border rounded-xl pl-8 pr-4 text-sm font-bold outline-none focus:border-primary transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* Applies To */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Applies To</label>
+                  <GlassSelect
+                    value={couponForm.applies_to}
+                    onChange={(v) => setCouponForm(f => ({ ...f, applies_to: v }))}
+                    options={[
+                      { value: 'all', label: 'All Products' },
+                      { value: 'course', label: 'Courses Only' },
+                      { value: 'note', label: 'Notes Only' },
+                      { value: 'service', label: 'Services Only' },
+                      { value: 'academic', label: 'Academics Only' },
+                    ]}
+                    className="w-full h-11 text-sm"
+                  />
+                </div>
+
+                {/* Never Expires Toggle */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Expiry</label>
+                  <button
+                    type="button"
+                    onClick={() => setCouponForm(f => ({ ...f, never_expires: !f.never_expires }))}
+                    className={`w-full h-11 flex items-center gap-3 px-4 rounded-xl border font-black text-xs uppercase tracking-widest transition-all ${
+                      couponForm.never_expires
+                        ? 'bg-primary/10 border-primary/40 text-primary'
+                        : 'bg-background border-border text-muted-foreground hover:border-primary/40'
+                    }`}
+                  >
+                    {couponForm.never_expires ? <Infinity size={16} /> : <Calendar size={16} />}
+                    {couponForm.never_expires ? 'Never Expires' : 'Set Expiry Date'}
+                  </button>
+                </div>
+
+                {/* Expires At */}
+                {!couponForm.never_expires && (
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Expires At</label>
+                    <input
+                      type="datetime-local"
+                      value={couponForm.expires_at}
+                      onChange={(e) => setCouponForm(f => ({ ...f, expires_at: e.target.value }))}
+                      className="w-full h-11 bg-background border border-border rounded-xl px-4 text-sm font-bold outline-none focus:border-primary transition-colors"
+                    />
+                  </div>
+                )}
+
+                {/* Active Toggle */}
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Status</label>
+                  <button
+                    type="button"
+                    onClick={() => setCouponForm(f => ({ ...f, is_active: !f.is_active }))}
+                    className={`w-full h-11 flex items-center gap-3 px-4 rounded-xl border font-black text-xs uppercase tracking-widest transition-all ${
+                      couponForm.is_active
+                        ? 'bg-green-500/10 border-green-500/40 text-green-500'
+                        : 'bg-destructive/10 border-destructive/40 text-destructive'
+                    }`}
+                  >
+                    {couponForm.is_active ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+                    {couponForm.is_active ? 'Active' : 'Inactive'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Preview */}
+              {couponForm.code && (
+                <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 flex flex-wrap items-center gap-4 text-xs font-black uppercase tracking-widest">
+                  <span className="px-3 py-1.5 rounded-lg bg-primary/20 text-primary border border-primary/30 text-sm tracking-[0.3em]">{couponForm.code || '—'}</span>
+                  <span className="text-green-500">{couponForm.discount_pct}% OFF</span>
+                  <span className="text-muted-foreground">Min ₹{parseFloat(couponForm.min_amount || 0).toFixed(0)}</span>
+                  <span className="text-muted-foreground">→ {couponForm.applies_to === 'all' ? 'All Products' : couponForm.applies_to}</span>
+                  <span className={couponForm.is_active ? 'text-green-500' : 'text-destructive'}>{couponForm.is_active ? '● Active' : '● Inactive'}</span>
+                  <span className="text-muted-foreground">{couponForm.never_expires ? '∞ Never Expires' : couponForm.expires_at ? `Expires ${new Date(couponForm.expires_at).toLocaleString()}` : 'No expiry set'}</span>
+                </div>
+              )}
+
+              <button
+                onClick={saveCoupon}
+                disabled={couponSaving}
+                className="px-8 py-3 rounded-xl bg-primary text-primary-foreground font-black text-xs uppercase tracking-widest hover:bg-primary/90 active:scale-95 transition-all flex items-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-50"
+              >
+                {couponSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                {couponEditId ? 'Update Coupon' : 'Create Coupon'}
+              </button>
+            </div>
+
+            {/* Coupons List */}
+            {loading ? (
+              <div className="h-40 flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>
+            ) : couponsList.length === 0 ? (
+              <EmptyState text="No coupon codes found. Create your first one above." />
+            ) : (
+              <div className="space-y-3">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">{couponsList.length} Coupon{couponsList.length !== 1 ? 's' : ''}</p>
+                {couponsList.map((c) => {
+                  const isExpired = !c.never_expires && c.expires_at && new Date(c.expires_at) < new Date();
+                  return (
+                    <div key={c.id} className={`p-5 rounded-2xl border bg-card flex flex-col sm:flex-row sm:items-center gap-4 transition-all ${couponEditId === c.id ? 'border-primary/50 shadow-[0_0_24px_rgba(var(--primary-rgb),0.1)]' : 'border-border'}`}>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-black text-base tracking-[0.25em] text-primary">{c.code}</span>
+                          <span className="px-2 py-0.5 rounded bg-green-500/10 text-green-500 text-[9px] font-black uppercase tracking-widest border border-green-500/20">
+                            {c.discount_pct}% OFF
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${
+                            c.is_active && !isExpired
+                              ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                              : 'bg-destructive/10 text-destructive border-destructive/20'
+                          }`}>
+                            {isExpired ? 'Expired' : c.is_active ? 'Active' : 'Inactive'}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[9px] font-black uppercase tracking-widest border border-blue-500/20">
+                            {c.applies_to === 'all' ? 'All' : c.applies_to}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-x-5 gap-y-1 text-[10px] text-muted-foreground font-bold">
+                          <span>Min Bill: ₹{parseFloat(c.min_amount || 0).toFixed(0)}</span>
+                          <span className="flex items-center gap-1">
+                            {c.never_expires ? <><Infinity size={10} /> Never Expires</> : isExpired ? `Expired ${new Date(c.expires_at).toLocaleString()}` : `Expires ${new Date(c.expires_at).toLocaleString()}`}
+                          </span>
+                          <span>Created {new Date(c.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => startEditCoupon(c)}
+                          className="px-4 py-2 rounded-xl border border-border hover:border-primary/40 text-xs font-black uppercase tracking-widest transition-all flex items-center gap-1.5"
+                        >
+                          <Pencil size={12} /> Edit
+                        </button>
+                        <button
+                          onClick={() => deleteCoupon(c.id)}
+                          className="px-4 py-2 rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/10 text-xs font-black uppercase tracking-widest transition-all flex items-center gap-1.5"
+                        >
+                          <Trash2 size={12} /> Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </section>
@@ -1878,15 +2266,33 @@ const Field = ({ label, required, children }) => (
 );
 
 const MessageBox = ({ type, children }) => (
-  <div
-    className={`p-3 rounded-xl border text-sm font-semibold flex items-center gap-2 ${type === 'success'
-      ? 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400'
-      : 'border-destructive/30 bg-destructive/10 text-destructive'
-      }`}
+  <motion.div
+    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+    animate={{ 
+      opacity: 1, 
+      scale: 1, 
+      y: 0,
+      x: type === 'error' ? [0, -6, 6, -6, 6, -3, 3, 0] : 0
+    }}
+    transition={{ duration: 0.4 }}
+    className={`p-4 rounded-2xl border text-sm font-semibold flex items-start gap-3 backdrop-blur-md relative overflow-hidden ${
+      type === 'success'
+        ? 'border-green-500/20 bg-green-500/5 text-green-600 dark:text-green-400 shadow-[0_4px_20px_rgba(34,197,94,0.05)] border-l-4 border-l-green-500'
+        : 'border-destructive/20 bg-destructive/5 text-destructive shadow-[0_4px_20px_rgba(239,68,68,0.05)] border-l-4 border-l-destructive'
+    }`}
   >
-    {type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-    {children}
-  </div>
+    <div className={`w-8 h-8 rounded-lg shrink-0 flex items-center justify-center relative ${
+      type === 'success' ? 'bg-green-500/10 text-green-500' : 'bg-destructive/10 text-destructive'
+    }`}>
+      {type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+    </div>
+    <div className="flex-1 pt-1.5 leading-tight text-left">
+      <span className="block text-[8px] font-black uppercase tracking-widest opacity-50 mb-0.5">
+        {type === 'success' ? 'TRANSACTION COMPLETE / SUCCESS' : 'SYSTEM EXCEPTION / WARNING'}
+      </span>
+      {children}
+    </div>
+  </motion.div>
 );
 
 const EmptyState = ({ text }) => (
@@ -1907,6 +2313,531 @@ const StatusBadge = ({ pushed, status }) => (
     {pushed ? 'Pushed' : status === 'unpushed' ? 'Unpushed' : 'On Hold'}
   </span>
 );
+
+const htmlToMarkdown = (html) => {
+  if (!html) return '';
+  let md = html;
+  
+  // 1. Replace plain block/paragraph/divisions (without attributes) with newlines
+  md = md.replace(/<p\s*>/gi, '').replace(/<\/p\s*>/gi, '\n\n');
+  md = md.replace(/<div\s*>/gi, '').replace(/<\/div\s*>/gi, '\n');
+  md = md.replace(/<br\s*\/?>/gi, '\n');
+  
+  // Headers
+  md = md.replace(/<h1>(.*?)<\/h1>/gi, '# $1\n\n');
+  md = md.replace(/<h2>(.*?)<\/h2>/gi, '## $1\n\n');
+  md = md.replace(/<h3>(.*?)<\/h3>/gi, '### $1\n\n');
+  
+  // Lists
+  md = md.replace(/<ul>/gi, '').replace(/<\/ul>/gi, '\n');
+  md = md.replace(/<ol>/gi, '').replace(/<\/ol>/gi, '\n');
+  md = md.replace(/<li>(.*?)<\/li>/gi, '- $1\n');
+  
+  // Bold, Italic, Underline, Code, Link, Strike, blockquotes
+  md = md.replace(/<strong>(.*?)<\/strong>/gi, '**$1**');
+  md = md.replace(/<b>(.*?)<\/b>/gi, '**$1**');
+  md = md.replace(/<em>(.*?)<\/em>/gi, '*$1*');
+  md = md.replace(/<i>(.*?)<\/i>/gi, '*$1*');
+  md = md.replace(/<u>(.*?)<\/u>/gi, '_$1_');
+  md = md.replace(/<strike>(.*?)<\/strike>/gi, '~~$1~~');
+  md = md.replace(/<s>(.*?)<\/s>/gi, '~~$1~~');
+  md = md.replace(/<code>(.*?)<\/code>/gi, '`$1`');
+  md = md.replace(/<a\s+href="([^"]+)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)');
+  md = md.replace(/<blockquote>(.*?)<\/blockquote>/gi, '> $1\n\n');
+
+  // 2. Keep all styled tags (span, font, div, p with any styling/alignment attributes) by replacing with placeholders
+  const preservedTags = [];
+  md = md.replace(/<(span|font|div|p)\s+([^>]+)>/gi, (match, tagName, attrs) => {
+    preservedTags.push(`<${tagName} ${attrs}>`);
+    return `__PRESERVED_TAG_START_${preservedTags.length - 1}__`;
+  });
+  
+  md = md.replace(/<\/span>/gi, '__SPAN_END__');
+  md = md.replace(/<\/font>/gi, '__FONT_END__');
+  md = md.replace(/<\/div>/gi, '__DIV_END__');
+  md = md.replace(/<\/p>/gi, '__P_END__');
+  md = md.replace(/<sub>/gi, '__SUB_START__');
+  md = md.replace(/<\/sub>/gi, '__SUB_END__');
+  md = md.replace(/<sup>/gi, '__SUP_START__');
+  md = md.replace(/<\/sup>/gi, '__SUP_END__');
+  md = md.replace(/<hr\s*\/?>/gi, '__HR__');
+
+  // 3. Clean remaining tags
+  md = md.replace(/<[^>]+>/g, '');
+
+  // 4. Restore preserved tags
+  preservedTags.forEach((tagString, index) => {
+    md = md.replace(new RegExp(`__PRESERVED_TAG_START_${index}__`, 'g'), tagString);
+  });
+  md = md.replace(/__SPAN_END__/g, '</span>');
+  md = md.replace(/__FONT_END__/g, '</font>');
+  md = md.replace(/__DIV_END__/g, '</div>');
+  md = md.replace(/__P_END__/g, '</p>');
+  md = md.replace(/__SUB_START__/g, '<sub>');
+  md = md.replace(/__SUB_END__/g, '</sub>');
+  md = md.replace(/__SUP_START__/g, '<sup>');
+  md = md.replace(/__SUP_END__/g, '</sup>');
+  md = md.replace(/__HR__/g, '<hr />');
+
+  // 5. Decode spacing/punctuation HTML entities safely
+  md = md
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&quot;/g, '"')
+    .replace(/&ldquo;/g, '"')
+    .replace(/&rdquo;/g, '"')
+    .replace(/&lsquo;/g, "'")
+    .replace(/&rsquo;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+  
+  // Clean up excessive newlines
+  md = md.replace(/\n{3,}/g, '\n\n');
+  return md.trim();
+};
+
+const markdownToHtml = (markdown) => {
+  if (!markdown) return '';
+  
+  let normalized = markdown
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&quot;/g, '"')
+    .replace(/&ldquo;/g, '"')
+    .replace(/&rdquo;/g, '"')
+    .replace(/&lsquo;/g, "'")
+    .replace(/&rsquo;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+
+  const blocks = normalized.split(/\n\n+/);
+  const result = [];
+
+  blocks.forEach(block => {
+    let trimmed = block.trim();
+    if (!trimmed) return;
+
+    trimmed = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    trimmed = trimmed.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    trimmed = trimmed.replace(/_(.*?)_/g, '<u>$1</u>');
+    trimmed = trimmed.replace(/~~(.*?)~~/g, '<strike>$1</strike>');
+    trimmed = trimmed.replace(/`(.*?)`/g, '<code>$1</code>');
+    trimmed = trimmed.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+    if (trimmed.startsWith('# ')) {
+      result.push(`<h1>${trimmed.substring(2)}</h1>`);
+    } else if (trimmed.startsWith('## ')) {
+      result.push(`<h2>${trimmed.substring(3)}</h2>`);
+    } else if (trimmed.startsWith('### ')) {
+      result.push(`<h3>${trimmed.substring(4)}</h3>`);
+    } else if (trimmed.startsWith('> ')) {
+      result.push(`<blockquote>${trimmed.substring(2)}</blockquote>`);
+    } else if (trimmed.startsWith('---')) {
+      result.push('<hr />');
+    } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      const items = trimmed.split(/\n[-*]\s+/);
+      const liElements = items.map(item => {
+        const cleaned = item.replace(/^[-*]\s+/, '');
+        return `<li>${cleaned}</li>`;
+      }).join('');
+      result.push(`<ul>${liElements}</ul>`);
+    } else if (/^\d+\.\s+/.test(trimmed)) {
+      const items = trimmed.split(/\n\d+\.\s+/);
+      const liElements = items.map(item => {
+        const cleaned = item.replace(/^\d+\.\s+/, '');
+        return `<li>${cleaned}</li>`;
+      }).join('');
+      result.push(`<ol>${liElements}</ol>`);
+    } else {
+      const isHtmlBlock = /^\s*<(p|div|h1|h2|h3|blockquote|ul|ol|hr)\b/i.test(trimmed);
+      if (isHtmlBlock) {
+        result.push(trimmed);
+      } else {
+        const parsedLines = trimmed.split('\n').join('<br />');
+        result.push(`<p>${parsedLines}</p>`);
+      }
+    }
+  });
+
+  return result.join('');
+};
+
+const CustomPromptModal = ({ isOpen, title, message, placeholder, value, onChange, onConfirm, onCancel }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+      <div className="w-full max-w-md p-6 rounded-[28px] border border-white/10 bg-card/85 backdrop-blur-xl shadow-2xl relative overflow-hidden flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="space-y-1">
+          <h4 className="text-sm font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+            <Sparkles size={16} className="text-primary animate-pulse" />
+            {title}
+          </h4>
+          <p className="text-xs text-muted-foreground font-medium leading-relaxed">
+            {message}
+          </p>
+        </div>
+
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              onConfirm();
+            }
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              onCancel();
+            }
+          }}
+          className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none text-xs text-foreground transition-all"
+          autoFocus
+        />
+
+        <div className="flex items-center justify-end gap-2.5">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2.5 rounded-xl border border-border hover:bg-muted/10 text-xs font-black uppercase tracking-wider text-muted-foreground transition-all cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-black uppercase tracking-wider hover:shadow-lg hover:shadow-primary/20 hover:-translate-y-[1px] active:translate-y-0 transition-all cursor-pointer"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const RichWordEditor = ({ value, onChange, placeholder = 'Type description here...' }) => {
+  const editorRef = React.useRef(null);
+  const [promptState, setPromptState] = React.useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    placeholder: '',
+    value: '',
+    resolve: null
+  });
+
+  const [activeColor, setActiveColor] = React.useState('#ffffff');
+  const [activeHighlight, setActiveHighlight] = React.useState('transparent');
+  const [activeSize, setActiveSize] = React.useState('3');
+  const [activeFont, setActiveFont] = React.useState('Inter');
+
+  const [showColorDropdown, setShowColorDropdown] = React.useState(false);
+  const [showHighlightDropdown, setShowHighlightDropdown] = React.useState(false);
+  const [showSizeDropdown, setShowSizeDropdown] = React.useState(false);
+  const [showFontDropdown, setShowFontDropdown] = React.useState(false);
+
+  const colors = [
+    { name: 'Purple', hex: '#b512ff', bg: '#b512ff' },
+    { name: 'Blue', hex: '#3b82f6', bg: '#3b82f6' },
+    { name: 'Green', hex: '#10b981', bg: '#10b981' },
+    { name: 'Gold', hex: '#f59e0b', bg: '#f59e0b' },
+    { name: 'Red', hex: '#f43f5e', bg: '#f43f5e' },
+    { name: 'White', hex: '#ffffff', bg: '#ffffff' },
+    { name: 'Gray', hex: '#94a3b8', bg: '#94a3b8' }
+  ];
+
+  const highlights = [
+    { name: 'Yellow Highlight', value: 'rgba(245,158,11,0.3)', color: '#f59e0b' },
+    { name: 'Green Highlight', value: 'rgba(16,185,129,0.3)', color: '#10b981' },
+    { name: 'Purple Highlight', value: 'rgba(181,18,255,0.3)', color: '#b512ff' },
+    { name: 'Blue Highlight', value: 'rgba(59,130,246,0.3)', color: '#3b82f6' },
+    { name: 'No Highlight', value: 'transparent', color: '#94a3b8' }
+  ];
+
+  const fontSizes = [
+    { label: 'Small', val: '2' },
+    { label: 'Normal', val: '3' },
+    { label: 'Large', val: '5' },
+    { label: 'Heading', val: '6' }
+  ];
+
+  const fontFamilies = [
+    { label: 'Sans-Serif', val: 'Inter, sans-serif' },
+    { label: 'Serif', val: 'Georgia, serif' },
+    { label: 'Monospace', val: 'Fira Code, monospace' }
+  ];
+
+  const showCustomPrompt = (title, message, placeholder = '', defaultValue = '') => {
+    return new Promise((resolve) => {
+      setPromptState({
+        isOpen: true,
+        title,
+        message,
+        placeholder,
+        value: defaultValue,
+        resolve
+      });
+    });
+  };
+
+  const handleConfirm = () => {
+    if (promptState.resolve) {
+      promptState.resolve(promptState.value);
+    }
+    setPromptState(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleCancel = () => {
+    if (promptState.resolve) {
+      promptState.resolve(null);
+    }
+    setPromptState(prev => ({ ...prev, isOpen: false }));
+  };
+  
+  React.useEffect(() => {
+    if (editorRef.current) {
+      const currentHtml = editorRef.current.innerHTML;
+      const expectedHtml = markdownToHtml(value);
+      if (htmlToMarkdown(currentHtml) !== htmlToMarkdown(expectedHtml)) {
+        editorRef.current.innerHTML = expectedHtml || `<p><br></p>`;
+      }
+    }
+  }, [value]);
+
+  const exec = (command, arg = null) => {
+    document.execCommand(command, false, arg);
+    handleInput();
+  };
+
+  const handleInput = () => {
+    if (editorRef.current) {
+      const html = editorRef.current.innerHTML;
+      const md = htmlToMarkdown(html);
+      onChange(md);
+    }
+  };
+
+  const addLink = async () => {
+    const url = await showCustomPrompt('Insert Link', 'Enter the link URL:', 'https://');
+    if (url) exec('createLink', url);
+  };
+
+  return (
+    <div className="border border-border/60 rounded-3xl overflow-hidden bg-background shadow-inner flex flex-col min-h-[300px]">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-1.5 p-3 bg-muted/20 border-b border-border/40 relative z-30 select-none">
+        
+        {/* Undo / Redo */}
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('undo'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Undo"><Undo size={14} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('redo'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Redo"><Redo size={14} /></button>
+        
+        <div className="w-[1px] h-4 bg-border/60 mx-1" />
+
+        {/* Basic styles */}
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('bold'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Bold"><Bold size={14} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('italic'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Italic"><Italic size={14} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('underline'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Underline"><Underline size={14} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('strikeThrough'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Strikethrough"><Strikethrough size={14} /></button>
+        
+        <div className="w-[1px] h-4 bg-border/60 mx-1" />
+
+        {/* Super / Sub */}
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('superscript'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Superscript"><Superscript size={14} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('subscript'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Subscript"><Subscript size={14} /></button>
+
+        <div className="w-[1px] h-4 bg-border/60 mx-1" />
+
+        {/* Font Family Dropdown */}
+        <div className="relative">
+          <button 
+            type="button" 
+            onMouseDown={(e) => { e.preventDefault(); setShowFontDropdown(!showFontDropdown); setShowColorDropdown(false); setShowHighlightDropdown(false); setShowSizeDropdown(false); }} 
+            className="px-2.5 py-1.5 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+            title="Font Family"
+          >
+            <span className="max-w-[70px] truncate">{fontFamilies.find(f => f.val === activeFont)?.label || 'Font'}</span>
+            <span className="text-[9px] opacity-60">▼</span>
+          </button>
+          {showFontDropdown && (
+            <div className="absolute top-full left-0 mt-1.5 w-36 py-1.5 rounded-2xl border border-border/80 bg-popover/95 backdrop-blur-xl shadow-2xl z-50 flex flex-col">
+              {fontFamilies.map((ff) => (
+                <button
+                  key={ff.val}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    exec('fontName', ff.val);
+                    setActiveFont(ff.val);
+                    setShowFontDropdown(false);
+                  }}
+                  className="px-3 py-1.5 text-left text-[11px] text-foreground hover:bg-muted/10 transition-all font-bold"
+                  style={{ fontFamily: ff.val }}
+                >
+                  {ff.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Font Size Dropdown */}
+        <div className="relative">
+          <button 
+            type="button" 
+            onMouseDown={(e) => { e.preventDefault(); setShowSizeDropdown(!showSizeDropdown); setShowColorDropdown(false); setShowHighlightDropdown(false); setShowFontDropdown(false); }} 
+            className="px-2.5 py-1.5 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+            title="Font Size"
+          >
+            <span>{fontSizes.find(s => s.val === activeSize)?.label || 'Size'}</span>
+            <span className="text-[9px] opacity-60">▼</span>
+          </button>
+          {showSizeDropdown && (
+            <div className="absolute top-full left-0 mt-1.5 w-28 py-1.5 rounded-2xl border border-border/80 bg-popover/95 backdrop-blur-xl shadow-2xl z-50 flex flex-col">
+              {fontSizes.map((sz) => (
+                <button
+                  key={sz.val}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    exec('fontSize', sz.val);
+                    setActiveSize(sz.val);
+                    setShowSizeDropdown(false);
+                  }}
+                  className="px-3 py-1.5 text-left text-[11px] text-foreground hover:bg-muted/10 transition-all font-bold"
+                >
+                  {sz.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="w-[1px] h-4 bg-border/60 mx-1" />
+
+        {/* Font Color Dropdown */}
+        <div className="relative">
+          <button 
+            type="button" 
+            onMouseDown={(e) => { e.preventDefault(); setShowColorDropdown(!showColorDropdown); setShowHighlightDropdown(false); setShowSizeDropdown(false); setShowFontDropdown(false); }} 
+            className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Text Color"
+          >
+            <Palette size={14} style={{ color: activeColor }} />
+          </button>
+          {showColorDropdown && (
+            <div className="absolute top-full left-0 mt-1.5 w-40 p-2.5 rounded-2xl border border-border/80 bg-popover/95 backdrop-blur-xl shadow-2xl z-50 flex flex-wrap gap-1.5 justify-center">
+              {colors.map((c) => (
+                <button
+                  key={c.hex}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    exec('foreColor', c.hex);
+                    setActiveColor(c.hex);
+                    setShowColorDropdown(false);
+                  }}
+                  className="w-6 h-6 rounded-lg transition-all border border-white/10 hover:scale-110 active:scale-95 cursor-pointer shadow-sm"
+                  style={{ backgroundColor: c.bg }}
+                  title={c.name}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Highlight Color Dropdown */}
+        <div className="relative">
+          <button 
+            type="button" 
+            onMouseDown={(e) => { e.preventDefault(); setShowHighlightDropdown(!showHighlightDropdown); setShowColorDropdown(false); setShowSizeDropdown(false); setShowFontDropdown(false); }} 
+            className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all flex items-center gap-1.5 cursor-pointer"
+            title="Highlight Color"
+          >
+            <Highlighter size={14} style={{ color: activeHighlight !== 'transparent' ? activeHighlight : '#ffffff' }} />
+          </button>
+          {showHighlightDropdown && (
+            <div className="absolute top-full left-0 mt-1.5 w-44 p-2.5 rounded-2xl border border-border/80 bg-popover/95 backdrop-blur-xl shadow-2xl z-50 flex flex-wrap gap-1.5 justify-center">
+              {highlights.map((h) => (
+                <button
+                  key={h.name}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    exec('hiliteColor', h.value);
+                    exec('backColor', h.value);
+                    setActiveHighlight(h.value);
+                    setShowHighlightDropdown(false);
+                  }}
+                  className="w-6 h-6 rounded-lg transition-all border border-white/10 hover:scale-110 active:scale-95 cursor-pointer shadow-sm"
+                  style={{ backgroundColor: h.value === 'transparent' ? '#ffffff' : h.value, color: h.value === 'transparent' ? '#000000' : 'transparent' }}
+                  title={h.name}
+                >
+                  {h.value === 'transparent' && '❌'}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="w-[1px] h-4 bg-border/60 mx-1" />
+
+        {/* Paragraph Headings Block Types */}
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('formatBlock', '<h1>'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all font-black cursor-pointer" title="H1"><Heading1 size={14} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('formatBlock', '<h2>'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all font-black cursor-pointer" title="H2"><Heading2 size={14} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('formatBlock', '<blockquote>'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Blockquote"><Quote size={14} /></button>
+
+        <div className="w-[1px] h-4 bg-border/60 mx-1" />
+
+        {/* Lists & Alignment */}
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('insertUnorderedList'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Unordered List"><List size={14} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('insertOrderedList'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Ordered List"><ListOrdered size={14} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('justifyLeft'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Align Left"><AlignLeft size={14} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('justifyCenter'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Align Center"><AlignCenter size={14} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('justifyRight'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Align Right"><AlignRight size={14} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('justifyFull'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Align Justify"><AlignJustify size={14} /></button>
+
+        <div className="w-[1px] h-4 bg-border/60 mx-1" />
+
+        {/* Insert items */}
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('insertHorizontalRule'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Horizontal Line"><Minus size={14} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); }} onClick={addLink} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-foreground transition-all cursor-pointer" title="Link"><Link size={14} /></button>
+        <button type="button" onMouseDown={(e) => { e.preventDefault(); exec('removeFormat'); }} className="p-2 rounded-xl hover:bg-background border border-transparent hover:border-border text-destructive transition-all ml-auto cursor-pointer" title="Clear Formatting"><Eraser size={14} /></button>
+      </div>
+
+      {/* MS Word Paper Area */}
+      <div 
+        ref={editorRef}
+        contentEditable
+        onInput={handleInput}
+        className="flex-1 p-6 outline-none bg-card min-h-[220px] prose prose-invert max-w-none text-sm text-foreground/80 overflow-y-auto custom-scrollbar focus:ring-1 focus:ring-primary/20"
+        placeholder={placeholder}
+        style={{
+          minHeight: '220px',
+        }}
+      />
+
+      <CustomPromptModal
+        isOpen={promptState.isOpen}
+        title={promptState.title}
+        message={promptState.message}
+        placeholder={promptState.placeholder}
+        value={promptState.value}
+        onChange={(val) => setPromptState(prev => ({ ...prev, value: val }))}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
+    </div>
+  );
+};
 
 const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
   const { showAlert } = useAlert();
@@ -1929,6 +2860,147 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
     return normalized;
   });
   const [loading, setLoading] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiFieldLoading, setAiFieldLoading] = useState({});
+
+  const [promptState, setPromptState] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    placeholder: '',
+    value: '',
+    resolve: null
+  });
+
+  const showCustomPrompt = (title, message, placeholder = '', defaultValue = '') => {
+    return new Promise((resolve) => {
+      setPromptState({
+        isOpen: true,
+        title,
+        message,
+        placeholder,
+        value: defaultValue,
+        resolve
+      });
+    });
+  };
+
+  const handleConfirm = () => {
+    if (promptState.resolve) {
+      promptState.resolve(promptState.value);
+    }
+    setPromptState(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleCancel = () => {
+    if (promptState.resolve) {
+      promptState.resolve(null);
+    }
+    setPromptState(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleFieldAIGenerate = async (fieldName, fieldLabel, fieldType) => {
+    const instruction = await showCustomPrompt(
+      '✨ AI Field Generator',
+      `Enter brief topic or guidance to generate "${fieldLabel}" (or leave blank to auto-generate based on existing fields):`,
+      'e.g. advanced technology concepts'
+    );
+    if (instruction === null) return;
+    
+    setAiFieldLoading(prev => ({ ...prev, [fieldName]: true }));
+    try {
+      if (fieldName.includes('image') || fieldName.includes('thumbnail') || fieldName.includes('cover')) {
+        const seed = Math.floor(Math.random() * 1000000);
+        const nameVal = getValue('name') || getValue('title') || 'illustration';
+        const imagePromptText = instruction || `premium futuristic tech graphics for 5EVEN ${table} ${nameVal} - ${fieldLabel}, cinematic lighting, 3d octane render, glowing dark purple neon highlights, 8k`;
+        const url = `https://image.pollinations.ai/p/${encodeURIComponent(imagePromptText.substring(0, 150))}?width=800&height=600&nologo=true&seed=${seed}`;
+        setValue(fieldName, url);
+        showAlert(`Generated cover image for ${fieldLabel}`, 'success');
+        return;
+      }
+
+      const contextList = [];
+      fields.forEach(f => {
+        const val = getValue(f.name);
+        if (val && f.name !== fieldName && typeof val !== 'object') {
+          contextList.push(`${f.label}: ${val}`);
+        }
+      });
+      const contextStr = contextList.join('\n');
+
+      const systemPrompt = `You are a premium AI database assistant for "5EVEN" (a futuristic cybernetic college & services portal).
+Task: Generate a professional, high-fidelity value for the field "${fieldLabel}" inside the database table "${table}".
+${instruction ? `Specific Guidance: "${instruction}"` : ''}
+
+Context of other form fields:
+${contextStr}
+
+${fieldType === 'string_array' ? 'Return the response as a comma-separated list of short bullet items. Do not use numbering or brackets.' : 'Return ONLY the plain text value for the field. Avoid conversational headers, extra markdown codes, or quotation marks.'}`;
+
+      const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(systemPrompt)}`);
+      if (!res.ok) throw new Error("Could not reach AI engine");
+      
+      let text = await res.text();
+      let cleaned = text.trim();
+      
+      if (cleaned.startsWith('"') && cleaned.endsWith('"')) cleaned = cleaned.slice(1, -1);
+      if (cleaned.startsWith("'") && cleaned.endsWith("'")) cleaned = cleaned.slice(1, -1);
+      
+      if (fieldType === 'string_array') {
+        const arr = cleaned.split(',').map(s => s.trim().replace(/^[-*]\s+/, '')).filter(Boolean);
+        setValue(fieldName, arr);
+      } else {
+        setValue(fieldName, cleaned);
+      }
+      showAlert(`AI generated value for ${fieldLabel}`, 'success');
+    } catch (err) {
+      console.error(err);
+      showAlert(`AI generation failed: ${err.message}`, 'error');
+    } finally {
+      setAiFieldLoading(prev => ({ ...prev, [fieldName]: false }));
+    }
+  };
+
+  const handleAIGenerate = async () => {
+    if (!aiPrompt.trim()) {
+      showAlert('Please enter a description for the AI', 'error');
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const { data, error } = await adminSupabase.functions.invoke('generate-ai-content', {
+        body: { table, prompt: aiPrompt }
+      });
+      if (error) throw error;
+      
+      if (data) {
+        // Map data directly into formData
+        setFormData(prev => {
+          const updated = { ...prev };
+          Object.keys(data).forEach(key => {
+            if (key === 'image_prompt') return; // Skip helper field
+            
+            if (key === 'extra_details' && data.extra_details) {
+              updated.extra_details = {
+                ...(updated.extra_details || {}),
+                ...data.extra_details
+              };
+            } else {
+              updated[key] = data[key];
+            }
+          });
+          return updated;
+        });
+        showAlert('✨ AI Content and cover image generated successfully!', 'success');
+      }
+    } catch (err) {
+      console.error('AI Generation failed:', err);
+      showAlert(err.message || 'AI Generation failed', 'error');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const fields = useMemo(() => {
     switch (table) {
@@ -2030,6 +3102,20 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
           { name: 'avatar_url', type: 'text', label: 'Avatar URL' },
           { name: 'role', type: 'select', label: 'Role', options: ['admin', 'student', 'faculty'] },
           { name: 'extra_details.id_number', type: 'text', label: 'ID Card Number' },
+          { name: 'extra_details.user_type', type: 'select', label: 'User Persona Track', options: [
+            { value: '', label: 'None/Not Set' },
+            { value: 'student', label: 'Student' },
+            { value: 'professional', label: 'Working Professional' },
+            { value: 'aspirant', label: 'Aspirant' }
+          ]},
+          { name: 'extra_details.user_subtype', type: 'select', label: 'User Persona Subtype', options: [
+            { value: '', label: 'None/Not Set' },
+            { value: 'school', label: 'School (Student)' },
+            { value: 'college', label: 'College (Student)' },
+            { value: 'competitive exam', label: 'Competitive Exam (Aspirant)' },
+            { value: 'job interview', label: 'Job Interview (Aspirant)' },
+            { value: 'other', label: 'Other/University' }
+          ]},
           ...(formData.role === 'student' ? [
             { name: 'extra_details.academics.attendance', type: 'text', label: 'Attendance %' },
             { name: 'extra_details.academics.avgGrade', type: 'text', label: 'Avg Grade' },
@@ -2054,7 +3140,7 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
           { name: 'tier', type: 'text', label: 'Tier' },
           { name: 'budget', type: 'text', label: 'Budget' },
           { name: 'timeline', type: 'text', label: 'Timeline' },
-          { name: 'status', type: 'select', label: 'Status', options: ['ordered', 'contacted', 'completed', 'rejected'] },
+          { name: 'status', type: 'select', label: 'Status', options: ['enquiry', 'ordered', 'contacted', 'completed', 'rejected'] },
           { name: 'requirements', type: 'textarea', label: 'Requirements & Pricing' },
           { name: 'custom_responses', type: 'json', label: 'Dynamic Field Data (JSON)' },
         ];
@@ -2074,26 +3160,23 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
   }, [table]);
 
   const setValue = (name, value) => {
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData((prev) => ({
-        ...prev,
-        [parent]: {
-          ...(prev[parent] || {}),
-          [child]: value,
-        },
-      }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
+    const setNestedValue = (obj, path, val) => {
+      const keys = path.split('.');
+      const nextObj = { ...obj };
+      let current = nextObj;
+      for (let i = 0; i < keys.length - 1; i++) {
+        const key = keys[i];
+        current[key] = { ...(current[key] || {}) };
+        current = current[key];
+      }
+      current[keys[keys.length - 1]] = val;
+      return nextObj;
+    };
+    setFormData((prev) => setNestedValue(prev, name, value));
   };
 
   const getValue = (name) => {
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      return formData[parent] ? formData[parent][child] : undefined;
-    }
-    return formData[name];
+    return name.split('.').reduce((acc, part) => (acc ? acc[part] : undefined), formData);
   };
 
   const submit = async (e) => {
@@ -2113,10 +3196,7 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
             console.warn(`Skipping key "${key}" because it does not exist in the original database row.`);
             return;
           }
-          // FORCEFUL FIX 2: Explicitly strip extra_details for academics because the DB column doesn't exist yet, which breaks Inserts
-          if (table === 'academics' && key === 'extra_details') {
-            return;
-          }
+
           payload[key] = formData[key];
         }
       });
@@ -2167,18 +3247,22 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
 
       // AUTO-GENERATE UPDATE FOR NEW CONTENT
       if (!initialData?.id && ['courses', 'services', 'notes', 'academics'].includes(actualTable)) {
-        const updateTitle = `New ${actualTable.slice(0, -1)}: ${payload.title || payload.name}`;
-        const updateSlug = `${actualTable.slice(0, -1)}-${Date.now()}`;
+        try {
+          const updateTitle = `New ${actualTable.slice(0, -1)}: ${payload.title || payload.name}`;
+          const updateSlug = `${actualTable.slice(0, -1)}-${Date.now()}`;
 
-        await adminSupabase.from('updates').insert([{
-          title: updateTitle,
-          slug: updateSlug,
-          type: 'patch',
-          category: actualTable.slice(0, -1),
-          date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-          excerpt: payload.short_desc || payload.description || `A new entry has been added to the ${actualTable} database.`,
-          content: `## Institutional Update\n\nA new **${actualTable.slice(0, -1)}** has been deployed to the 5EVEN Institutional network.\n\n**Record Title:** ${payload.title || payload.name}\n**Deployment Date:** ${new Date().toISOString()}`
-        }]);
+          await adminSupabase.from('updates').insert([{
+            title: updateTitle,
+            slug: updateSlug,
+            type: 'patch',
+            category: actualTable.slice(0, -1),
+            date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+            excerpt: payload.short_desc || payload.description || `A new entry has been added to the ${actualTable} database.`,
+            content: `## Institutional Update\n\nA new **${actualTable.slice(0, -1)}** has been deployed to the 5EVEN Institutional network.\n\n**Record Title:** ${payload.title || payload.name}\n**Deployment Date:** ${new Date().toISOString()}`
+          }]);
+        } catch (updateErr) {
+          console.warn('Failed to auto-generate update bulletin. You might need to add the "category" column to the updates table:', updateErr);
+        }
       }
 
       onSuccess();
@@ -2192,6 +3276,47 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
 
   return (
     <form onSubmit={submit} className="space-y-6 pb-4">
+      {/* AI Generator Panel */}
+      {['courses', 'academics', 'services', 'faculty', 'notes', 'founders', 'updates'].includes(table) && (
+        <div className="p-6 rounded-[28px] border border-primary/20 bg-primary/5 backdrop-blur-xl relative overflow-hidden flex flex-col md:flex-row gap-4 items-center">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="flex-1 space-y-1 w-full">
+            <h4 className="text-sm font-black uppercase tracking-wider text-primary flex items-center gap-1.5">
+              <Sparkles size={16} className="animate-pulse" />
+              Generate with AI
+            </h4>
+            <p className="text-[10px] text-muted-foreground font-medium">Describe what you want to create (e.g. "Advanced React course on Next.js 15, 6 weeks duration"). AI will generate title, description, cover image, and metadata.</p>
+          </div>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <input
+              type="text"
+              placeholder="Describe the entry..."
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              className="flex-1 md:w-64 px-4 py-2.5 rounded-xl bg-background border border-border focus:border-primary outline-none text-xs"
+            />
+            <button
+              type="button"
+              disabled={aiLoading}
+              onClick={handleAIGenerate}
+              className="px-4 py-2.5 rounded-xl bg-primary text-white text-xs font-black uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-55 hover:shadow-lg transition-all"
+            >
+              {aiLoading ? (
+                <>
+                  <Loader2 size={12} className="animate-spin" />
+                  <span>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={12} />
+                  <span>Generate</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
         {fields.map((field, fIdx) => (
           <motion.div
@@ -2201,9 +3326,31 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
             transition={{ delay: fIdx * 0.05 }}
             className={field.type === 'textarea' || field.type === 'json' ? 'md:col-span-2 space-y-2' : 'space-y-2'}
           >
-            <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-              {field.label} {field.required ? '*' : ''}
-            </label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                {field.label} {field.required ? '*' : ''}
+              </label>
+              {['text', 'textarea', 'string_array'].includes(field.type) && (
+                <button
+                  type="button"
+                  disabled={aiFieldLoading[field.name]}
+                  onClick={() => handleFieldAIGenerate(field.name, field.label, field.type)}
+                  className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-primary hover:text-primary-foreground/90 transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {aiFieldLoading[field.name] ? (
+                    <>
+                      <Loader2 size={10} className="animate-spin text-primary" />
+                      <span>Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={10} className="text-primary animate-pulse" />
+                      <span>AI Generate</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
 
             {field.type === 'text' && (field.name.includes('image') || field.name.includes('url')) ? (
               <AdminImageField
@@ -2213,12 +3360,10 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
                 adminId={adminId}
               />
             ) : field.type === 'textarea' ? (
-              <textarea
+              <RichWordEditor
                 value={getValue(field.name) || ''}
-                onChange={(e) => setValue(field.name, e.target.value)}
-                required={field.required}
-                className="w-full min-h-[120px] max-h-64 px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none overflow-y-auto custom-scrollbar resize-y"
-                data-lenis-prevent="true"
+                onChange={(val) => setValue(field.name, val)}
+                placeholder={field.label}
               />
             ) : field.type === 'string_array' ? (
               <textarea
@@ -2289,9 +3434,18 @@ const AdminForm = ({ table, initialData, onSuccess, onCancel, adminId }) => {
           className="save-button w-full md:w-auto text-[11px]"
         >
           {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-          <span>{initialData ? 'Save Changes' : 'Create Entry'}</span>
         </button>
       </div>
+      <CustomPromptModal
+        isOpen={promptState.isOpen}
+        title={promptState.title}
+        message={promptState.message}
+        placeholder={promptState.placeholder}
+        value={promptState.value}
+        onChange={(val) => setPromptState(prev => ({ ...prev, value: val }))}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </form>
   );
 };
