@@ -2,11 +2,18 @@ import React, { useEffect, useRef, useState } from 'react';
 
 const CustomCursor = () => {
   const canvasRef = useRef(null);
-  const [ctx, setCtx] = useState(null);
-  const lastPos = useRef({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
+  const pointsRef = useRef([]);
+  const lastMousePosRef = useRef({ x: 0, y: 0 });
+  const loopRunningRef = useRef(false);
+  const [isEnabled, setIsEnabled] = useState(false);
 
   useEffect(() => {
+    // Enable only on hover-capable devices (skip touch-only screens/phones)
+    const hasHover = window.matchMedia('(hover: hover)').matches;
+    setIsEnabled(hasHover);
+    if (!hasHover) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -14,80 +21,96 @@ const CustomCursor = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
-
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', resizeCanvas, { passive: true });
     resizeCanvas();
 
-    const context = canvas.getContext('2d');
-    context.lineCap = 'round';
-    context.lineJoin = 'round';
-    setCtx(context);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    // Initialize lastPos to current mouse position to avoid drawing a line from 0,0 on first move
+    // Use lightweight mouseover boundaries instead of running closest() on every mousemove pixel
+    const handleMouseOver = (e) => {
+      const target = e.target;
+      if (!target) return;
+      const isOverInteractive = !!target.closest('a, button, input, select, textarea, [role="button"], .view-profile-btn');
+      setIsHovering(isOverInteractive);
+    };
+    window.addEventListener('mouseover', handleMouseOver, { passive: true });
+
     const handleFirstMove = (e) => {
-      lastPos.current = { x: e.clientX, y: e.clientY };
+      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
       window.removeEventListener('mousemove', handleFirstMove);
     };
-    window.addEventListener('mousemove', handleFirstMove);
+    window.addEventListener('mousemove', handleFirstMove, { passive: true });
+
+    const handleMouseMove = (e) => {
+      const x = e.clientX;
+      const y = e.clientY;
+      
+      pointsRef.current.push({
+        x,
+        y,
+        prevX: lastMousePosRef.current.x,
+        prevY: lastMousePosRef.current.y,
+        life: 1.0
+      });
+
+      lastMousePosRef.current = { x, y };
+
+      if (!loopRunningRef.current) {
+        loopRunningRef.current = true;
+        requestAnimationFrame(renderLoop);
+      }
+    };
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+
+    // requestAnimationFrame rendering loop - stops running when mouse is still
+    const renderLoop = () => {
+      const canvas = canvasRef.current;
+      if (!canvas || !ctx) {
+        loopRunningRef.current = false;
+        return;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const points = pointsRef.current;
+      
+      if (points.length > 0) {
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 2.5;
+
+        for (let i = 0; i < points.length; i++) {
+          const pt = points[i];
+          ctx.strokeStyle = `rgba(224, 93, 93, ${pt.life})`;
+          ctx.beginPath();
+          ctx.moveTo(pt.prevX, pt.prevY);
+          ctx.lineTo(pt.x, pt.y);
+          ctx.stroke();
+
+          // Slowly fade out
+          pt.life -= 0.08;
+        }
+
+        pointsRef.current = points.filter(p => p.life > 0);
+        
+        requestAnimationFrame(renderLoop);
+      } else {
+        // Sleep when no active segments are left
+        loopRunningRef.current = false;
+      }
+    };
 
     return () => {
       window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener('mouseover', handleMouseOver);
       window.removeEventListener('mousemove', handleFirstMove);
+      window.removeEventListener('mousemove', handleMouseMove);
     };
   }, []);
 
-  useEffect(() => {
-    if (!ctx) return;
+  if (!isEnabled) return null;
 
-    const getMousePos = (e) => {
-      return { x: e.clientX, y: e.clientY };
-    };
-
-    const isInteractiveElement = (target) => {
-      // Strictly links, buttons, and form inputs. No card wrappers or group effects.
-      return target.closest('a, button, input, select, textarea, [role="button"], .view-profile-btn');
-    };
-
-    const handleMouseMove = (e) => {
-      const isOverInteractive = isInteractiveElement(e.target);
-      setIsHovering(!!isOverInteractive);
-
-      const currentPos = getMousePos(e);
-
-      // Continuous drawing on mouse move (if not over a link/button)
-      if (!isOverInteractive) {
-        ctx.lineWidth = 2.5;
-        ctx.strokeStyle = '#E05D5D'; 
-        
-        ctx.beginPath();
-        ctx.moveTo(lastPos.current.x, lastPos.current.y);
-        ctx.lineTo(currentPos.x, currentPos.y);
-        ctx.stroke();
-      }
-
-      lastPos.current = currentPos;
-    };
-
-    // Constant fade out of canvas
-    const fadeCanvas = setInterval(() => {
-      if (!ctx || !canvasRef.current) return;
-      const canvas = canvasRef.current;
-      const originalComposite = ctx.globalCompositeOperation;
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)'; // Slightly faster fade
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.globalCompositeOperation = originalComposite;
-    }, 50);
-
-    window.addEventListener('mousemove', handleMouseMove);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      clearInterval(fadeCanvas);
-    };
-  }, [ctx]);
-
-  // Clean, sleek pencil icon mapping pointing to bottom left tip (0, 24 geometry roughly)
   const pencilSvg = encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 20h9"/>
@@ -95,7 +118,6 @@ const CustomCursor = () => {
     </svg>
   `);
 
-  // Interactive Target icon for hovering over buttons/links
   const pointerSvg = encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#E05D5D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="16" cy="16" r="12" fill="rgba(224,93,93,0.1)"/>
@@ -108,17 +130,12 @@ const CustomCursor = () => {
     <>
       <style>
         {`
-          * {
-            cursor: url("data:image/svg+xml;utf8,${pencilSvg}") 2 22, auto !important;
+          body {
+            cursor: url("data:image/svg+xml;utf8,${pencilSvg}") 2 22, auto;
           }
           a, button, [role="button"], input, select, textarea, .view-profile-btn, a * {
             cursor: url("data:image/svg+xml;utf8,${pointerSvg}") 16 16, pointer !important;
           }
-          /* Ensure cards themselves do NOT force a pointer cursor unless wrapped in a link */
-          .hover-glow, .group, .bg-card, .rounded-3xl, .rounded-4xl {
-            cursor: url("data:image/svg+xml;utf8,${pencilSvg}") 2 22, auto !important;
-          }
-          /* Fix Lenis overlay hijacking pointer states */
           .lenis {
             cursor: inherit;
           }

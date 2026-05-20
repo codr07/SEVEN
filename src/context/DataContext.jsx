@@ -4,19 +4,62 @@ import { supabase, orderedFetch, filterVisible, withTimeout } from '../lib/supab
 const DataContext = createContext({});
 
 export const DataProvider = ({ children }) => {
-  const [academics, setAcademics] = useState([]);
-  const [courses, setCourses] = useState([]);
-  const [notes, setNotes] = useState([]);
-  const [services, setServices] = useState([]);
-  const [faculty, setFaculty] = useState([]);
-  const [founders, setFounders] = useState([]);
-  const [updates, setUpdates] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [academics, setAcademics] = useState(() => {
+    try {
+      const cached = localStorage.getItem('seven_cached_academics');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [courses, setCourses] = useState(() => {
+    try {
+      const cached = localStorage.getItem('seven_cached_courses');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [notes, setNotes] = useState(() => {
+    try {
+      const cached = localStorage.getItem('seven_cached_notes');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [services, setServices] = useState(() => {
+    try {
+      const cached = localStorage.getItem('seven_cached_services');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [faculty, setFaculty] = useState(() => {
+    try {
+      const cached = localStorage.getItem('seven_cached_faculty');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [founders, setFounders] = useState(() => {
+    try {
+      const cached = localStorage.getItem('seven_cached_founders');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [updates, setUpdates] = useState(() => {
+    try {
+      const cached = localStorage.getItem('seven_cached_updates');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+  const [loading, setLoading] = useState(() => {
+    try {
+      const timestamp = localStorage.getItem('seven_cache_timestamp');
+      return !timestamp; // If cached, don't show initial loading screen
+    } catch { return true; }
+  });
   const [error, setError] = useState(null);
 
   const fetchAllData = useCallback(async (retryCount = 0) => {
     try {
-      setLoading(true);
+      const hasCache = localStorage.getItem('seven_cache_timestamp');
+      if (!hasCache) {
+        setLoading(true);
+      }
       setError(null);
 
       // Perform all fetches in parallel with a timeout
@@ -43,8 +86,8 @@ export const DataProvider = ({ children }) => {
          throw firstError;
       }
 
-      setAcademics(filterVisible(aca.data || []));
-      setCourses(filterVisible(crs.data || []));
+      const filteredAca = filterVisible(aca.data || []);
+      const filteredCrs = filterVisible(crs.data || []);
       
       const notesWithPrice = (nts.data || []).map(n => {
         let priceVal = null;
@@ -60,12 +103,34 @@ export const DataProvider = ({ children }) => {
           price: priceVal || null
         };
       });
-      setNotes(filterVisible(notesWithPrice));
+      const filteredNts = filterVisible(notesWithPrice);
       
-      setServices(filterVisible(srv.data || []));
-      setFaculty(filterVisible(fac.data || []));
-      setFounders(filterVisible(fnd.data || []));
-      setUpdates(upd.data || []);
+      const filteredSrv = filterVisible(srv.data || []);
+      const filteredFac = filterVisible(fac.data || []);
+      const filteredFnd = filterVisible(fnd.data || []);
+      const filteredUpd = upd.data || [];
+
+      setAcademics(filteredAca);
+      setCourses(filteredCrs);
+      setNotes(filteredNts);
+      setServices(filteredSrv);
+      setFaculty(filteredFac);
+      setFounders(filteredFnd);
+      setUpdates(filteredUpd);
+
+      // Persist values in cache for instant future loads
+      try {
+        localStorage.setItem('seven_cached_academics', JSON.stringify(filteredAca));
+        localStorage.setItem('seven_cached_courses', JSON.stringify(filteredCrs));
+        localStorage.setItem('seven_cached_notes', JSON.stringify(filteredNts));
+        localStorage.setItem('seven_cached_services', JSON.stringify(filteredSrv));
+        localStorage.setItem('seven_cached_faculty', JSON.stringify(filteredFac));
+        localStorage.setItem('seven_cached_founders', JSON.stringify(filteredFnd));
+        localStorage.setItem('seven_cached_updates', JSON.stringify(filteredUpd));
+        localStorage.setItem('seven_cache_timestamp', Date.now().toString());
+      } catch (cacheErr) {
+        console.warn('Failed to write to cache:', cacheErr);
+      }
 
       setLoading(false);
     } catch (err) {
@@ -76,7 +141,13 @@ export const DataProvider = ({ children }) => {
         console.log(`Retrying global fetch... (Attempt ${retryCount + 1})`);
         setTimeout(() => fetchAllData(retryCount + 1), 2000);
       } else {
-        setError(err.message || 'Failed to sync with institutional database.');
+        const hasCache = localStorage.getItem('seven_cache_timestamp');
+        if (hasCache) {
+          console.warn('Circuit breaker active: Sync with database failed. Falling back to local cache.');
+          setError(null); // Clear error, allow app to function with cache
+        } else {
+          setError(err.message || 'Failed to sync with institutional database.');
+        }
         setLoading(false);
       }
     }

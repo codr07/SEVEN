@@ -24,5 +24,25 @@ export default defineConfig({
     hmr: {
       overlay: true,
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('lucide-react')) {
+              return 'vendor-lucide';
+            }
+            if (id.includes('framer-motion') || id.includes('motion')) {
+              return 'vendor-motion';
+            }
+            if (id.includes('@supabase') || id.includes('supabase-js')) {
+              return 'vendor-supabase';
+            }
+          }
+        }
+      }
+    },
+    chunkSizeWarningLimit: 800
   }
 })

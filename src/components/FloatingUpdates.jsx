@@ -2,41 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, X, Sparkles, Cpu, BookOpen, ChevronRight, Zap, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { useData } from '../context/DataContext';
 
 const FloatingUpdates = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [updates, setUpdates] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const { updates, loading } = useData();
   const [hasNew, setHasNew] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
   useEffect(() => {
-    const fetchUpdates = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('updates')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(10);
+    if (updates && updates.length > 0) {
+      setHasNew(true);
+    }
+  }, [updates]);
 
-        if (error) throw error;
-        setUpdates(data || []);
-        if (data && data.length > 0) setHasNew(true);
-      } catch (err) {
-        console.error('Failed to fetch updates:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUpdates();
-
+  useEffect(() => {
     // iPhone-style Assist Ball Timer
     const timer = setTimeout(() => {
       setIsMinimized(true);

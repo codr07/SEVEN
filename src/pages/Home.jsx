@@ -16,8 +16,17 @@ const ScrollAnimatedSection = ({ children, className = "" }) => {
     offset: ["start end", "end start"]
   });
 
-  const scale = useTransform(scrollYProgress, [0, 0.4, 0.6, 1], [0.9, 1, 1, 0.9]);
-  const rotateX = useTransform(scrollYProgress, [0, 0.4, 0.6, 1], [10, 0, 0, -10]);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile, { passive: true });
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const scale = useTransform(scrollYProgress, [0, 0.4, 0.6, 1], isMobile ? [1, 1, 1, 1] : [0.9, 1, 1, 0.9]);
+  const rotateX = useTransform(scrollYProgress, [0, 0.4, 0.6, 1], isMobile ? [0, 0, 0, 0] : [10, 0, 0, -10]);
   const opacity = useTransform(scrollYProgress, [0, 0.2, 0.8, 1], [0, 1, 1, 0]);
 
   return (
@@ -49,62 +58,42 @@ const PopOutIcon = ({ icon: Icon, x, y, rotate, delay, colorClass = "text-primar
   </motion.div>
 );
 
-const FloatingIcon = ({ icon: Icon, x, y, delay, colorClass = "text-primary" }) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{
-      opacity: [0.1, 0.3, 0.1],
-      y: [`${y}vh`, `${y - 4}vh`, `${y}vh`],
-      x: [`${x}vw`, `${x + 2}vw`, `${x}vw`]
-    }}
-    transition={{
-      delay,
-      duration: 6 + Math.random() * 4,
-      repeat: Infinity,
-      ease: "easeInOut"
-    }}
-    className={`absolute pointer-events-none z-0 ${colorClass}`}
-    style={{ left: '50%', top: '50%' }}
-  >
-    <Icon size={28} className="opacity-20 drop-shadow-[0_0_10px_currentColor]" />
-  </motion.div>
-);
+const FloatingIcon = ({ icon: Icon, x, y, delay, colorClass = "text-primary" }) => {
+  // Statically pick one of the two floats to ensure stable renders while using standard CSS class animations
+  const animClass = (Math.abs(x + y) % 2 === 0) ? "animate-float-icon-1" : "animate-float-icon-2";
 
-const GlowingBlob = ({ color, className = "", delay = 0 }) => (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.8 }}
-    animate={{
-      opacity: [0.15, 0.3, 0.15],
-      scale: [1, 1.2, 1],
-      rotate: [0, 90, 0]
-    }}
-    transition={{
-      delay,
-      duration: 10,
-      repeat: Infinity,
-      ease: "easeInOut"
-    }}
-    className={`absolute rounded-full blur-[60px] pointer-events-none z-0 will-change-[transform,opacity] ${className}`}
-    style={{ backgroundColor: color }}
-  />
-);
+  return (
+    <div
+      className={`absolute pointer-events-none z-0 ${colorClass} ${animClass}`}
+      style={{
+        left: '50%',
+        top: '50%',
+        transform: `translate(${x}vw, ${y}vh)`,
+        animationDelay: `${delay}s`,
+        willChange: "transform, opacity"
+      }}
+    >
+      <Icon size={28} className="opacity-20 drop-shadow-[0_0_10px_currentColor]" />
+    </div>
+  );
+};
 
-const Hero3DAsset = ({ icon: Icon, x = 0, y = 0, colorClass = "text-primary", delay = 1 }) => {
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
+const GlowingBlob = ({ color, className = "", delay = 0 }) => {
+  const animClass = (className.length % 2 === 0) ? "animate-blob-float-1" : "animate-blob-float-2";
 
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      const { innerWidth, innerHeight } = window;
-      const xPct = (e.clientX / innerWidth - 0.5) * 30;
-      const yPct = (e.clientY / innerHeight - 0.5) * 30;
-      mouseX.set(xPct);
-      mouseY.set(yPct);
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [mouseX, mouseY]);
+  return (
+    <div
+      className={`absolute rounded-full blur-[60px] pointer-events-none z-0 ${animClass} ${className}`}
+      style={{
+        backgroundColor: color,
+        animationDelay: `${delay}s`,
+        willChange: "transform, opacity"
+      }}
+    />
+  );
+};
 
+const Hero3DAsset = ({ icon: Icon, x = 0, y = 0, colorClass = "text-primary", delay = 1, mouseX, mouseY }) => {
   const springX = useSpring(mouseX, { stiffness: 60, damping: 20 });
   const springY = useSpring(mouseY, { stiffness: 60, damping: 20 });
 
@@ -159,6 +148,21 @@ const Home = () => {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [profileType, setProfileType] = useState(null);
 
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      const { innerWidth, innerHeight } = window;
+      const xPct = (e.clientX / innerWidth - 0.5) * 30;
+      const yPct = (e.clientY / innerHeight - 0.5) * 30;
+      mouseX.set(xPct);
+      mouseY.set(yPct);
+    };
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, [mouseX, mouseY]);
+
   const categories = [...new Set(courses.map(c => c.category || 'General'))].slice(0, 4);
 
   // Custom sort for founders
@@ -179,10 +183,10 @@ const Home = () => {
       {/* Hero Section */}
       <div className="relative z-10 w-full min-h-screen flex flex-col items-center justify-center px-4 md:px-12 max-w-7xl mx-auto py-20 md:py-0 overflow-hidden">
         <div className="hidden md:block">
-          <Hero3DAsset icon={BookOpen} x={-380} y={-180} colorClass="text-primary" delay={1} />
-          <Hero3DAsset icon={GraduationCap} x={340} y={-220} colorClass="text-accent" delay={1.2} />
-          <Hero3DAsset icon={Laptop} x={-420} y={120} colorClass="text-secondary" delay={1.4} />
-          <Hero3DAsset icon={BookIcon} x={380} y={180} colorClass="text-primary" delay={1.6} />
+          <Hero3DAsset icon={BookOpen} x={-380} y={-180} colorClass="text-primary" delay={1} mouseX={mouseX} mouseY={mouseY} />
+          <Hero3DAsset icon={GraduationCap} x={340} y={-220} colorClass="text-accent" delay={1.2} mouseX={mouseX} mouseY={mouseY} />
+          <Hero3DAsset icon={Laptop} x={-420} y={120} colorClass="text-secondary" delay={1.4} mouseX={mouseX} mouseY={mouseY} />
+          <Hero3DAsset icon={BookIcon} x={380} y={180} colorClass="text-primary" delay={1.6} mouseX={mouseX} mouseY={mouseY} />
 
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <FloatingIcon icon={Code} x={-40} y={-30} delay={0} colorClass="text-primary" />
