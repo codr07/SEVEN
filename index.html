@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-30W8QBXPBS"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-30W8QBXPBS');
+    </script>
+    <title>5EVEN Institution</title>
+    <meta name="description" content="5EVEN Institution - A premium educational experience. Explore Academics, Courses, IT Services, and more in an immersive environment. Elevate your learning today." />
+    
+    <link rel="canonical" href="https://5even.netlify.app/" />
+    <link rel="shortcut icon" href="/assets/seven-Bq1Js9Vz.svg" type="image/svg+xml">
+    <meta name="author" content="5EVEN Institution" />
+    <meta name="robots" content="index, follow" />
+    
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://5even.netlify.app/" />
+    <meta property="og:title" content="5EVEN Institution | Premium Education" />
+    <meta property="og:description" content="5EVEN Institution - A premium educational experience. Explore Academics, Courses, IT Services, and more in an immersive environment." />
+    <meta property="og:image" content="/assets/images/img/banner.png" />
+
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://5even.netlify.app/" />
+    <meta property="twitter:title" content="5EVEN Institution | Premium Education" />
+    <meta property="twitter:description" content="5EVEN Institution - A premium educational experience. Explore Academics, Courses, IT Services, and more in an immersive environment." />
+    <meta property="twitter:image" content="/assets/images/img/banner.png" />
+    
+    <meta name="theme-color" content="#0a0a0a" />
+    <link rel="manifest" href="/site.webmanifest" crossorigin="use-credentials" />
+    
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="5EVEN" />
+    <link rel="apple-touch-icon"  href="/assets/favicon-BjSWhl4F.svg" type="image/svg+xml" />
+    
+    <meta name="keywords" content="5EVEN, 5EVEN Institution, Five Even, Premium Education, Academic Excellence, Professional Training, Skill Development, Online Learning Platform, Career Guidance, Institutional Tracks, Elite Curriculum, Web Development, IT Solutions, Software Engineering, Mobile App Development, Digital Transformation, Technical Documentation, Mock Exams, Mock and Rock, Exam Preparation, Test Series, Student Success, Innovative Learning, EdTech, West Bengal Education, Masalandapur IT Services, Coding Bootcamp, Web Design, Full Stack Development, ReactJS, Vite, Tailwind CSS, Educational Technology, Smart Learning, Study Materials, Professional Services, Corporate Training, Academic Support, Learning Management System, High Fidelity Education, Modern Pedagogy, Industry Ready Skills, Tech Education, Software Services, Web Application, Programming Courses, Computer Science, Data Science, AI Learning, Machine Learning, Digital Literacy, Future Skills, Career Growth, Certification Courses, Virtual Classroom, Interactive Learning, Personalized Education, Specialized Training, Enterprise Solutions, IT Consulting, System Architecture, UI/UX Design, User Experience, Cloud Computing, Cybersecurity, Backend Development, Frontend Engineering, Database Management, API Integration, DevOps, Agile Methodology, Project Management, Digital Marketing, SEO Services, Content Strategy, Educational Consulting, Institutional Support, E-learning, distance learning, blended learning, higher education, vocational training, STEM education, computer education, software development company, IT agency, web development agency, educational startup" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Montserrat:ital,wght@0,100;0,400;0,900;1,100;1,400;1,900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+      body { font-family: 'Inter', sans-serif; font-display: swap; overflow-x: hidden; background-color: #050505; margin: 0; }
+      h1, h2, h3, h4, h5, h6, .italic-font { font-family: 'Montserrat', sans-serif; font-display: swap; }
+      
+      .preloader-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        width: 100vw;
+        background-color: #050505;
+        flex-direction: column;
+        gap: 2rem;
+      }
+      
+      .preloader-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2rem;
+        width: 100%;
+        max-width: 280px;
+      }
+
+      .fancy-spinner {
+        width: 80px;
+        height: 80px;
+        position: relative;
+      }
+
+      .fancy-spinner .ring {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        border: 2px solid transparent;
+      }
+
+      .fancy-spinner .ring:nth-child(1) {
+        border-top-color: #8b5cf6; /* Primary */
+        animation: spin-ring 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+      }
+
+      .fancy-spinner .ring:nth-child(2) {
+        border-right-color: #d946ef; /* Accent */
+        animation: spin-ring 2s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite reverse;
+        inset: 8px;
+        width: calc(100% - 16px);
+        height: calc(100% - 16px);
+      }
+
+      .fancy-spinner .ring:nth-child(3) {
+        border-bottom-color: #06b6d4; /* Secondary */
+        animation: spin-ring 2.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+        inset: 16px;
+        width: calc(100% - 32px);
+        height: calc(100% - 32px);
+      }
+
+      @keyframes spin-ring {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .preloader-text-wrapper {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        margin-bottom: -1rem;
+      }
+
+      .preloader-text {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 900;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        font-size: 10px;
+        color: rgba(255, 255, 255, 0.8);
+      }
+      
+      .preloader-percentage {
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 900;
+        font-size: 10px;
+        color: #d946ef;
+      }
+
+      .progress-bar-container {
+        width: 100%;
+        height: 3px;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .progress-bar-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(to right, #8b5cf6, #d946ef, #06b6d4);
+        border-radius: 4px;
+        box-shadow: 0 0 10px rgba(217, 70, 239, 0.5);
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-B50oKkQb.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-lucide-BcskZdtO.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-motion-Ds8Uk9Q5.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-supabase-ClVc2H6D.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-DE-IS_-7.css">
+  </head>
+  <body>
+    <!-- Global Preloader Overlay -->
+    <div id="global-preloader" class="preloader-container" style="position: fixed; z-index: 99999; top: 0; left: 0;">
+      <div class="preloader-content">
+        <div class="fancy-spinner">
+          <div class="ring"></div>
+          <div class="ring"></div>
+          <div class="ring"></div>
+        </div>
+        <div style="width: 100%; display: flex; flex-direction: column; gap: 1rem;">
+          <div class="preloader-text-wrapper">
+            <span class="preloader-text">INITIALIZING</span>
+            <span class="preloader-percentage" id="progress-text">0%</span>
+          </div>
+          <div class="progress-bar-container">
+            <div id="progress-bar-fill" class="progress-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="root"></div>
+    <div id="modal-root"></div>
+    
+    <script>
+      (function() {
+        const preloader = document.getElementById('global-preloader');
+        const progressFill = document.getElementById('progress-bar-fill');
+        const progressText = document.getElementById('progress-text');
+        
+        let completed = false;
+        let progressPercent = 0;
+        const duration = 2500; 
+        const intervalTime = 20;
+
+        function easeOutCubic(x) {
+          return 1 - Math.pow(1 - x, 3);
+        }
+
+        let elapsedTime = 0;
+        const interval = setInterval(() => {
+          if (completed) return;
+          elapsedTime += intervalTime;
+          progressPercent = easeOutCubic(elapsedTime / duration) * 100;
+          
+          if (progressPercent >= 98) {
+            progressPercent = 98;
+            clearInterval(interval);
+          }
+          
+          if (progressFill) progressFill.style.width = `${progressPercent}%`;
+          if (progressText) progressText.innerText = `${Math.floor(progressPercent)}%`;
+        }, intervalTime);
+
+        window.dismissPreloader = function() {
+          if (completed) return;
+          completed = true;
+          clearInterval(interval);
+          if (progressFill) progressFill.style.width = '100%';
+          if (progressText) progressText.innerText = '100%';
+          setTimeout(() => {
+            if (preloader) {
+              preloader.style.opacity = '0';
+              preloader.style.transition = 'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+              setTimeout(() => {
+                try { preloader.remove(); } catch(e) {}
+              }, 400);
+            }
+          }, 100);
+        };
+
+        // Fallback safety timeout to dismiss preloader anyway after 5 seconds
+        setTimeout(() => {
+          window.dismissPreloader();
+        }, 5000);
+      })();
+    </script>
+  </body>
+</html>

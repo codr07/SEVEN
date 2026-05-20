@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://5even.netlify.app/sitemap.xml
