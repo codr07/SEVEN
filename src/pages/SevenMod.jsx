@@ -59,7 +59,11 @@ import {
   ToggleLeft,
   ToggleRight,
   Calendar,
-  Infinity
+  Infinity,
+  IdCard,
+  Menu,
+  KeyRound,
+  Mail
 } from 'lucide-react';
 import {
   BarChart,
@@ -81,9 +85,13 @@ import {
 import { useAlert } from '../context/AlertContext';
 import { orderedFetch } from '../lib/supabase';
 import { generateInvoicePDF } from '../lib/invoiceGenerator';
+import { generateIdCardPDF } from '../lib/idCardGenerator';
+import CryptoJS from 'crypto-js';
 
+const SECRET_KEY = import.meta.env.VITE_AES_SECRET || '5EVEN_SUPER_SECRET_KEY_FOR_AES_256_VAULT';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SERVICE_ROLE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
 const adminSupabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -121,6 +129,7 @@ const ADMIN_TABS = [
   { id: 'student_submissions', name: 'Student Submissions', icon: Upload },
   { id: 'payments', name: 'Payments', icon: Activity },
   { id: 'coupons', name: 'Coupon Codes', icon: Tag },
+  { id: 'credentials', name: 'Credentials Vault', icon: KeyRound },
 ];
 
 const LoginScreen = ({ onLogin }) => {
@@ -190,6 +199,7 @@ const LoginScreen = ({ onLogin }) => {
 
 const SevenMod = () => {
   const { showAlert, showConfirm } = useAlert();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [adminUser, setAdminUser] = useState(null);
@@ -210,6 +220,46 @@ const SevenMod = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+
+  const [editingCredsId, setEditingCredsId] = useState(null);
+  const [newPasswordVal, setNewPasswordVal] = useState('');
+
+  const handleDirectPasswordChange = async (userId, email) => {
+    if (!SERVICE_ROLE_KEY) {
+      showAlert('Error', 'VITE_SUPABASE_SERVICE_ROLE_KEY is required in .env.local to directly change passwords.');
+      return;
+    }
+    if (newPasswordVal.length < 6) {
+      showAlert('Error', 'Password must be at least 6 characters.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const adminClient = createClient(supabaseUrl, SERVICE_ROLE_KEY);
+      const { error } = await adminClient.auth.admin.updateUserById(userId, {
+        password: newPasswordVal
+      });
+      if (error) throw error;
+      
+      const encrypted_credential = CryptoJS.AES.encrypt(newPasswordVal, SECRET_KEY).toString();
+      
+      const { data: profile } = await adminSupabase.from('profiles').select('extra_details').eq('id', userId).single();
+      const updatedExtra = { ...(profile?.extra_details || {}), encrypted_credential };
+      
+      const { error: updateError } = await adminSupabase.from('profiles').update({ extra_details: updatedExtra }).eq('id', userId);
+      if (updateError) throw updateError;
+      
+      showAlert('Success', 'Password changed successfully for ' + (email || 'user'));
+      setEditingCredsId(null);
+      setNewPasswordVal('');
+      fetchData(); // Refresh the vault list
+    } catch (e) {
+      showAlert('Error', e.message || 'Failed to change password.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     setSearchQuery('');
@@ -866,40 +916,129 @@ const SevenMod = () => {
 
   return (
     <div className="h-screen w-full bg-background flex flex-col md:flex-row overflow-hidden">
-      <aside className="w-full md:w-72 border-b md:border-b-0 md:border-r border-border p-4 md:p-6 bg-card flex flex-col flex-shrink-0 z-20">
-        <div className="flex items-center justify-between mb-4 md:mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl bg-primary text-white flex items-center justify-center flex-shrink-0">
-              <Settings size={20} />
-            </div>
-            <div>
-              <p className="font-black text-base md:text-lg leading-tight">5EVEN Admin</p>
-              <p className="text-[9px] md:text-[10px] uppercase tracking-widest font-black text-muted-foreground">Control Center</p>
-            </div>
+      {/* Mobile Top Bar */}
+      <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card z-30 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center">
+            <Settings size={20} />
           </div>
+          <div>
+            <p className="font-black text-base leading-tight">5EVEN Admin</p>
+            <p className="text-[9px] uppercase tracking-widest font-black text-muted-foreground">Control Center</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="p-2.5 rounded-xl border border-border text-foreground hover:bg-accent transition-colors"
+        >
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+      </div>
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="md:hidden flex items-center justify-center p-2.5 rounded-xl border border-destructive/40 text-destructive bg-destructive/5 hover:bg-destructive/10"
-            title="Sign Out"
-          >
-            <LogOut size={18} />
-          </button>
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="md:hidden fixed inset-0 bg-background/80 backdrop-blur-md z-40"
+            />
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+              className="md:hidden fixed inset-y-0 left-0 w-[280px] border-r border-border p-4 bg-card/95 backdrop-blur-xl flex flex-col z-50 shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/20">
+                    <Settings size={18} />
+                  </div>
+                  <div>
+                    <p className="font-black text-sm leading-tight">5EVEN Admin</p>
+                    <p className="text-[8px] uppercase tracking-widest font-black text-muted-foreground">Control Center</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-accent rounded-lg text-muted-foreground hover:bg-white/10"><X size={18} /></button>
+              </div>
+
+              <nav data-lenis-prevent="true" className="flex flex-col space-y-2 overflow-y-auto custom-scrollbar flex-1 pr-1">
+                {ADMIN_TABS.map((tab, idx) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <motion.button
+                      key={tab.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05 }}
+                      onClick={() => {
+                        setActiveTab(tab.id);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-black transition-all overflow-hidden group ${isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-white/5'}`}
+                    >
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeTabIndicatorMobile"
+                          className="absolute inset-0 bg-primary/10 rounded-xl"
+                          initial={false}
+                          transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                        />
+                      )}
+                      <Icon size={18} className={`relative z-10 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110 group-hover:rotate-3'}`} />
+                      <span className="relative z-10">{tab.name}</span>
+                    </motion.button>
+                  );
+                })}
+              </nav>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="mt-6 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-destructive/20 text-destructive font-black uppercase tracking-widest text-xs bg-destructive/5 hover:bg-destructive hover:text-white transition-all flex-shrink-0"
+              >
+                <LogOut size={16} /> Sign Out
+              </button>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
+      <aside className="hidden md:flex flex-col w-72 border-r border-border p-6 bg-card/95 backdrop-blur-xl flex-shrink-0 z-20">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-11 h-11 rounded-xl bg-primary text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-primary/20">
+            <Settings size={20} />
+          </div>
+          <div>
+            <p className="font-black text-lg leading-tight">5EVEN Admin</p>
+            <p className="text-[10px] uppercase tracking-widest font-black text-muted-foreground">Control Center</p>
+          </div>
         </div>
 
-        <nav data-lenis-prevent="true" className="flex overflow-x-auto md:flex-col gap-2 md:gap-0 md:space-y-2 pb-2 md:pb-0 custom-scrollbar">
+        <nav data-lenis-prevent="true" className="flex flex-col space-y-2 overflow-y-auto custom-scrollbar flex-1 pr-1">
           {ADMIN_TABS.map((tab) => {
             const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex-shrink-0 whitespace-nowrap w-auto md:w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-xl text-xs md:text-sm font-black transition-all ${activeTab === tab.id ? 'bg-foreground text-background shadow-lg shadow-foreground/10' : 'hover:bg-background text-muted-foreground border border-transparent md:border-none hover:border-border'
-                  }`}
+                className={`relative w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-black transition-all overflow-hidden group ${isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-white/5'}`}
               >
-                <Icon size={14} className="md:w-4 md:h-4" />
-                <span>{tab.name}</span>
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabIndicatorDesktop"
+                    className="absolute inset-0 bg-primary/10 rounded-xl"
+                    initial={false}
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                <Icon size={18} className={`relative z-10 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110 group-hover:rotate-3'}`} />
+                <span className="relative z-10">{tab.name}</span>
               </button>
             );
           })}
@@ -908,7 +1047,7 @@ const SevenMod = () => {
         <button
           type="button"
           onClick={handleLogout}
-          className="hidden md:flex mt-auto w-full items-center justify-center gap-2 px-4 py-3 rounded-xl border border-destructive/40 text-destructive font-black uppercase tracking-widest text-xs hover:bg-destructive hover:text-white transition-all flex-shrink-0"
+          className="mt-6 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-destructive/20 text-destructive font-black uppercase tracking-widest text-xs bg-destructive/5 hover:bg-destructive hover:text-white transition-all flex-shrink-0"
         >
           <LogOut size={16} /> Sign Out
         </button>
@@ -1233,11 +1372,61 @@ const SevenMod = () => {
                             );
                           })()}
                         </div>
-                        <p className="text-xs text-muted-foreground">{item.phone || 'No phone'} • {item.id.slice(0, 8)}...</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
+                          {item.email && (
+                            <button 
+                              onClick={() => { navigator.clipboard.writeText(item.email); showAlert('Success', 'Email copied to clipboard'); }}
+                              className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
+                              title="Copy Email"
+                            >
+                              <Mail size={12} /> <span className="truncate max-w-[120px]">{item.email}</span>
+                            </button>
+                          )}
+                          {item.email && <span>•</span>}
+                          <span>{item.phone || 'No phone'}</span>
+                          <span>•</span>
+                          <span>{item.id.slice(0, 8)}...</span>
+                        </div>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {(() => {
+                        let extra = item.extra_details;
+                        if (typeof extra === 'string') {
+                          try { extra = JSON.parse(extra); } catch { extra = {}; }
+                        }
+                        if (extra?.id_card_status === 'applied') {
+                          return (
+                            <span className="px-2 py-1 bg-green-500/10 border border-green-500/30 text-green-500 text-[9px] font-black uppercase tracking-widest rounded-lg hidden sm:block mr-2">
+                              ID Requested
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                      <button
+                        onClick={() => generateIdCardPDF(item)}
+                        className="px-3 py-2 rounded-xl border border-border text-primary hover:bg-primary/10 transition-all flex items-center gap-2"
+                        title="Download ID Card"
+                      >
+                        <IdCard size={14} />
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (window.confirm(`Send password reset email to ${item.email}?`)) {
+                            const { error } = await adminSupabase.auth.resetPasswordForEmail(item.email, {
+                              redirectTo: `${window.location.origin}/update-password`
+                            });
+                            if (error) showAlert('Error', error.message);
+                            else showAlert('Success', 'Password reset email sent');
+                          }
+                        }}
+                        className="px-3 py-2 rounded-xl border border-border text-primary hover:bg-primary/10 transition-all flex items-center gap-2"
+                        title="Send Password Reset"
+                      >
+                        <KeyRound size={14} />
+                      </button>
                       <button
                         onClick={() => {
                           setEditingItem(item);
@@ -1268,6 +1457,130 @@ const SevenMod = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeTab === 'credentials' && (
+          <section>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+              <div>
+                <h2 className="text-2xl font-black">Credentials Vault</h2>
+                <p className="text-sm text-muted-foreground mt-1">Highly restricted. AES-256 encrypted credentials mapped to registered accounts.</p>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="h-56 flex items-center justify-center">
+                <Loader2 className="animate-spin text-primary" />
+              </div>
+            ) : users.length === 0 ? (
+              <EmptyState text="No users found." />
+            ) : (
+              <div className="space-y-3">
+                {users.map((item) => {
+                  let extra = item.extra_details;
+                  if (typeof extra === 'string') {
+                    try { extra = JSON.parse(extra); } catch { extra = {}; }
+                  }
+                  
+                  const encPass = extra?.encrypted_credential;
+                  let decryptedPass = null;
+                  if (encPass) {
+                    try {
+                      const bytes = CryptoJS.AES.decrypt(encPass, SECRET_KEY);
+                      decryptedPass = bytes.toString(CryptoJS.enc.Utf8);
+                    } catch (e) {
+                      console.warn('Decryption failed for user', item.id);
+                    }
+                  }
+
+                  return (
+                    <div key={item.id} className="p-4 rounded-2xl border border-border bg-card flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
+                           <KeyRound size={18} className="text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-bold">{item.email || item.username}</p>
+                          <p className="text-xs text-muted-foreground">ID: {item.id}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="px-4 py-2 rounded-xl border border-border bg-background min-w-[200px] flex items-center justify-between font-mono text-sm">
+                          {expandedId === `cred_${item.id}` ? (
+                            <span>{decryptedPass || <span className="text-destructive">Decryption Failed</span>}</span>
+                          ) : (
+                            <span className="text-muted-foreground tracking-widest">{encPass ? '••••••••' : 'Not Stored'}</span>
+                          )}
+                          
+                          {encPass && (
+                            <button
+                              onClick={() => setExpandedId(expandedId === `cred_${item.id}` ? null : `cred_${item.id}`)}
+                              className="text-primary hover:text-primary/80 ml-4"
+                            >
+                              {expandedId === `cred_${item.id}` ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          {!encPass && item.email && (
+                            <button
+                              onClick={async () => {
+                                if (window.confirm(`Send password reset to ${item.email} to force a new encrypted credential save?`)) {
+                                  const { error } = await adminSupabase.auth.resetPasswordForEmail(item.email, {
+                                    redirectTo: `${window.location.origin}/update-password`
+                                  });
+                                  if (error) showAlert('Error', error.message);
+                                  else showAlert('Success', 'Password reset email sent');
+                                }
+                              }}
+                              className="px-3 py-2 rounded-xl border border-destructive/40 text-destructive hover:bg-destructive/10 transition-all text-xs font-black uppercase tracking-widest"
+                            >
+                              Force Reset
+                            </button>
+                          )}
+                          
+                          {editingCredsId === item.id ? (
+                            <div className="flex items-center gap-2 bg-background border border-border rounded-xl p-1">
+                              <input
+                                type="text"
+                                placeholder="New Password"
+                                value={newPasswordVal}
+                                onChange={(e) => setNewPasswordVal(e.target.value)}
+                                className="px-3 py-1 bg-transparent outline-none text-sm w-32"
+                              />
+                              <button
+                                onClick={() => handleDirectPasswordChange(item.id, item.email)}
+                                className="p-1.5 bg-primary text-white rounded-lg hover:bg-primary/80"
+                                title="Save Password"
+                              >
+                                <Save size={14} />
+                              </button>
+                              <button
+                                onClick={() => { setEditingCredsId(null); setNewPasswordVal(''); }}
+                                className="p-1.5 bg-muted text-muted-foreground rounded-lg hover:text-foreground"
+                                title="Cancel"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => { setEditingCredsId(item.id); setNewPasswordVal(''); }}
+                              className="px-3 py-2 rounded-xl border border-primary/40 text-primary hover:bg-primary/10 transition-all text-xs font-black uppercase tracking-widest"
+                            >
+                              Edit Password
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </section>

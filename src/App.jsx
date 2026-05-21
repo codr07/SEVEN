@@ -27,6 +27,8 @@ const PaymentGateway = lazy(() => import('./pages/PaymentGateway'));
 const ContiCMS = lazy(() => import('./pages/ContiCMS'));
 const CourseViewer = lazy(() => import('./pages/CourseViewer'));
 const NoteViewer = lazy(() => import('./pages/NoteViewer'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const UpdatePassword = lazy(() => import('./pages/UpdatePassword'));
 
 import Footer from './components/Footer';
 import FloatingUpdates from './components/FloatingUpdates';
@@ -179,6 +181,8 @@ const AppContent = ({ loading, setLoading }) => {
                   <Route path="/stars" element={<Stars />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/student-zone" element={<StudentZone />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/update-password" element={<UpdatePassword />} />
                   <Route path="/courses/:id" element={<CourseDetail />} />
                   <Route path="/services/:id" element={<ServiceDetail />} />
                   <Route path="/notes/:id" element={<NoteDetail />} />

@@ -20,6 +20,18 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
   const serviceCategory = selectedServiceObj ? (selectedServiceObj.category || '').toLowerCase() : 'custom';
   const dbConfig = selectedServiceObj?.extra_details?.form_config;
 
+  const DYNAMIC_SERVICE_OPTIONS = useMemo(() => {
+    const uniqueCategories = [...new Set(services.map(s => s.category).filter(Boolean))];
+    const opts = uniqueCategories.map(cat => ({
+      label: cat,
+      options: services
+        .filter(s => s.category === cat)
+        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
+    }));
+    opts.push({ value: "Custom", label: "Other / Highly Custom Request" });
+    return opts;
+  }, [services]);
+
   const DYNAMIC_OPTIONS = useMemo(() => {
     // 1. Try to get config from the selected service entry
     const config = dbConfig;
@@ -290,42 +302,7 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
                   value={formData.service_type}
                   onChange={(val) => setFormData({ ...formData, service_type: val })}
                   placeholder="Select a service you are interested in..."
-                  options={[
-                    {
-                      label: "Web & Commercial Services",
-                      options: services
-                        .filter(s => (s.category || '').toLowerCase().includes('web') || (s.category || '').toLowerCase().includes('software'))
-                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
-                    },
-                    {
-                      label: "Institutional & Academic Services",
-                      options: services
-                        .filter(s => (s.category || '').toLowerCase().includes('academic') || (s.category || '').toLowerCase().includes('notes'))
-                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
-                    },
-                    {
-                      label: "Creative & Design Services",
-                      options: services
-                        .filter(s => (s.category || '').toLowerCase().includes('design') || (s.category || '').toLowerCase().includes('creative'))
-                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
-                    },
-                    {
-                      label: "Marketing & Growth",
-                      options: services
-                        .filter(s => (s.category || '').toLowerCase().includes('marketing') || (s.category || '').toLowerCase().includes('seo'))
-                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
-                    },
-                    {
-                      label: "Other Specialized Services",
-                      options: services
-                        .filter(s => {
-                          const cat = (s.category || '').toLowerCase();
-                          return !cat.includes('web') && !cat.includes('software') && !cat.includes('academic') && !cat.includes('design') && !cat.includes('marketing');
-                        })
-                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
-                    },
-                    { value: "Custom", label: "Other / Highly Custom Request" }
-                  ]}
+                  options={DYNAMIC_SERVICE_OPTIONS}
                 />
               </div>
 

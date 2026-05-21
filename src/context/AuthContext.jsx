@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import supabase from '../lib/supabase';
+import CryptoJS from 'crypto-js';
+
+const SECRET_KEY = import.meta.env.VITE_AES_SECRET || '5EVEN_SUPER_SECRET_KEY_FOR_AES_256_VAULT';
 
 const AuthContext = createContext({});
 
@@ -82,6 +85,7 @@ export const AuthProvider = ({ children }) => {
                 id_number: idNumber,
                 user_type: meta.user_type || '',
                 user_subtype: meta.user_subtype || '',
+                encrypted_credential: meta.encrypted_credential || '',
               },
               updated_at: new Date().toISOString(),
             };
@@ -224,6 +228,8 @@ export const AuthProvider = ({ children }) => {
       user_subtype = '',
     } = profileData || {};
 
+    const encrypted_credential = CryptoJS.AES.encrypt(password, SECRET_KEY).toString();
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -238,6 +244,7 @@ export const AuthProvider = ({ children }) => {
           social_links: socialLinks,
           user_type,
           user_subtype,
+          encrypted_credential,
         },
       },
     });
@@ -280,7 +287,7 @@ export const AuthProvider = ({ children }) => {
 
   const resetPassword = async (email) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/student-zone`,
+      redirectTo: `${window.location.origin}/update-password`,
     });
     if (error) throw error;
   };

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase, withTimeout } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { useAlert } from '../context/AlertContext';
 import { updateMetadata } from '../lib/seo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CommunityBadge, VerifyBadge, AccountBadge, CreatorBadge, AchievementBadge, ActivityBadge } from '@/components/ui/SocialBadges';
@@ -328,6 +329,7 @@ const PublicProfile = () => {
   const { username } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showAlert } = useAlert();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -442,6 +444,24 @@ const PublicProfile = () => {
 
     if (username) fetchProfileData();
   }, [username]);
+
+  const handleApplyIdCard = async () => {
+    try {
+      const newExtraDetails = { ...profile.extra_details, id_card_status: 'applied' };
+      const { error } = await supabase
+        .from('profiles')
+        .update({ extra_details: newExtraDetails })
+        .eq('id', profile.id);
+      
+      if (error) throw error;
+      
+      setProfile({ ...profile, extra_details: newExtraDetails });
+      showAlert('Success', 'Application for Digital ID submitted successfully!');
+    } catch (err) {
+      console.error('Failed to apply for ID', err);
+      showAlert('Error', 'Failed to apply for ID. Please try again.');
+    }
+  };
 
   if (loading) {
     return (
@@ -636,6 +656,19 @@ const PublicProfile = () => {
                   <i className="ri-id-card-line text-lg group-hover/btn:rotate-12 transition-transform"></i>
                   ID_NODE
                 </button>
+                {isOwner && (
+                  <button 
+                    onClick={handleApplyIdCard}
+                    disabled={profile.extra_details?.id_card_status === 'applied'}
+                    className={`px-5 py-2.5 rounded-xl border text-white font-black uppercase tracking-widest text-[9px] transition-all flex items-center gap-2 group/btn ${profile.extra_details?.id_card_status === 'applied' ? 'bg-green-500/10 border-green-500/20 text-green-400 opacity-80 cursor-not-allowed' : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'}`}
+                  >
+                    {profile.extra_details?.id_card_status === 'applied' ? (
+                      <><i className="ri-check-line text-lg"></i> APPLIED</>
+                    ) : (
+                      <><i className="ri-file-add-line text-lg group-hover/btn:scale-110 transition-transform"></i> APPLY FOR ID</>
+                    )}
+                  </button>
+                )}
                 {isOwner && (
                   <button 
                     onClick={() => navigate('/student-zone?tab=settings')}
