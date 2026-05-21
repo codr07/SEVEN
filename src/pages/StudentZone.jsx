@@ -32,9 +32,16 @@ import {
   Lock,
   ChevronRight,
   ChevronLeft,
-  ArrowRight,
   ArrowLeft,
   Sparkles,
+  Heart,
+  MessageSquare,
+  Share2,
+  Send,
+  ThumbsUp,
+  ThumbsDown,
+  Lightbulb,
+  PartyPopper,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useAlert } from '../context/AlertContext';
@@ -1433,7 +1440,7 @@ const StudentZone = () => {
                   
                   <div className="h-px bg-border w-full" />
                   
-                  <PublicFeed loadingData={loadingData} posts={publicPosts} />
+                  <PublicFeed loadingData={loadingData} posts={publicPosts} currentUser={user} />
                 </motion.div>
               )}
 
@@ -1927,19 +1934,150 @@ const StatusBadge = ({ pushed, status }) => (
   </span>
 );
 
-const PublicFeed = ({ loadingData, posts }) => {
+const PublicFeed = ({ loadingData, posts, currentUser }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const { showAlert } = useAlert();
+  
+  const [localPosts, setLocalPosts] = useState(posts);
+  const [expandedComments, setExpandedComments] = useState({});
+  const [commentInputs, setCommentInputs] = useState({});
+  const [isLiking, setIsLiking] = useState(false);
+
+  useEffect(() => {
+    setLocalPosts(posts);
+  }, [posts]);
+
+  const handleReaction = async (post, type = 'like') => {
+    if (!currentUser) {
+      showAlert('error', 'Authentication Required', 'Please log in to react.');
+      return;
+    }
+    if (isLiking) return;
+    setIsLiking(true);
+
+    const userId = currentUser.id;
+    // Migrate legacy 'likes' array to 'reactions' array if needed
+    let currentReactions = post.extra_details?.reactions || [];
+    if (post.extra_details?.likes?.length > 0 && currentReactions.length === 0) {
+      currentReactions = post.extra_details.likes.map(id => ({ userId: id, type: 'like' }));
+    }
+
+    const existingReaction = currentReactions.find(r => r.userId === userId);
+    let newReactions;
+
+    if (existingReaction && existingReaction.type === type) {
+      // Toggle off if same reaction is clicked
+      newReactions = currentReactions.filter(r => r.userId !== userId);
+    } else if (existingReaction) {
+      // Change reaction
+      newReactions = currentReactions.map(r => r.userId === userId ? { ...r, type } : r);
+    } else {
+      // New reaction
+      newReactions = [...currentReactions, { userId, type }];
+    }
+    
+    // Also clear legacy likes array to prevent duplication issues later
+    const updatedPost = { 
+      ...post, 
+      extra_details: { ...(post.extra_details || {}), reactions: newReactions, likes: [] } 
+    };
+    setLocalPosts(prev => prev.map(p => p.id === post.id ? updatedPost : p));
+
+    try {
+      const { error } = await supabase
+        .from('student_submissions')
+        .update({ extra_details: updatedPost.extra_details })
+        .eq('id', post.id);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Reaction error:', error);
+      setLocalPosts(prev => prev.map(p => p.id === post.id ? post : p));
+      showAlert('error', 'Update Failed', 'Failed to update reaction status.');
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const REACTION_TYPES = [
+    { type: 'like', icon: ThumbsUp, label: 'Like', color: 'text-blue-500', fill: 'fill-blue-500' },
+    { type: 'dislike', icon: ThumbsDown, label: 'Dislike', color: 'text-orange-500', fill: 'fill-orange-500' },
+    { type: 'love', icon: Heart, label: 'Love', color: 'text-red-500', fill: 'fill-red-500' },
+    { type: 'celebrate', icon: PartyPopper, label: 'Celebrate', color: 'text-green-500', fill: '' },
+    { type: 'insightful', icon: Lightbulb, label: 'Insightful', color: 'text-yellow-500', fill: 'fill-yellow-500' },
+  ];
+
+  const handleComment = async (post) => {
+    if (!currentUser) {
+      showAlert('error', 'Authentication Required', 'Please log in to comment.');
+      return;
+    }
+
+    const text = commentInputs[post.id]?.trim();
+    if (!text) return;
+
+    const newComment = {
+      id: crypto.randomUUID(),
+      user_id: currentUser.id,
+      name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User',
+      avatar: currentUser.user_metadata?.avatar_url || '',
+      text,
+      created_at: new Date().toISOString()
+    };
+
+    const currentComments = post.extra_details?.comments || [];
+    const newComments = [...currentComments, newComment];
+
+    const updatedPost = { 
+      ...post, 
+      extra_details: { ...(post.extra_details || {}), comments: newComments } 
+    };
+    setLocalPosts(prev => prev.map(p => p.id === post.id ? updatedPost : p));
+    setCommentInputs(prev => ({ ...prev, [post.id]: '' }));
+
+    try {
+      const { error } = await supabase
+        .from('student_submissions')
+        .update({ extra_details: updatedPost.extra_details })
+        .eq('id', post.id);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Comment error:', error);
+      setLocalPosts(prev => prev.map(p => p.id === post.id ? post : p));
+      setCommentInputs(prev => ({ ...prev, [post.id]: text }));
+      showAlert('error', 'Update Failed', 'Failed to post comment.');
+    }
+  };
+
+  const handleShare = async (post) => {
+    const url = `${window.location.origin}/student-zone?tab=explore`;
+    const shareData = {
+      title: `${post.title} on 5EVEN`,
+      text: post.summary,
+      url: url
+    };
+    
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
+    } else {
+      navigator.clipboard.writeText(`${shareData.title} - ${url}`);
+      showAlert('success', 'Link Copied', 'Share link copied to clipboard!');
+    }
+  };
 
   const filteredPosts = useMemo(() => {
-    if (!searchQuery) return posts;
+    if (!searchQuery) return localPosts;
     const q = searchQuery.toLowerCase();
-    return posts.filter(p => 
+    return localPosts.filter(p => 
       p.title?.toLowerCase().includes(q) || 
       p.summary?.toLowerCase().includes(q) ||
       p.author_profile?.full_name?.toLowerCase().includes(q) ||
       p.author_profile?.username?.toLowerCase().includes(q)
     );
-  }, [posts, searchQuery]);
+  }, [localPosts, searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -1974,12 +2112,25 @@ const PublicFeed = ({ loadingData, posts }) => {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
-          {filteredPosts.map((item) => (
+          {filteredPosts.map((item) => {
+            const reactions = item.extra_details?.reactions || [];
+            if (item.extra_details?.likes?.length > 0 && reactions.length === 0) {
+              item.extra_details.likes.forEach(id => reactions.push({ userId: id, type: 'like' }));
+            }
+            const comments = item.extra_details?.comments || [];
+            
+            const userReactionObj = currentUser ? reactions.find(r => r.userId === currentUser.id) : null;
+            const userReactionType = userReactionObj ? userReactionObj.type : null;
+            const ActiveIconDef = userReactionType ? REACTION_TYPES.find(r => r.type === userReactionType) : REACTION_TYPES[0];
+            const ActiveIcon = ActiveIconDef?.icon || ThumbsUp;
+            
+            const isExpanded = expandedComments[item.id] || false;
+
+            return (
             <article 
               key={item.id} 
-              className="group p-6 rounded-[32px] border border-border bg-card shadow-xl hover:shadow-2xl hover:border-primary/20 transition-all duration-500 overflow-hidden relative"
+              className="group p-6 rounded-[32px] border border-border bg-card shadow-xl hover:border-primary/20 transition-all duration-500 overflow-hidden relative"
             >
-              {/* Card Header: Facebook style */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                   <Link 
@@ -2018,19 +2169,15 @@ const PublicFeed = ({ loadingData, posts }) => {
                   <div className="hidden sm:block scale-75 origin-right">
                     <CreatorBadge role={item.submission_type === 'research_paper' ? 'writer' : 'creator'} />
                   </div>
-                  <div className="p-2 rounded-xl bg-muted text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer">
-                    <Globe size={16} />
-                  </div>
                 </div>
               </div>
 
-              {/* Card Body */}
               <div className="space-y-4">
                 <div className="space-y-2">
                   <h4 className="text-2xl font-black uppercase tracking-tighter leading-tight group-hover:text-primary transition-colors">
                     {item.title}
                   </h4>
-                  <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3">
+                  <p className="text-muted-foreground text-sm leading-relaxed">
                     {item.summary}
                   </p>
                 </div>
@@ -2043,16 +2190,50 @@ const PublicFeed = ({ loadingData, posts }) => {
                 )}
               </div>
 
-              {/* Card Footer Actions */}
-              <div className="mt-6 pt-6 border-t border-border flex items-center justify-between gap-4">
+              {/* Card Footer Social Actions */}
+              <div className="mt-6 pt-6 border-t border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-6">
-                  <button className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors">
-                    <History size={14} />
-                    <span>Peer Review</span>
+                  
+                  <div className="relative group/reaction flex items-center">
+                    <button 
+                      onClick={() => handleReaction(item, userReactionType || 'like')}
+                      className={`flex items-center gap-2 text-xs font-bold transition-all ${userReactionType ? ActiveIconDef.color + ' scale-105' : 'text-muted-foreground hover:text-primary'}`}
+                    >
+                      <ActiveIcon size={18} className={userReactionType ? ActiveIconDef.fill : ""} />
+                      <span>{reactions.length}</span>
+                    </button>
+
+                    {/* Reaction Picker Popover Wrapper with invisible bridge */}
+                    <div className="absolute bottom-full left-0 pb-2 hidden group-hover/reaction:flex z-20 animate-in slide-in-from-bottom-2 fade-in duration-200">
+                      <div className="flex items-center gap-2 p-2 rounded-full bg-background border border-border shadow-xl">
+                        {REACTION_TYPES.map(rt => {
+                          const Icon = rt.icon;
+                          return (
+                            <button
+                              key={rt.type}
+                              onClick={() => handleReaction(item, rt.type)}
+                              className={`p-2 rounded-full bg-card hover:bg-muted transition-all hover:-translate-y-1 ${rt.color}`}
+                              title={rt.label}
+                            >
+                              <Icon size={18} className={rt.fill} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setExpandedComments(prev => ({ ...prev, [item.id]: !prev[item.id] }))}
+                    className={`flex items-center gap-2 text-xs font-bold transition-all ${isExpanded ? 'text-primary' : 'text-muted-foreground hover:text-primary'}`}
+                  >
+                    <MessageSquare size={18} className={isExpanded ? "fill-primary/20" : ""} />
+                    <span>{comments.length}</span>
                   </button>
-                  <button className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors">
-                    <Activity size={14} />
-                    <span>Analytics</span>
+                  <button 
+                    onClick={() => handleShare(item)}
+                    className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <Share2 size={18} />
                   </button>
                 </div>
 
@@ -2069,8 +2250,78 @@ const PublicFeed = ({ loadingData, posts }) => {
                   )}
                 </div>
               </div>
+
+              {/* Comments Section */}
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }} 
+                    animate={{ height: 'auto', opacity: 1 }} 
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden mt-6"
+                  >
+                    <div className="p-4 rounded-2xl bg-background/50 border border-border space-y-4">
+                      {/* Comment Input */}
+                      <div className="flex gap-3">
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-muted shrink-0 border border-border">
+                          {currentUser?.user_metadata?.avatar_url ? (
+                            <img src={currentUser.user_metadata.avatar_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <User size={14} className="m-auto mt-1.5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1 relative">
+                          <input
+                            type="text"
+                            placeholder="Write a comment..."
+                            value={commentInputs[item.id] || ''}
+                            onChange={(e) => setCommentInputs(prev => ({ ...prev, [item.id]: e.target.value }))}
+                            onKeyDown={(e) => e.key === 'Enter' && handleComment(item)}
+                            className="w-full pl-4 pr-10 py-2.5 rounded-xl bg-card border border-border focus:border-primary outline-none text-sm transition-all"
+                          />
+                          <button 
+                            onClick={() => handleComment(item)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                          >
+                            <Send size={16} />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Comments List */}
+                      {comments.length > 0 ? (
+                        <div className="space-y-4 mt-6">
+                          {comments.map((comment) => (
+                            <div key={comment.id} className="flex gap-3">
+                              <div className="w-8 h-8 rounded-full overflow-hidden bg-muted shrink-0 border border-border">
+                                {comment.avatar ? (
+                                  <img src={comment.avatar} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <User size={14} className="m-auto mt-1.5 text-muted-foreground" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="bg-card rounded-2xl rounded-tl-sm px-4 py-3 border border-border inline-block max-w-full">
+                                  <p className="text-[10px] font-black uppercase tracking-widest mb-1">{comment.name}</p>
+                                  <p className="text-sm text-foreground break-words">{comment.text}</p>
+                                </div>
+                                <p className="text-[9px] font-bold text-muted-foreground mt-1.5 ml-2 uppercase tracking-widest">
+                                  {new Date(comment.created_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-center text-muted-foreground font-medium py-4">No comments yet. Be the first!</p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
