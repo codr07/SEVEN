@@ -68,6 +68,9 @@ const INITIAL_POST = {
   summary: '',
   content_url: '',
   cover_image: '',
+  category: '',
+  classification: '',
+  tags: '',
 };
 
 const StudentZone = () => {
@@ -473,6 +476,14 @@ const StudentZone = () => {
         cover_image: coverUrl || null,
         moderation_status: 'on_hold',
         is_pushed: false,
+        extra_details: {
+          category: postForm.category || 'General',
+          classification: postForm.classification || 'Unclassified',
+          tags: postForm.tags ? postForm.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+          likes: [],
+          reactions: [],
+          comments: []
+        }
       };
 
       const { error } = await supabase.from('student_submissions').insert([payload]);
@@ -1780,6 +1791,33 @@ const StudentZone = () => {
                     </Field>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Field label="Category">
+                        <GlassSelect
+                          value={postForm.category}
+                          onChange={(val) => setPostForm({ ...postForm, category: val })}
+                          options={['Technology', 'Science', 'Engineering', 'Mathematics', 'Design', 'Humanities', 'Business', 'Literature', 'Medical']}
+                        />
+                      </Field>
+                      <Field label="Classification">
+                        <GlassSelect
+                          value={postForm.classification}
+                          onChange={(val) => setPostForm({ ...postForm, classification: val })}
+                          options={['Beginner', 'Intermediate', 'Advanced', 'Research-Grade']}
+                        />
+                      </Field>
+                    </div>
+
+                    <Field label="Tags (Comma separated)">
+                      <input
+                        type="text"
+                        value={postForm.tags}
+                        onChange={(e) => setPostForm({ ...postForm, tags: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl bg-background border border-border focus:border-primary outline-none"
+                        placeholder="e.g. react, machine learning, physics"
+                      />
+                    </Field>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <StudentFileField
                         label="Cover Image"
                         accept="image/*"
@@ -1936,6 +1974,8 @@ const StatusBadge = ({ pushed, status }) => (
 
 const PublicFeed = ({ loadingData, posts, currentUser }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterClassification, setFilterClassification] = useState('');
   const { showAlert } = useAlert();
   
   const [localPosts, setLocalPosts] = useState(posts);
@@ -2069,31 +2109,65 @@ const PublicFeed = ({ loadingData, posts, currentUser }) => {
   };
 
   const filteredPosts = useMemo(() => {
-    if (!searchQuery) return localPosts;
-    const q = searchQuery.toLowerCase();
-    return localPosts.filter(p => 
-      p.title?.toLowerCase().includes(q) || 
-      p.summary?.toLowerCase().includes(q) ||
-      p.author_profile?.full_name?.toLowerCase().includes(q) ||
-      p.author_profile?.username?.toLowerCase().includes(q)
-    );
-  }, [localPosts, searchQuery]);
+    let result = localPosts;
+    
+    if (filterCategory) {
+      result = result.filter(p => p.extra_details?.category === filterCategory);
+    }
+    if (filterClassification) {
+      result = result.filter(p => p.extra_details?.classification === filterClassification);
+    }
+    
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(p => 
+        p.title?.toLowerCase().includes(q) || 
+        p.summary?.toLowerCase().includes(q) ||
+        p.author_profile?.full_name?.toLowerCase().includes(q) ||
+        p.author_profile?.username?.toLowerCase().includes(q) ||
+        (p.extra_details?.tags || []).some(tag => tag.toLowerCase().includes(q))
+      );
+    }
+    return result;
+  }, [localPosts, searchQuery, filterCategory, filterClassification]);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-3xl bg-card border border-border shadow-xl">
-        <div className="flex items-center gap-3 px-4 py-2 border-r border-border hidden md:flex">
-          <Globe className="text-primary" size={20} />
-          <span className="text-xs font-black uppercase tracking-widest italic">Global Network</span>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-3xl bg-card border border-border shadow-xl">
+          <div className="flex items-center gap-3 px-4 py-2 border-r border-border hidden md:flex">
+            <Globe className="text-primary" size={20} />
+            <span className="text-xs font-black uppercase tracking-widest italic">Global Network</span>
+          </div>
+          <div className="flex-1 relative group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
+            <input
+              type="text"
+              placeholder="Search projects, tags, creators..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 rounded-2xl bg-background border border-border focus:border-primary outline-none text-sm font-medium transition-all"
+            />
+          </div>
         </div>
-        <div className="flex-1 relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
-          <input
-            type="text"
-            placeholder="Search projects, papers, or student creators..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 rounded-2xl bg-background border border-border focus:border-primary outline-none text-sm font-medium transition-all"
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <GlassSelect
+            value={filterCategory}
+            onChange={setFilterCategory}
+            options={[
+              { value: '', label: 'All Categories' },
+              'Technology', 'Science', 'Engineering', 'Mathematics', 'Design', 'Humanities', 'Business', 'Literature', 'Medical'
+            ]}
+            className="w-full sm:w-auto min-w-[200px]"
+          />
+          <GlassSelect
+            value={filterClassification}
+            onChange={setFilterClassification}
+            options={[
+              { value: '', label: 'All Classifications' },
+              'Beginner', 'Intermediate', 'Advanced', 'Research-Grade'
+            ]}
+            className="w-full sm:w-auto min-w-[200px]"
           />
         </div>
       </div>
@@ -2177,6 +2251,23 @@ const PublicFeed = ({ loadingData, posts, currentUser }) => {
                   <h4 className="text-2xl font-black uppercase tracking-tighter leading-tight group-hover:text-primary transition-colors">
                     {item.title}
                   </h4>
+                  <div className="flex flex-wrap items-center gap-2 py-1">
+                    {item.extra_details?.category && (
+                      <span className="px-2 py-1 rounded-md bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest border border-primary/20">
+                        {item.extra_details.category}
+                      </span>
+                    )}
+                    {item.extra_details?.classification && (
+                      <span className="px-2 py-1 rounded-md bg-secondary/10 text-secondary text-[9px] font-black uppercase tracking-widest border border-secondary/20">
+                        {item.extra_details.classification}
+                      </span>
+                    )}
+                    {(item.extra_details?.tags || []).map((tag, idx) => (
+                      <span key={idx} className="px-2 py-1 rounded-md bg-muted text-muted-foreground text-[9px] font-bold uppercase tracking-widest border border-border">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
                   <p className="text-muted-foreground text-sm leading-relaxed">
                     {item.summary}
                   </p>
