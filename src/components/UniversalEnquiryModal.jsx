@@ -135,9 +135,11 @@ export const UniversalEnquiryModal = ({ isOpen, onClose, item = null, itemType =
   const pricingEstimate = useMemo(() => {
     if (!actualItem) return null;
 
-    // Parse base price
+    // Parse base price - extract the first valid sequence of digits (e.g. from range or /month text)
     const baseStr = String(actualItem.price || '');
-    const basePrice = parseInt(baseStr.replace(/[^0-9]/g, '')) || 0;
+    const cleanBaseStr = baseStr.replace(/,/g, '');
+    const baseMatch = cleanBaseStr.match(/(\d+(\.\d+)?)/);
+    const basePrice = baseMatch ? Math.round(parseFloat(baseMatch[0])) : 0;
     if (basePrice === 0) return null;
 
     // Apply tier multiplier if any
@@ -151,7 +153,9 @@ export const UniversalEnquiryModal = ({ isOpen, onClose, item = null, itemType =
     if (formConfig?.addons) {
       formConfig.addons.forEach(addon => {
         if (selectedAddons.includes(addon.id)) {
-          addonsTotal += parseInt(addon.price) || 0;
+          const addonPriceStr = String(addon.price || '0').replace(/,/g, '');
+          const addonMatch = addonPriceStr.match(/(\d+(\.\d+)?)/);
+          addonsTotal += addonMatch ? Math.round(parseFloat(addonMatch[0])) : 0;
         }
       });
     }
@@ -159,7 +163,9 @@ export const UniversalEnquiryModal = ({ isOpen, onClose, item = null, itemType =
     // Add academic certification cost if selected
     let extraAcademicCost = 0;
     if (actualType === 'academic' && includeCertification && actualItem.extra_details?.certification_cost) {
-      extraAcademicCost = parseInt(String(actualItem.extra_details.certification_cost).replace(/[^0-9]/g, '')) || 0;
+      const certCostStr = String(actualItem.extra_details.certification_cost).replace(/,/g, '');
+      const certMatch = certCostStr.match(/(\d+(\.\d+)?)/);
+      extraAcademicCost = certMatch ? Math.round(parseFloat(certMatch[0])) : 0;
     }
 
     const estimatedTotal = Math.round(basePrice * multiplier) + addonsTotal + extraAcademicCost;

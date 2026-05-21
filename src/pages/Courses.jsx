@@ -153,84 +153,82 @@ const Courses = () => {
                       transition={{ duration: 0.5, delay: idx * 0.1 }}
                       className="flex justify-center"
                     >
-                      <Link to={linkTarget} className="group relative block transition-all duration-500 hover:scale-[1.02]">
-                        <MergedShape height={520}>
-                           {/* Category Vertical Indicator (Left Side) */}
-                           <div className="absolute left-0 top-0 bottom-0 w-10 flex flex-col items-center py-8 bg-accent/5 border-r border-white/10 z-10 rounded-l-[32px]">
-                              <div className="flex-1 w-px bg-gradient-to-b from-accent/50 to-transparent mb-4" />
-                              <div className="text-[8px] font-black text-accent rotate-180 uppercase tracking-[0.4em] [writing-mode:vertical-lr] whitespace-nowrap drop-shadow-[0_0_8px_rgba(var(--accent-rgb),0.5)] opacity-80 group-hover:opacity-100 group-hover:text-primary transition-all">
-                                 {category}
-                              </div>
-                              <div className="flex-1 w-px bg-gradient-to-t from-accent/20 to-transparent mt-4" />
-                           </div>
+                      <div className="relative group transition-all duration-500 hover:scale-[1.02]">
+                        <Link to={linkTarget} className="block">
+                          <MergedShape height={520}>
+                             {/* Category Vertical Indicator (Left Side) */}
+                             <div className="absolute left-0 top-0 bottom-0 w-10 flex flex-col items-center py-8 bg-accent/5 border-r border-white/10 z-10 rounded-l-[32px]">
+                                <div className="flex-1 w-px bg-gradient-to-b from-accent/50 to-transparent mb-4" />
+                                <div className="text-[8px] font-black text-accent rotate-180 uppercase tracking-[0.4em] [writing-mode:vertical-lr] whitespace-nowrap drop-shadow-[0_0_8px_rgba(var(--accent-rgb),0.5)] opacity-80 group-hover:opacity-100 group-hover:text-primary transition-all">
+                                   {category}
+                                </div>
+                                <div className="flex-1 w-px bg-gradient-to-t from-accent/20 to-transparent mt-4" />
+                             </div>
 
-                           <div className="absolute left-0 top-0 w-[390px] h-[520px] p-8 pl-16 flex flex-col pointer-events-auto">
-                              <div className="relative w-full h-[180px] rounded-[24px] overflow-hidden mb-8 bg-white/5 border border-white/10 group-hover:border-primary/20 transition-colors">
-                                 {course.cover_image ? (
-                                   <img src={course.cover_image} alt={course.name} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" loading="lazy" />
-                                 ) : (
-                                   <div className="w-full h-full flex items-center justify-center opacity-20"><BookOpen size={40} className="text-primary" /></div>
-                                 )}
-                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                                 <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                                   <div className="flex text-accent drop-shadow-[0_0_8px_rgba(var(--accent-rgb),0.5)]">
-                                     {[...Array(5)].map((_, i) => <Star key={i} size={8} fill={i < 4 ? "currentColor" : "none"} />)}
+                             <div className="absolute left-0 top-0 w-[390px] h-[520px] p-8 pl-16 flex flex-col pointer-events-auto">
+                                <div className="relative w-full h-[180px] rounded-[24px] overflow-hidden mb-8 bg-white/5 border border-white/10 group-hover:border-primary/20 transition-colors">
+                                   {course.cover_image ? (
+                                     <img src={course.cover_image} alt={course.name} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" loading="lazy" />
+                                   ) : (
+                                     <div className="w-full h-full flex items-center justify-center opacity-20"><BookOpen size={40} className="text-primary" /></div>
+                                   )}
+                                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                   <div className="absolute bottom-4 left-4 flex items-center gap-2">
+                                     <div className="flex text-accent drop-shadow-[0_0_8px_rgba(var(--accent-rgb),0.5)]">
+                                       {[...Array(5)].map((_, i) => <Star key={i} size={8} fill={i < 4 ? "currentColor" : "none"} />)}
+                                     </div>
+                                     <span className="text-[7px] font-black uppercase tracking-widest text-white/60">Top Rated</span>
                                    </div>
-                                   <span className="text-[7px] font-black uppercase tracking-widest text-white/60">Top Rated</span>
                                  </div>
-                               </div>
-                               
-                               <div className="flex justify-between items-start mb-6">
-                                 <h3 className="text-2xl font-black leading-tight group-hover:text-primary transition-colors line-clamp-1 uppercase tracking-tighter">
-                                   {course.name}
-                                 </h3>
-                                 {course.extra_details?.id_number && (
-                                   <span className="text-[7px] font-black bg-accent/10 text-accent px-2 py-1 rounded-md border border-accent/20 whitespace-nowrap ml-2">
-                                     {course.extra_details.id_number}
-                                   </span>
-                                 )}
-                               </div>
-                               
-                               {/* Pointwise Details */}
-                               <div className="space-y-3 mb-8">
-                                 {details.slice(0, 3).map((detail, dIdx) => (
-                                   <div key={dIdx} className="flex items-start gap-3">
-                                     <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-accent group-hover:scale-125 transition-transform" />
-                                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest line-clamp-1">{detail}</span>
-                                   </div>
-                                 ))}
-                               </div>
-
-                               <div className="mt-auto flex items-end justify-between border-t border-white/5 pt-8">
-                                 <div className="flex flex-col gap-1">
-                                   <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary">
-                                     <Clock size={14} />
-                                     <span>{course.duration || '8 Weeks'}</span>
-                                   </div>
-                                   <span className="text-xl font-black text-white">
-                                     {course.price && course.price !== 'FREE'
-                                       ? (course.price.includes('₹') || course.price.toLowerCase().includes('inr')
-                                           ? course.price 
-                                           : `₹${course.price}`)
-                                       : 'FREE'}
-                                   </span>
+                                 
+                                 <div className="flex justify-between items-start mb-6">
+                                   <h3 className="text-2xl font-black leading-tight group-hover:text-primary transition-colors line-clamp-1 uppercase tracking-tighter">
+                                     {course.name}
+                                   </h3>
+                                   {course.extra_details?.id_number && (
+                                     <span className="text-[7px] font-black bg-accent/10 text-accent px-2 py-1 rounded-md border border-accent/20 whitespace-nowrap ml-2">
+                                       {course.extra_details.id_number}
+                                     </span>
+                                   )}
                                  </div>
-                                 <SignatureButton label="Enroll" />
-                               </div>
-                           </div>
+                                 
+                                 {/* Pointwise Details */}
+                                 <div className="space-y-3 mb-8">
+                                   {details.slice(0, 3).map((detail, dIdx) => (
+                                     <div key={dIdx} className="flex items-start gap-3">
+                                       <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-accent group-hover:scale-125 transition-transform" />
+                                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest line-clamp-1">{detail}</span>
+                                     </div>
+                                   ))}
+                                 </div>
 
-                           <div className="absolute left-[390px] top-[60px] w-[70px] h-[50px] flex items-center justify-center pointer-events-auto">
-                              <SignatureShareButton
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  navigator.clipboard.writeText(`${window.location.origin}/courses/${course.id}`);
-                                  showAlert("Link copied!", "success");
-                                }}
-                              />
-                           </div>
-                        </MergedShape>
-                      </Link>
+                                 <div className="mt-auto flex items-end justify-between border-t border-white/5 pt-8">
+                                   <div className="flex flex-col gap-1">
+                                     <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary">
+                                       <Clock size={14} />
+                                       <span>{course.duration || '8 Weeks'}</span>
+                                     </div>
+                                     <span className="text-xl font-black text-white">
+                                       {course.price && course.price !== 'FREE'
+                                         ? (course.price.includes('₹') || course.price.toLowerCase().includes('inr')
+                                             ? course.price 
+                                             : `₹${course.price}`)
+                                         : 'FREE'}
+                                     </span>
+                                   </div>
+                                   <SignatureButton label="Enroll" />
+                                 </div>
+                             </div>
+                          </MergedShape>
+                        </Link>
+
+                        <div className="absolute left-[390px] top-[60px] w-[70px] h-[50px] flex items-center justify-center z-20">
+                          <SignatureShareButton
+                            shareUrl={`${window.location.origin}/courses/${course.id}`}
+                            onShareSuccess={() => showAlert("Link copied!", "success")}
+                          />
+                        </div>
+                      </div>
                     </motion.div>
                   );
                 })}

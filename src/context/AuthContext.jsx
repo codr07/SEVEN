@@ -252,8 +252,8 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      // Attempt global sign out
-      await supabase.auth.signOut();
+      // Attempt sign out locally first to ensure instant local logout, then clear server session
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
     } catch (error) {
       console.warn("Sign out request failed, purging local state anyway:", error);
     } finally {
@@ -262,8 +262,18 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setProfile(null);
       setRole('guest');
-      // Clear persistence just in case
-      localStorage.removeItem('seven-auth-v3-stable');
+      // Clear persistence and all supabase tokens just in case
+      try {
+        localStorage.removeItem('seven-auth-v3-stable');
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('sb-') || key.includes('auth-token'))) {
+            localStorage.removeItem(key);
+          }
+        }
+      } catch (e) {
+        console.warn("Error cleaning up localStorage:", e);
+      }
     }
   };
 

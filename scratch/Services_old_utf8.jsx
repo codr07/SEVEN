@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+﻿import React, { useEffect, useState, useMemo } from 'react';
 import { supabase, withTimeout, filterVisible, orderedFetch } from '../lib/supabase';
 import { Loader2, Code, Laptop, Cpu, Rocket, Search, Filter, Share2, ArrowRight, Sparkles, MessageSquare, X, Send, User, Mail, FileText, CheckCircle2, Phone, Briefcase, IndianRupee, Clock, PlusSquare, MessageSquarePlus, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,8 +9,6 @@ import { useAlert } from '../context/AlertContext';
 import MergedShape from '../components/MergedShape';
 import SignatureButton from '../components/SignatureButton';
 import SignatureShareButton from '../components/SignatureShareButton';
-import UniversalEnquiryModal from '../components/UniversalEnquiryModal';
-import GlassSearch from '../components/GlassSearch';
 
 const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }) => {
   const { showAlert } = useAlert();
@@ -88,7 +86,7 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
         custom_fields: []
       };
     }
-  }, [serviceCategory, selectedServiceObj, dbConfig]);
+  }, [serviceCategory, selectedServiceObj]);
 
   // Sync default tier when service changes
   useEffect(() => {
@@ -96,20 +94,11 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
       setFormData(prev => ({ 
         ...prev, 
         tier: DYNAMIC_OPTIONS.tiers[0],
-        custom_responses: {
-          mock_tests: 1,
-          subjects: 1,
-          doc_type: '',
-          thesis_range: '',
-          desktop_setups: 1,
-          theme_preference: '',
-          poster_package: '',
-          album_package: ''
-        },
+        custom_responses: {},
         addons: []
       }));
     }
-  }, [formData.service_type, DYNAMIC_OPTIONS]);
+  }, [formData.service_type]);
 
   if (!isOpen) return null;
 
@@ -140,31 +129,28 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
     if (template === 'mock_exams') {
       const tests = formData.custom_responses.mock_tests || 1;
       const subs = formData.custom_responses.subjects || 1;
-      return `₹${(tests * subs * 500).toLocaleString()}`;
+      return `Γé╣${(tests * subs * 500).toLocaleString()}`;
     }
     if (template === 'project_doc') {
       const rates = { 'Word': 500, 'LaTeX': 1000, 'Custom Publisher': 2000 };
-      const docType = formData.custom_responses.doc_type;
-      return rates[docType] ? `₹${rates[docType].toLocaleString()}` : 'Select Format';
+      return `Γé╣${(rates[formData.custom_responses.doc_type] || 0).toLocaleString()}`;
     }
     if (template === 'thesis_doc') {
       const rates = { '4-7': 2000, '8-20': 5000, '20-40': 8000, '40+': 'Custom Quote' };
       const price = rates[formData.custom_responses.thesis_range];
-      return typeof price === 'number' ? `₹${price.toLocaleString()}` : (price || 'Select Range');
+      return typeof price === 'number' ? `Γé╣${price.toLocaleString()}` : (price || 'Select Range');
     }
     if (template === 'poster_design') {
       const rates = { 'Standard': 500, 'Premium': 1000 };
-      const packageType = formData.custom_responses.poster_package;
-      return rates[packageType] ? `₹${rates[packageType].toLocaleString()}` : 'Select Package';
+      return `Γé╣${(rates[formData.custom_responses.poster_package] || 0).toLocaleString()}`;
     }
     if (template === 'album_layout') {
       const rates = { 'Standard': 2000, 'Premium': 5000 };
-      const packageType = formData.custom_responses.album_package;
-      return rates[packageType] ? `₹${rates[packageType].toLocaleString()}` : 'Select Package';
+      return `Γé╣${(rates[formData.custom_responses.album_package] || 0).toLocaleString()}`;
     }
     if (template === 'desktop_design') {
       const setups = formData.custom_responses.desktop_setups || 1;
-      return `₹${(setups * 1500).toLocaleString()}`;
+      return `Γé╣${(setups * 1500).toLocaleString()}`;
     }
 
     // 2. Fallback to Web/General Service pricing logic
@@ -177,17 +163,13 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
 
     formData.addons.forEach(id => {
       const addon = DYNAMIC_OPTIONS.addons.find(a => a.id === id);
-      if (addon) {
-        const addonPriceStr = String(addon.price || '0').replace(/,/g, '');
-        const addonMatch = addonPriceStr.match(/(\d+(\.\d+)?)/);
-        total += addonMatch ? parseFloat(addonMatch[0]) : 0;
-      }
+      if (addon) total += (addon.price || 0);
     });
 
     const multiplier = DYNAMIC_OPTIONS.tierMultipliers[formData.tier] || 1;
     total = Math.round(total * multiplier);
 
-    return `₹${total.toLocaleString()}${formData.tier ? '+' : ''}`;
+    return `Γé╣${total.toLocaleString()}${formData.tier ? '+' : ''}`;
   };
 
   const handleSubmit = async (e) => {
@@ -211,9 +193,10 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
         custom_responses: formData.custom_responses
       };
       await supabase.from('service_inquiries').insert([payload]);
-
-      // Submit the form details to FormSubmit.co
+      
+      // After Supabase logging, trigger the form submission to FormSubmit.co
       form.submit(); 
+      
       showAlert('Architectural Manifesto Received. Redirecting...', 'success');
     } catch (err) {
       console.error(err);
@@ -295,25 +278,25 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
                       label: "Web & Commercial Services",
                       options: services
                         .filter(s => (s.category || '').toLowerCase().includes('web') || (s.category || '').toLowerCase().includes('software'))
-                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
+                        .map(s => ({ value: s.title, label: `${s.title} ΓÇö ${s.price}` }))
                     },
                     {
                       label: "Institutional & Academic Services",
                       options: services
                         .filter(s => (s.category || '').toLowerCase().includes('academic') || (s.category || '').toLowerCase().includes('notes'))
-                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
+                        .map(s => ({ value: s.title, label: `${s.title} ΓÇö ${s.price}` }))
                     },
                     {
                       label: "Creative & Design Services",
                       options: services
                         .filter(s => (s.category || '').toLowerCase().includes('design') || (s.category || '').toLowerCase().includes('creative'))
-                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
+                        .map(s => ({ value: s.title, label: `${s.title} ΓÇö ${s.price}` }))
                     },
                     {
                       label: "Marketing & Growth",
                       options: services
                         .filter(s => (s.category || '').toLowerCase().includes('marketing') || (s.category || '').toLowerCase().includes('seo'))
-                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
+                        .map(s => ({ value: s.title, label: `${s.title} ΓÇö ${s.price}` }))
                     },
                     {
                       label: "Other Specialized Services",
@@ -322,7 +305,7 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
                           const cat = (s.category || '').toLowerCase();
                           return !cat.includes('web') && !cat.includes('software') && !cat.includes('academic') && !cat.includes('design') && !cat.includes('marketing');
                         })
-                        .map(s => ({ value: s.title, label: `${s.title} — ${s.price}` }))
+                        .map(s => ({ value: s.title, label: `${s.title} ΓÇö ${s.price}` }))
                     },
                     { value: "Custom", label: "Other / Highly Custom Request" }
                   ]}
@@ -334,46 +317,37 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
               {/* Web Services Fields */}
               {formData.service_type !== "" && formData.service_type !== "Custom" && (
                 <div className="space-y-6">
-                  {/* Common Tiers & Add-ons Segment */}
-                  {(serviceCategory.includes('web') || 
-                    serviceCategory.includes('software') || 
-                    serviceCategory.includes('design') || 
-                    serviceCategory.includes('marketing') ||
-                    (DYNAMIC_OPTIONS.tiers && DYNAMIC_OPTIONS.tiers.length > 0) ||
-                    (DYNAMIC_OPTIONS.addons && DYNAMIC_OPTIONS.addons.length > 0)) && (
+                  {/* Common Web/Software Fields */}
+                  {(serviceCategory.includes('web') || serviceCategory.includes('software')) && (
                     <div className="p-6 border border-border bg-card/50 rounded-2xl space-y-6">
-                      <h3 className="text-sm font-black uppercase tracking-widest text-secondary">Service Parameters</h3>
+                      <h3 className="text-sm font-black uppercase tracking-widest text-secondary">Web Service Requirements</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {DYNAMIC_OPTIONS.tiers && DYNAMIC_OPTIONS.tiers.length > 0 && (
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Preferred Tier</label>
-                            <GlassSelect
-                              value={formData.tier}
-                              onChange={val => setFormData({ ...formData, tier: val })}
-                              options={DYNAMIC_OPTIONS.tiers.map(t => ({ value: t, label: `${t} Tier` }))}
-                            />
-                          </div>
-                        )}
-                        <div className={(DYNAMIC_OPTIONS.tiers && DYNAMIC_OPTIONS.tiers.length > 0) ? "space-y-1" : "space-y-1 md:col-span-2"}>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Preferred Tier</label>
+                          <GlassSelect
+                            value={formData.tier}
+                            onChange={val => setFormData({ ...formData, tier: val })}
+                            options={DYNAMIC_OPTIONS.tiers.map(t => ({ value: t, label: `${t} Tier` }))}
+                          />
+                        </div>
+                        <div className="space-y-1">
                           <label className="text-[10px] font-black uppercase tracking-widest opacity-60">Budget Range</label>
                           <input type="text" name="Budget Range" placeholder="Budget (e.g. Rs. 80,000)" value={formData.budget} onChange={e => setFormData({...formData, budget: e.target.value})} className="w-full px-6 py-4 rounded-xl bg-background/50 border border-border focus:border-primary outline-none" />
                         </div>
-                        <input type="text" name="Timeline" placeholder={DYNAMIC_OPTIONS.timelinePlaceholder || "Expected Timeline (e.g. 4 weeks)"} value={formData.timeline} onChange={e => setFormData({...formData, timeline: e.target.value})} className="md:col-span-2 w-full px-6 py-4 rounded-xl bg-background/50 border border-border focus:border-primary outline-none" />
+                        <input type="text" name="Timeline" placeholder="Expected Timeline (e.g. 4 weeks)" value={formData.timeline} onChange={e => setFormData({...formData, timeline: e.target.value})} className="md:col-span-2 w-full px-6 py-4 rounded-xl bg-background/50 border border-border focus:border-primary outline-none" />
                       </div>
                       
-                      {DYNAMIC_OPTIONS.addons && DYNAMIC_OPTIONS.addons.length > 0 && (
-                        <div className="space-y-3">
-                          <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Strategic Add-ons</p>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {DYNAMIC_OPTIONS.addons.map(addon => (
-                              <label key={addon.id} className={`flex items-center gap-2 text-xs p-3 rounded-xl border cursor-pointer transition-all ${formData.addons.includes(addon.id) ? 'bg-primary/10 border-primary text-primary' : 'bg-background border-border hover:border-primary/50'}`}>
-                                <input type="checkbox" checked={formData.addons.includes(addon.id)} onChange={() => toggleAddon(addon.id)} className="accent-primary" />
-                                <span className="truncate font-bold uppercase tracking-tighter">{addon.label}</span>
-                              </label>
-                            ))}
-                          </div>
+                      <div className="space-y-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Strategic Add-ons</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {DYNAMIC_OPTIONS.addons.map(addon => (
+                            <label key={addon.id} className={`flex items-center gap-2 text-xs p-3 rounded-xl border cursor-pointer transition-all ${formData.addons.includes(addon.id) ? 'bg-primary/10 border-primary text-primary' : 'bg-background border-border hover:border-primary/50'}`}>
+                              <input type="checkbox" checked={formData.addons.includes(addon.id)} onChange={() => toggleAddon(addon.id)} className="accent-primary" />
+                              <span className="truncate font-bold uppercase tracking-tighter">{addon.label}</span>
+                            </label>
+                          ))}
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
 
@@ -407,9 +381,9 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
                         onChange={val => updateCustomResponse('doc_type', val)}
                         placeholder="Select Format"
                         options={[
-                          { value: "Word", label: "Word Document - ₹500" },
-                          { value: "LaTeX", label: "LaTeX Documentation - ₹1000" },
-                          { value: "Custom Publisher", label: "Publisher Format - ₹2000" }
+                          { value: "Word", label: "Word Document - Γé╣500" },
+                          { value: "LaTeX", label: "LaTeX Documentation - Γé╣1000" },
+                          { value: "Custom Publisher", label: "Publisher Format - Γé╣2000" }
                         ]}
                       />
                     </div>
@@ -423,9 +397,9 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
                         onChange={val => updateCustomResponse('thesis_range', val)}
                         placeholder="Select Content Volume"
                         options={[
-                          { value: "4-7", label: "4-7 pages - ₹2000" },
-                          { value: "8-20", label: "8-20 pages - ₹5000" },
-                          { value: "20-40", label: "20-40 pages - ₹8000" },
+                          { value: "4-7", label: "4-7 pages - Γé╣2000" },
+                          { value: "8-20", label: "8-20 pages - Γé╣5000" },
+                          { value: "20-40", label: "20-40 pages - Γé╣8000" },
                           { value: "40+", label: "40+ pages - Custom Quote" }
                         ]}
                       />
@@ -450,8 +424,8 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
                         onChange={val => updateCustomResponse('poster_package', val)}
                         placeholder="Select Design Package"
                         options={[
-                          { value: "Standard", label: "Standard - ₹500" },
-                          { value: "Premium", label: "Premium - ₹1000" }
+                          { value: "Standard", label: "Standard - Γé╣500" },
+                          { value: "Premium", label: "Premium - Γé╣1000" }
                         ]}
                       />
                     </div>
@@ -464,47 +438,10 @@ const CustomServiceModal = ({ isOpen, onClose, services, formData, setFormData }
                         onChange={val => updateCustomResponse('album_package', val)}
                         placeholder="Select Layout Package"
                         options={[
-                          { value: "Standard", label: "Standard - ₹2000" },
-                          { value: "Premium", label: "Premium - ₹5000" }
+                          { value: "Standard", label: "Standard - Γé╣2000" },
+                          { value: "Premium", label: "Premium - Γé╣5000" }
                         ]}
                       />
-                    </div>
-                  )}
-
-                  {/* Database Customized Custom Fields */}
-                  {DYNAMIC_OPTIONS.custom_fields && DYNAMIC_OPTIONS.custom_fields.length > 0 && (
-                    <div className="p-6 border border-border bg-card/50 rounded-2xl space-y-4">
-                      <h3 className="text-sm font-black uppercase tracking-widest text-secondary">Service Specifications</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {DYNAMIC_OPTIONS.custom_fields.map((field) => (
-                          <div key={field.name} className={field.type === 'textarea' ? "space-y-1 md:col-span-2" : "space-y-1"}>
-                            <label className="text-[10px] font-black uppercase tracking-widest opacity-60">
-                              {field.label} {field.required && <span className="text-destructive">*</span>}
-                            </label>
-                            {field.type === 'textarea' ? (
-                              <textarea
-                                name={field.label}
-                                required={field.required}
-                                placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                                value={formData.custom_responses[field.name] || ''}
-                                onChange={e => updateCustomResponse(field.name, e.target.value)}
-                                rows="3"
-                                className="w-full px-6 py-4 rounded-xl bg-background/50 border border-border focus:border-primary outline-none"
-                              />
-                            ) : (
-                              <input
-                                type={field.type || 'text'}
-                                name={field.label}
-                                required={field.required}
-                                placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                                value={formData.custom_responses[field.name] || ''}
-                                onChange={e => updateCustomResponse(field.name, e.target.value)}
-                                className="w-full px-6 py-4 rounded-xl bg-background/50 border border-border focus:border-primary outline-none"
-                              />
-                            )}
-                          </div>
-                        ))}
-                      </div>
                     </div>
                   )}
                 </div>
@@ -552,8 +489,6 @@ const Services = () => {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedServiceForEnquiry, setSelectedServiceForEnquiry] = useState(null);
-  const [isUniversalModalOpen, setIsUniversalModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -564,8 +499,8 @@ const Services = () => {
     tier: 'Basic',
     budget: '',
     timeline: '',
-    requirements: '',
     addons: [],
+    requirements: '',
     custom_responses: {
       mock_tests: 1,
       subjects: 1,
@@ -618,13 +553,16 @@ const Services = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-            <GlassSearch
-              placeholder="Search services..."
-              value={searchQuery}
-              onChange={setSearchQuery}
-              suggestions={services.map(s => s.title)}
-              className="flex-1 md:w-80"
-            />
+            <div className="relative flex-1 md:w-80">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={20} />
+              <input
+                placeholder="Search services..."
+                className="w-full pl-12 pr-6 py-4 bg-card border border-border rounded-full outline-none focus:border-primary transition-all shadow-sm"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
             <div className="flex items-center gap-4">
               <button
@@ -684,6 +622,8 @@ const Services = () => {
           </div>
         </div>
 
+        {/* Floating Trigger Button Removed - now in header flow */}
+
         {loading ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24">
             {[...Array(4)].map((_, i) => (
@@ -718,8 +658,7 @@ const Services = () => {
                         transition={{ duration: 0.5, delay: idx * 0.1 }}
                         className="flex justify-center"
                       >
-                      <div className="relative group transition-all duration-500 hover:scale-[1.02]">
-                        <Link to={`/services/${service.id}`} className="block">
+                        <Link to={`/services/${service.id}`} className="group relative block transition-all duration-500 hover:scale-[1.02]">
                           <MergedShape height={520}>
                             {/* Category Vertical Indicator (Left Side) */}
                             <div className="absolute left-0 top-0 bottom-0 w-10 flex flex-col items-center py-8 bg-primary/5 border-r border-white/10 z-10 rounded-l-[32px]">
@@ -775,37 +714,35 @@ const Services = () => {
                                   </div>
                                   <span className="text-xl font-black text-white">{service.price || 'Elite Quote'}</span>
                                 </div>
-                                {/* Spacer to preserve width for buttons overlay */}
-                                <div className="w-[180px]" />
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setFormData(prev => ({ ...prev, service_type: service.title }));
+                                      setIsModalOpen(true);
+                                    }}
+                                    className="px-6 py-3 rounded-xl bg-primary text-white text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                                  >
+                                    Order
+                                  </button>
+                                  <SignatureButton label="Details" />
+                                </div>
                               </div>
+                            </div>
+
+                            <div className="absolute left-[390px] top-[60px] w-[70px] h-[50px] flex items-center justify-center pointer-events-auto">
+                              <SignatureShareButton
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  navigator.clipboard.writeText(`${window.location.origin}/services/${service.id}`);
+                                  showAlert("Link copied!", "success");
+                                }}
+                              />
                             </div>
                           </MergedShape>
                         </Link>
-
-                        {/* Interactive overlay buttons */}
-                        <div className="absolute right-8 bottom-8 flex gap-2 z-20 pointer-events-auto">
-                          <button
-                            onClick={() => {
-                              setSelectedServiceForEnquiry(service);
-                              setIsUniversalModalOpen(true);
-                            }}
-                            className="px-6 py-3 rounded-xl bg-primary text-white text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all"
-                          >
-                            Enquire
-                          </button>
-                          <Link to={`/services/${service.id}`}>
-                            <SignatureButton label="Details" />
-                          </Link>
-                        </div>
-
-                        {/* Share button overlay */}
-                        <div className="absolute left-[390px] top-[60px] w-[70px] h-[50px] flex items-center justify-center z-20 pointer-events-auto">
-                          <SignatureShareButton
-                            shareUrl={`${window.location.origin}/services/${service.id}`}
-                            onShareSuccess={() => showAlert("Link copied!", "success")}
-                          />
-                        </div>
-                      </div>
                       </motion.div>
                     );
                   })}
@@ -823,13 +760,6 @@ const Services = () => {
         services={services}
         formData={formData}
         setFormData={setFormData}
-      />
-
-      <UniversalEnquiryModal
-        isOpen={isUniversalModalOpen}
-        onClose={() => setIsUniversalModalOpen(false)}
-        item={selectedServiceForEnquiry}
-        itemType="service"
       />
     </main>
   );
