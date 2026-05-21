@@ -1989,7 +1989,7 @@ const PublicFeed = ({ loadingData, posts, currentUser }) => {
 
   const handleReaction = async (post, type = 'like') => {
     if (!currentUser) {
-      showAlert('error', 'Authentication Required', 'Please log in to react.');
+      showAlert('Please log in to react.', 'error');
       return;
     }
     if (isLiking) return;
@@ -2032,7 +2032,7 @@ const PublicFeed = ({ loadingData, posts, currentUser }) => {
     } catch (error) {
       console.error('Reaction error:', error);
       setLocalPosts(prev => prev.map(p => p.id === post.id ? post : p));
-      showAlert('error', 'Update Failed', 'Failed to update reaction status.');
+      showAlert('Failed to update reaction status.', 'error');
     } finally {
       setIsLiking(false);
     }
@@ -2048,7 +2048,7 @@ const PublicFeed = ({ loadingData, posts, currentUser }) => {
 
   const handleComment = async (post) => {
     if (!currentUser) {
-      showAlert('error', 'Authentication Required', 'Please log in to comment.');
+      showAlert('Please log in to comment.', 'error');
       return;
     }
 
@@ -2084,7 +2084,7 @@ const PublicFeed = ({ loadingData, posts, currentUser }) => {
       console.error('Comment error:', error);
       setLocalPosts(prev => prev.map(p => p.id === post.id ? post : p));
       setCommentInputs(prev => ({ ...prev, [post.id]: text }));
-      showAlert('error', 'Update Failed', 'Failed to post comment.');
+      showAlert('Failed to post comment.', 'error');
     }
   };
 
@@ -2187,9 +2187,9 @@ const PublicFeed = ({ loadingData, posts, currentUser }) => {
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {filteredPosts.map((item) => {
-            const reactions = item.extra_details?.reactions || [];
+            let reactions = item.extra_details?.reactions || [];
             if (item.extra_details?.likes?.length > 0 && reactions.length === 0) {
-              item.extra_details.likes.forEach(id => reactions.push({ userId: id, type: 'like' }));
+              reactions = item.extra_details.likes.map(id => ({ userId: id, type: 'like' }));
             }
             const comments = item.extra_details?.comments || [];
             

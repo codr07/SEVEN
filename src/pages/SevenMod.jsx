@@ -3391,11 +3391,43 @@ ${fieldType === 'string_array' ? 'Return the response as a comma-separated list 
     }
     setAiLoading(true);
     try {
-      const { data, error } = await adminSupabase.functions.invoke('generate-ai-content', {
-        body: { table, prompt: aiPrompt }
-      });
-      if (error) throw error;
+      const systemPrompt = `You are a premium AI assistant for "5EVEN" (a futuristic, premium technological college & services platform).
+Generate realistic database content for the "${table}" table.
+The administrator prompt is: "${aiPrompt}".
+
+Generate appropriate, highly detailed, futuristic, professional content.
+Return ONLY a valid JSON object matching the exact schema requirements for the "${table}" table below. DO NOT include any markdown, backticks (\`\`\`), or commentary. Just raw JSON.
+
+Schema requirements by table:
+- For "courses": { "name": "...", "category": "...", "short_desc": "...", "duration": "...", "price": "...", "extra_details": { "details": ["syllabus line 1", "syllabus line 2"], "why_choose_this_course": "...", "public_review": "...", "certification_available": true, "certification_cost": "..." } }
+- For "academics": { "title": "...", "description": "...", "price": "...", "extra_details": { "details": ["highlight 1", "highlight 2"], "detailed_description": "...", "public_review": "...", "certification_available": true, "certification_cost": "..." } }
+- For "services": { "category": "...", "title": "...", "price": "...", "description": "...", "extra_details": { "details": ["highlight 1", "highlight 2"], "detailed_description": "...", "public_review": "..." } }
+- For "faculty": { "name": "...", "topic": "...", "stars": "5.0", "price": "...", "description": "...", "extra_details": { "education": ["degree 1"], "expertise": ["expertise 1"], "research": ["paper 1"], "books": ["book 1"] } }
+- For "notes": { "category": "...", "title": "...", "short_desc": "...", "extra_details": { "price": "...", "details": ["highlight 1", "highlight 2"], "detailed_description": "..." } }
+- For "founders": { "name": "...", "role": "...", "bio": "...", "extra_details": { "education": ["..."], "expertise": ["..."] } }
+- For "updates": { "title": "...", "slug": "...", "type": "patch", "category": "system", "excerpt": "...", "content": "markdown content..." }
+
+Also, add a property "image_prompt" in the root of the JSON containing a specific, premium cinematic AI image prompt (e.g. "futuristic holographic computer lab, octane render, 8k, neon purple accents") to generate an illustration for this item. Make sure it describes a cool visual representation.`;
+
+      const encodedPrompt = encodeURIComponent(systemPrompt);
+      const res = await fetch(`https://text.pollinations.ai/${encodedPrompt}`);
+      if (!res.ok) throw new Error("Could not reach AI engine");
       
+      let text = await res.text();
+      let cleaned = text.trim();
+      
+      if (cleaned.startsWith('```json')) cleaned = cleaned.substring(7);
+      else if (cleaned.startsWith('```')) cleaned = cleaned.substring(3);
+      if (cleaned.endsWith('```')) cleaned = cleaned.substring(0, cleaned.length - 3);
+      cleaned = cleaned.trim();
+      
+      const data = JSON.parse(cleaned);
+
+      const imgPrompt = data.image_prompt || `${table} ${data.title || data.name || 'illustration'}`;
+      const cleanImgPrompt = encodeURIComponent(imgPrompt.substring(0, 150));
+      const seed = Math.floor(Math.random() * 1000000);
+      data.cover_image = `https://image.pollinations.ai/p/${cleanImgPrompt}?width=800&height=600&nologo=true&seed=${seed}`;
+
       if (data) {
         // Map data directly into formData
         setFormData(prev => {
