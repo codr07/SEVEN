@@ -1,9 +1,9 @@
-# 🚀 Release Notes — V 1.0.0 (Official Release)
-> **Date: May 20, 2026**
+# 🚀 Release Notes — V 1.1.0
+> **Date: May 21, 2026**
 > **Codename: Divine Union (Gold Master)**
-> **Version: 1.0.0**
+> **Version: 1.1.0**
 
-We are thrilled to announce the official **V 1.0.0 Release** of **5EVEN Institution Portal**. This release marks the transition of the portal into a production-grade, highly resilient, and zero-lag environment. By merging concurrent rendering, local caching, interactive 3D elements, and serverless automation, we have created a premium digital workspace for students, faculty, and administrators.
+We are thrilled to announce the official **V 1.1.0 Release** of **5EVEN Institution Portal**. This release marks the transition of the portal into a production-grade, highly resilient, and zero-lag environment. By merging concurrent rendering, local caching, interactive 3D elements, and serverless automation, we have created a premium digital workspace for students, faculty, and administrators.
 
 ---
 
@@ -24,6 +24,9 @@ We are thrilled to announce the official **V 1.0.0 Release** of **5EVEN Institut
 *   **Verified PDF Invoice Generator:** Generate and download verified purchase invoices instantly.
 *   **Submission Review Cycle:** Implemented an upload panel for papers and projects with automated review states (`on_hold`, `approved`, `rejected`).
 *   **Signatures & Personalization:** Interactive signature drawing button and sharing system for public profile cards.
+*   **Detailed Posting & Filtering System:** Submissions now support deep categorizations across 9 primary domains (Technology, Science, etc.), 4 academic classifications (Beginner to Research-Grade), and custom tagging. 
+*   **Advanced Explore Hall Filters:** Instant dropdown filters by category and classification alongside a deep-search engine that recursively checks custom tags.
+*   **Expanded Social Interactions:** Rebuilt the reaction engine to support 5 distinct reactions (Like, Dislike, Love, Celebrate, Insightful) dynamically tracked per user with real-time UI popovers.
 
 ### 👑 3. Centralized Admin Console (SevenMod)
 *   **Analytics Center:** Visual dashboard showing database counts and record growth through interactive graphs. Includes date range toggling (Daily, Weekly, Monthly, Quarterly, Lifetime).
