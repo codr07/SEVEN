@@ -33,6 +33,7 @@ import {
   ChevronRight,
   ChevronLeft,
   ArrowLeft,
+  ArrowRight,
   Sparkles,
   Heart,
   MessageSquare,
