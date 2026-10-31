@@ -22,7 +22,7 @@ const AcademicsDetail = () => {
         );
         if (error) throw error;
         setAcademic(data);
-        
+
         // Update Metadata
         updateMetadata({
           title: data.title,
@@ -160,7 +160,7 @@ const AcademicsDetail = () => {
 
               <button
                 onClick={() => setShowEnquiry(true)}
-                className="inline-flex w-full items-center justify-center rounded-xl bg-green-600 px-6 py-5 text-base font-black uppercase tracking-widest text-white shadow-xl shadow-primary/20 hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 cursor-pointer"
+                className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#14151e] via-[#211d13] to-[#14151e] border border-[#d4af37]/60 hover:border-[#fcf6ba] px-6 py-4 text-xs font-mono font-bold uppercase tracking-widest text-[#fcf6ba] shadow-[0_10px_30px_rgba(0,0,0,0.85),0_0_20px_rgba(212,175,55,0.25)] hover:shadow-[0_0_35px_rgba(212,175,55,0.45)] hover:-translate-y-0.5 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 cursor-pointer"
               >
                 Enroll Now / Enquire
               </button>

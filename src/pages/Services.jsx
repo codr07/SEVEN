@@ -766,8 +766,9 @@ const Services = () => {
                               setSelectedServiceForEnquiry(service);
                               setIsUniversalModalOpen(true);
                             }}
-                            className="px-6 py-3 rounded-xl bg-primary text-white text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                            className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#12131a] via-[#1c1913] to-[#12131a] border border-[#d4af37]/60 hover:border-[#fcf6ba] text-[#fcf6ba] text-[10px] font-mono font-bold uppercase tracking-widest shadow-[0_4px_20px_rgba(0,0,0,0.8),0_0_15px_rgba(212,175,55,0.2)] hover:shadow-[0_0_25px_rgba(212,175,55,0.45)] hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                           >
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-pulse" />
                             Enquire
                           </button>
                           <Link to={`/services/${service.id}`}>

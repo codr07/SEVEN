@@ -90,7 +90,7 @@ const CourseDetail = () => {
 
   // Parse extra_details block
   const view = course.extra_details || {};
-  const coverUrl = view.cover || course.thumbnail || course.image_url || course.cover_image || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop';
+  const coverUrl = view.cover || course.thumbnail || course.image_url || course.cover_image || '/assets/images/img/banner.png';
   
   const basePriceNum = parseFloat(String(course.price || '0').replace(/[^0-9.]/g, '')) || 0;
   const certPriceNum = parseFloat(String(view.certification_cost || '0').replace(/[^0-9.]/g, '')) || 0;
@@ -115,7 +115,7 @@ const CourseDetail = () => {
               src={coverUrl}
               alt={course.name}
               className="h-full w-full object-cover"
-              onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200&auto=format&fit=crop'; }}
+              onError={(e) => { e.currentTarget.src = '/assets/images/img/banner.png'; }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
             <div className="absolute top-6 left-6 z-10">
@@ -229,7 +229,7 @@ const CourseDetail = () => {
               ) : (
                 <Link
                   to={`/payment?amount=${finalPrice}&purpose=${encodeURIComponent(finalPurpose)}`}
-                  className="inline-flex w-full items-center justify-center rounded-xl bg-green-600 px-6 py-5 text-base font-black uppercase tracking-widest text-white shadow-xl shadow-primary/20 hover:-translate-y-1 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300"
+                  className="inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-[#14151e] via-[#211d13] to-[#14151e] border border-[#d4af37]/60 hover:border-[#fcf6ba] px-6 py-4 text-xs font-mono font-bold uppercase tracking-widest text-[#fcf6ba] shadow-[0_10px_30px_rgba(0,0,0,0.85),0_0_20px_rgba(212,175,55,0.25)] hover:shadow-[0_0_35px_rgba(212,175,55,0.45)] hover:-translate-y-0.5 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300"
                 >
                   Enroll Now
                 </Link>

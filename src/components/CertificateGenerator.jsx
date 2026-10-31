@@ -72,16 +72,16 @@ const CertificateGenerator = forwardRef(({ studentName, courseName, date, isDemo
                 <div className="h-16 flex items-center justify-center mb-1">
                    <img src="/assets/images/sign/sign2.png" alt="Co-Founder Signature" className="h-14 object-contain brightness-0 invert opacity-90" />
                 </div>
-                <p className="text-xs font-black uppercase tracking-widest text-white mb-1">Co-Founder, 5EVEN</p>
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Authorized Signature</p>
+                <p className="text-xs font-mono font-bold uppercase tracking-widest text-[#fcf6ba] mb-1">Co-Founder, <span className="font-mono">5EVEN</span></p>
+                <p className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#d4af37]">Authorized Signature</p>
              </div>
 
              <div className="text-right flex flex-col items-end w-1/3">
                 <div className="h-16 flex items-center justify-end mb-1 pr-4">
                    <img src="/assets/images/sign/sign1.png" alt="Founder Signature" className="h-14 object-contain brightness-0 invert opacity-90" />
                 </div>
-                <p className="text-xs font-black uppercase tracking-widest text-white mb-1 mr-4">Founder, 5EVEN</p>
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground mr-4">Authorized Signature</p>
+                <p className="text-xs font-mono font-bold uppercase tracking-widest text-[#fcf6ba] mb-1 mr-4">Founder, <span className="font-mono">5EVEN</span></p>
+                <p className="text-[9px] font-mono uppercase tracking-[0.2em] text-[#d4af37] mr-4">Authorized Signature</p>
              </div>
           </div>
        </div>

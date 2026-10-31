@@ -1071,7 +1071,39 @@ const SevenMod = () => {
                 className="w-full pl-9 pr-4 py-3 md:py-3.5 rounded-2xl bg-card border border-border text-sm outline-none focus:border-primary transition-all"
               />
             </div>          <div className="flex items-center gap-4">
-              {(CONTENT_TABLES.some(t => t.id === activeTab) || activeTab === 'student_submissions') && (
+              
+              {CONTENT_TABLES.some(t => t.id === activeTab) && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const confirmApply = window.confirm(`FORCE OVERWRITE: Force replace ALL thumbnails in "${activeTab}" with the new banner.png? This will overwrite existing thumbnails for all ${tableData.length} entries.`);
+                    if (!confirmApply) return;
+                    setLoading(true);
+                    try {
+                      if (tableData.length === 0) {
+                        showAlert('No entries found to update.', 'info');
+                        setLoading(false);
+                        return;
+                      }
+                      const actualTable = (activeTab === 'profiles_edit' || activeTab === 'users') ? 'profiles' : activeTab;
+                      for (const target of tableData) {
+                        await adminSupabase.from(actualTable).update({ cover_image: '/assets/images/img/banner.png' }).eq('id', target.id);
+                      }
+                      showAlert(`Force applied banner.png to all ${tableData.length} entries in ${activeTab}!`, 'success');
+                      fetchTable(activeTab);
+                    } catch (e) {
+                      showAlert('Failed to force update banner thumbnails: ' + e.message, 'error');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  className="px-4 h-12 rounded-xl border border-[#d4af37]/60 bg-gradient-to-r from-[#14151e] via-[#211d13] to-[#14151e] hover:border-[#fcf6ba] text-[#fcf6ba] font-mono text-[10px] font-bold uppercase tracking-widest shadow-[0_4px_20px_rgba(0,0,0,0.8),0_0_15px_rgba(212,175,55,0.2)] hover:shadow-[0_0_25px_rgba(212,175,55,0.45)] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
+                  title="Force change every thumbnail in this table to the new banner.png"
+                >
+                  <Tag size={14} className="text-[#d4af37]" /> Force Apply Banner
+                </button>
+              )}
+{(CONTENT_TABLES.some(t => t.id === activeTab) || activeTab === 'student_submissions') && (
                 <button
                   onClick={() => {
                     setEditingItem(null);
@@ -1125,7 +1157,7 @@ const SevenMod = () => {
                   Product Distribution
                 </h3>
                 <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
                     <PieChart>
                       <Pie
                         data={stats.filter(s => CONTENT_TABLES.some(t => t.id === s.tableName))}
@@ -1179,7 +1211,7 @@ const SevenMod = () => {
                         </div>
 
                         <div className="flex-1 w-full relative">
-                          <ResponsiveContainer width="100%" height="100%">
+                          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
                             <LineChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700 }} />
@@ -2667,6 +2699,14 @@ const AdminImageField = ({ value, onChange, label, adminId }) => {
             placeholder="Paste Image URL"
             className="flex-1 px-4 py-2.5 rounded-xl bg-background border border-border focus:border-primary outline-none text-sm"
           />
+          <button
+            type="button"
+            onClick={() => onChange('/assets/images/img/banner.png')}
+            className="px-3 py-2 rounded-xl border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary font-mono text-xs font-bold transition-all flex items-center gap-1.5"
+            title="Use official 5EVEN banner.png as thumbnail"
+          >
+            <span>Use Banner</span>
+          </button>
           <label className={`cursor-pointer px-4 py-2.5 rounded-xl border border-border bg-card hover:bg-muted transition-all flex items-center gap-2 text-xs font-bold ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
             {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
             <span>{uploading ? '...' : 'Upload'}</span>
@@ -2737,6 +2777,8 @@ const StatusBadge = ({ pushed, status }) => (
 );
 
 const htmlToMarkdown = (html) => {
+  if (html === null || html === undefined) return '';
+  if (typeof html !== 'string') return String(html);
   if (!html) return '';
   let md = html;
   
@@ -2821,6 +2863,14 @@ const htmlToMarkdown = (html) => {
 };
 
 const markdownToHtml = (markdown) => {
+  if (markdown === null || markdown === undefined) return '';
+  if (typeof markdown !== 'string') {
+    if (Array.isArray(markdown)) return markdown.map(m => `<p>${String(m)}</p>`).join('');
+    if (typeof markdown === 'object') {
+      try { return `<pre>${JSON.stringify(markdown, null, 2)}</pre>`; } catch { return ''; }
+    }
+    return String(markdown);
+  }
   if (!markdown) return '';
   
   let normalized = markdown

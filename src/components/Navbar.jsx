@@ -1,9 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { useTheme } from '../context/ThemeContext';
+import React, { useEffect, useState, useRef } from 'react';
+import { NavLink, useLocation, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
-import { ChevronDown, Menu, X, Home, BookOpen, GraduationCap, FileText, Briefcase, Star, Mail, UserCircle, ChevronLeft, ChevronRight, LogIn, Settings } from 'lucide-react';
+import {
+  ChevronDown,
+  Menu,
+  X,
+  UserCircle,
+  LogIn,
+  Settings,
+  Mail,
+  BookOpen,
+  GraduationCap,
+  FileText,
+  Briefcase,
+  Star,
+  Layers,
+  ArrowRight
+} from 'lucide-react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,22 +27,14 @@ function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-const navItems = [
-  { name: 'Home', path: '/', icon: Home },
-  { name: 'Academics', path: '/academics', icon: BookOpen },
-  { name: 'Courses', path: '/courses', icon: GraduationCap },
-  { name: 'Notes', path: '/notes', icon: FileText },
-  { name: 'Services', path: '/services', icon: Briefcase },
-  { name: 'Stars', path: '/stars', icon: Star },
-  { name: 'Contact', path: '/contact', icon: Mail },
-  { name: 'Student Zone', path: '/student-zone', icon: UserCircle },
-];
-
 const Navbar = () => {
   const { user, profile, logout, login, signup, role, signInWithGoogle } = useAuth();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isServicesOpen, setIsServicesOpen] = useState(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
-  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Auth modal states
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignUpMode, setIsSignUpMode] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
@@ -41,14 +46,31 @@ const Navbar = () => {
   const [loginError, setLoginError] = useState('');
   const [isLoginBusy, setIsLoginBusy] = useState(false);
   const [showVerificationSent, setShowVerificationSent] = useState(false);
-  
+
+  const servicesTimeoutRef = useRef(null);
   const avatarMenuRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setIsScrolled(window.scrollY > 30);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
     setIsAvatarMenuOpen(false);
     setIsMobileMenuOpen(false);
+    setIsServicesOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -60,6 +82,17 @@ const Navbar = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleServicesEnter = () => {
+    if (servicesTimeoutRef.current) clearTimeout(servicesTimeoutRef.current);
+    setIsServicesOpen(true);
+  };
+
+  const handleServicesLeave = () => {
+    servicesTimeoutRef.current = setTimeout(() => {
+      setIsServicesOpen(false);
+    }, 200);
+  };
 
   const handleSignOut = async () => {
     try {
@@ -109,270 +142,509 @@ const Navbar = () => {
     }
   };
 
-  const SidebarContent = ({ collapsed }) => (
-    <div className="flex flex-col h-full w-full">
-      <div className={cn("flex items-center gap-4 py-8 transition-all duration-300", collapsed ? "px-0 justify-center" : "px-6")}>
-        <img src={logoMain} alt="5EVEN" className="h-10 w-auto" />
-        {!collapsed && <span className="font-bold text-2xl uppercase tracking-widest mt-1">5EVEN</span>}
-      </div>
-
-      <div className="flex-1 flex flex-col gap-1 overflow-y-auto w-full px-3 no-scrollbar">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink
-              key={item.name}
-              to={item.path}
-              className={({ isActive }) => cn(
-                "flex items-center rounded-xl text-sm font-black uppercase tracking-widest transition-all",
-                isActive ? "bg-gradient-to-r from-primary to-accent text-white shadow-[0_8px_20px_-6px_rgba(var(--primary-rgb),0.6),inset_0_1px_1px_rgba(255,255,255,0.4)] border border-white/20" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                collapsed ? "py-4 justify-center" : "px-4 py-3 gap-3"
-              )}
-            >
-              <Icon size={collapsed ? 24 : 18} />
-              {!collapsed && <span>{item.name}</span>}
-            </NavLink>
-          );
-        })}
-      </div>
-
-      <div className={cn("p-4 border-t border-border w-full", collapsed ? "flex flex-col items-center" : "")}>
-        {user ? (
-          <div className="relative w-full" ref={avatarMenuRef}>
-            <button onClick={() => setIsAvatarMenuOpen(!isAvatarMenuOpen)} className="flex items-center justify-between w-full p-2 rounded-xl bg-muted/50 hover:bg-muted transition-all">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black text-[10px] overflow-hidden">
-                  {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    (profile?.full_name || user.email || 'U').charAt(0).toUpperCase()
-                  )}
-                </div>
-                {!collapsed && <span className="text-[10px] font-black uppercase truncate max-w-[100px]">{profile?.full_name || user.email}</span>}
-              </div>
-              {!collapsed && <ChevronDown size={14} />}
-            </button>
-            {isAvatarMenuOpen && (
-              <div className={cn("absolute bottom-full mb-2 w-48 bg-card/95 backdrop-blur-xl border border-white/10 rounded-xl p-2 shadow-2xl z-[100] flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-2 duration-200", collapsed ? "left-12 bottom-0" : "left-0")}>
-                {profile?.username ? (
-                  <button onClick={() => { setIsAvatarMenuOpen(false); navigate(`/profile/${profile.username}`); }} className="w-full text-left px-3 py-2.5 text-[10px] font-black uppercase text-primary hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-2">
-                    <UserCircle size={14} /> View My Profile
-                  </button>
-                ) : (
-                  <button onClick={() => { setIsAvatarMenuOpen(false); navigate('/student-zone?tab=settings'); }} className="w-full text-left px-3 py-2.5 text-[10px] font-black uppercase text-amber-500 hover:bg-amber-500/5 rounded-lg transition-colors flex items-center gap-2">
-                    <Settings size={14} /> Setup Profile
-                  </button>
-                )}
-                {role === 'admin' && (
-                  <button onClick={() => { setIsAvatarMenuOpen(false); navigate('/seven-mod'); }} className="w-full text-left px-3 py-2.5 text-[10px] font-black uppercase text-accent hover:bg-accent/5 rounded-lg transition-colors flex items-center gap-2">
-                    <Settings size={14} /> Admin Control Panel
-                  </button>
-                )}
-                <div className="h-px bg-border my-1 mx-1" />
-                <button onClick={handleSignOut} className="w-full text-left px-3 py-2.5 text-[10px] font-black uppercase text-destructive hover:bg-destructive/10 rounded-lg transition-colors flex items-center gap-2">
-                  <LogIn size={14} className="rotate-180" /> Sign Out
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <button onClick={() => setIsLoginOpen(true)} className="w-full py-3 bg-primary text-white rounded-xl font-black uppercase tracking-widest text-[10px]">
-            {collapsed ? <LogIn size={20} /> : "Sign In"}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside className={cn("hidden md:flex sticky top-0 h-screen border-r border-border bg-card z-50 transition-all duration-300", isDesktopCollapsed ? "w-20" : "w-64")}>
-        <SidebarContent collapsed={isDesktopCollapsed} />
-        <button onClick={() => setIsDesktopCollapsed(!isDesktopCollapsed)} className="absolute top-10 -right-4 w-8 h-8 rounded-full border border-border bg-card shadow-md flex items-center justify-center hover:bg-primary hover:text-white transition-all">
-          {isDesktopCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
-      </aside>
-
-      {/* Mobile Topbar */}
-      <div className="md:hidden sticky top-0 h-20 bg-background/80 backdrop-blur-md border-b border-border z-[100] flex items-center justify-between px-6">
-        <div className="flex items-center gap-3">
-          <img src={logoMain} alt="Logo" className="h-8 w-auto" />
-          <span className="font-bold text-xl uppercase mt-1">5EVEN</span>
-        </div>
-        
-        <button 
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all active:scale-95"
+      {/* Top Floating macOS Pill Navbar */}
+      <header
+        className={cn(
+          "fixed top-0 left-0 right-0 z-50 flex items-center justify-center transition-all duration-500 ease-out px-4 pointer-events-none",
+          isScrolled ? "pt-2" : "pt-4"
+        )}
+      >
+        <div
+          className={cn(
+            "pointer-events-auto liquid-nav-pill flex items-center justify-between w-full max-w-5xl transition-all duration-500",
+            isScrolled ? "h-14 px-4 sm:px-6 shadow-[0_15px_35px_rgba(0,0,0,0.8)]" : "h-16 px-5 sm:px-8 shadow-[0_20px_45px_rgba(0,0,0,0.85)]"
+          )}
         >
-          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
+          {/* Brand Logo with Monospace 5EVEN */}
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="relative">
+              <div className="absolute -inset-1 rounded-lg bg-[#d4af37]/30 blur-sm opacity-0 group-hover:opacity-100 transition duration-300" />
+              <img src={logoMain} alt="5EVEN Logo" className="h-8 w-auto relative z-10" />
+            </div>
+            <span className="font-mono font-bold text-lg tracking-[0.2em] uppercase text-[#fcf6ba]">
+              5EVEN
+            </span>
+          </Link>
 
-      {/* Floating Mobile Menu Button removed - now in Topbar */}
+          {/* Center Navigation Links (Desktop) */}
+          <nav className="hidden md:flex items-center gap-1 sm:gap-2">
+            {/* Home */}
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                cn(
+                  "px-4 py-2 rounded-lg text-xs font-mono font-semibold tracking-wider uppercase transition-all duration-300",
+                  isActive
+                    ? "bg-[#d4af37]/15 text-[#fcf6ba] border border-[#d4af37]/40 shadow-[inset_0_1px_1px_rgba(254,240,138,0.3)]"
+                    : "text-[#bba782] hover:text-[#fcf6ba] hover:bg-[#d4af37]/5"
+                )
+              }
+            >
+              Home
+            </NavLink>
 
-      {/* Mobile Menu Overlay */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div 
-            initial={{ x: "100%" }} 
-            animate={{ x: 0 }} 
-            exit={{ x: "100%" }} 
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-[9000] bg-background/80 backdrop-blur-3xl flex flex-col overflow-hidden"
-          >
-            {/* Ambient Background Glows */}
-            <div className="absolute top-[-10%] right-[-20%] w-[70vw] h-[70vw] rounded-full bg-primary/30 blur-[80px] pointer-events-none" />
-            <div className="absolute bottom-[-10%] left-[-20%] w-[80vw] h-[80vw] rounded-full bg-accent/20 blur-[100px] pointer-events-none" />
-            
-            <div className="flex flex-col h-full p-6 pt-12 relative z-10">
-              <div className="flex justify-between items-center mb-8">
-                <div className="flex items-center gap-3">
-                  <img src={logoMain} alt="Logo" className="h-8 w-auto" />
-                  <span className="font-black text-xl uppercase mt-1">5EVEN</span>
-                </div>
-                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 bg-muted rounded-full hover:bg-muted/80 transition-colors">
-                  <X size={20} />
+            {/* Services with Hover Dropdown & Tooltip */}
+            <div
+              className="relative"
+              onMouseEnter={handleServicesEnter}
+              onMouseLeave={handleServicesLeave}
+            >
+              <div className="group relative">
+                <button
+                  type="button"
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-xs font-mono font-semibold tracking-wider uppercase transition-all duration-300 inline-flex items-center gap-1.5",
+                    location.pathname.startsWith('/services') ||
+                    location.pathname.startsWith('/academics') ||
+                    location.pathname.startsWith('/courses') ||
+                    location.pathname.startsWith('/notes')
+                      ? "bg-[#d4af37]/15 text-[#fcf6ba] border border-[#d4af37]/40"
+                      : "text-[#bba782] hover:text-[#fcf6ba] hover:bg-[#d4af37]/5"
+                  )}
+                >
+                  <span>Services</span>
+                  <ChevronDown
+                    size={14}
+                    className={cn(
+                      "transition-transform duration-300 opacity-70",
+                      isServicesOpen ? "rotate-180 text-[#d4af37]" : ""
+                    )}
+                  />
                 </button>
+
+                {/* macOS Tooltip with Monospace 5EVEN */}
+                <div className="liquid-tooltip -bottom-10 left-1/2 -translate-x-1/2 font-mono">
+                  <span className="font-mono font-bold">5EVEN</span> Core services
+                </div>
               </div>
 
-              {/* Mobile Profile Section */}
-              {user && (
-                <div className="mb-6 p-5 rounded-2xl bg-muted/30 border border-border flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary font-black text-lg border-2 border-border shadow-sm overflow-hidden">
+              {/* Sub-menu Dropdown */}
+              <AnimatePresence>
+                {isServicesOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="absolute top-full left-0 mt-2 w-56 liquid-glass-menu p-2 z-[60]"
+                  >
+                    <Link
+                      to="/academics"
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-mono font-medium uppercase tracking-wider text-[#bba782] hover:text-[#fcf6ba] hover:bg-[#d4af37]/10 transition-colors"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-[#d4af37]/20 text-[#d4af37] flex items-center justify-center">
+                        <BookOpen size={14} />
+                      </div>
+                      <span>Academics</span>
+                    </Link>
+
+                    <Link
+                      to="/courses"
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-mono font-medium uppercase tracking-wider text-[#bba782] hover:text-[#fcf6ba] hover:bg-[#d4af37]/10 transition-colors"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-[#d4af37]/20 text-[#d4af37] flex items-center justify-center">
+                        <GraduationCap size={14} />
+                      </div>
+                      <span>Courses</span>
+                    </Link>
+
+                    <Link
+                      to="/notes"
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-mono font-medium uppercase tracking-wider text-[#bba782] hover:text-[#fcf6ba] hover:bg-[#d4af37]/10 transition-colors"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-[#d4af37]/20 text-[#d4af37] flex items-center justify-center">
+                        <FileText size={14} />
+                      </div>
+                      <span>Notes</span>
+                    </Link>
+
+                    <div className="h-px bg-[rgba(212,175,55,0.2)] my-1 mx-2" />
+
+                    <Link
+                      to="/services"
+                      className="flex items-center justify-between px-3 py-2 rounded-lg text-[11px] font-mono font-bold text-[#d4af37] hover:bg-[#d4af37]/10 transition-colors"
+                    >
+                      <span>Explore All Services</span>
+                      <ArrowRight size={12} />
+                    </Link>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* IT */}
+            <div className="group relative">
+              <NavLink
+                to="/services"
+                className={({ isActive }) =>
+                  cn(
+                    "px-4 py-2 rounded-lg text-xs font-mono font-semibold tracking-wider uppercase transition-all duration-300",
+                    isActive
+                      ? "bg-[#d4af37]/15 text-[#fcf6ba] border border-[#d4af37]/40 shadow-[inset_0_1px_1px_rgba(254,240,138,0.3)]"
+                      : "text-[#bba782] hover:text-[#fcf6ba] hover:bg-[#d4af37]/5"
+                  )
+                }
+              >
+                IT
+              </NavLink>
+              <div className="liquid-tooltip -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono">
+                All the IT Services we provide
+              </div>
+            </div>
+
+            {/* Stars */}
+            <div className="group relative">
+              <NavLink
+                to="/stars"
+                className={({ isActive }) =>
+                  cn(
+                    "px-4 py-2 rounded-lg text-xs font-mono font-semibold tracking-wider uppercase transition-all duration-300",
+                    isActive
+                      ? "bg-[#d4af37]/15 text-[#fcf6ba] border border-[#d4af37]/40 shadow-[inset_0_1px_1px_rgba(254,240,138,0.3)]"
+                      : "text-[#bba782] hover:text-[#fcf6ba] hover:bg-[#d4af37]/5"
+                  )
+                }
+              >
+                Stars
+              </NavLink>
+              <div className="liquid-tooltip -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono">
+                How others are benefited from us ?
+              </div>
+            </div>
+          </nav>
+
+          {/* Right Action: Account Avatar / Sign In + Mobile Hamburger */}
+          <div className="flex items-center gap-3">
+            {user ? (
+              <div className="relative" ref={avatarMenuRef}>
+                <button
+                  onClick={() => setIsAvatarMenuOpen(!isAvatarMenuOpen)}
+                  className="liquid-avatar-container p-0.5 rounded-lg transition-transform active:scale-95"
+                  aria-label="Account menu"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-[#d4af37]/20 flex items-center justify-center text-[#d4af37] font-mono font-bold text-xs overflow-hidden border border-[#d4af37]/40">
                     {profile?.avatar_url ? (
-                      <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                      <img
+                        src={profile.avatar_url}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       (profile?.full_name || user.email || 'U').charAt(0).toUpperCase()
                     )}
                   </div>
-                  <div className="flex flex-col overflow-hidden">
-                    <span className="text-base font-black uppercase truncate">{profile?.full_name || 'User'}</span>
-                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60">
-                      {role === 'admin' ? 'Administrator' : 'Student Account'}
-                    </span>
-                  </div>
-                </div>
-              )}
+                </button>
 
-              <div className="flex flex-col gap-1 overflow-y-auto no-scrollbar flex-grow">
-                {navItems.map(item => (
-                  <NavLink 
-                    key={item.name} 
-                    to={item.path} 
-                    onClick={() => setIsMobileMenuOpen(false)} 
-                    className={({ isActive }) => cn(
-                      "flex items-center gap-5 p-4 rounded-xl text-lg font-black uppercase tracking-widest transition-all",
-                      isActive ? "bg-gradient-to-r from-primary to-accent text-white shadow-[0_10px_30px_-10px_rgba(var(--primary-rgb),0.7),inset_0_1px_1px_rgba(255,255,255,0.4)] border border-white/20" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                    )}
-                  >
-                    <item.icon size={22} />
-                    {item.name}
-                  </NavLink>
-                ))}
+                {/* Avatar Menu Dropdown */}
+                <AnimatePresence>
+                  {isAvatarMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute right-0 mt-3 w-56 liquid-glass-menu p-2 z-[70]"
+                    >
+                      <div className="px-3 py-2 border-b border-[rgba(212,175,55,0.2)] mb-1">
+                        <p className="text-xs font-heading text-[#fcf6ba] truncate">
+                          {profile?.full_name || 'Member'}
+                        </p>
+                        <p className="text-[10px] font-mono text-[#bba782] truncate">
+                          {user.email}
+                        </p>
+                      </div>
+
+                      {profile?.username ? (
+                        <button
+                          onClick={() => {
+                            setIsAvatarMenuOpen(false);
+                            navigate(`/profile/${profile.username}`);
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs font-mono font-medium uppercase tracking-wider text-[#d4af37] hover:bg-[#d4af37]/10 rounded-lg transition-colors flex items-center gap-2.5"
+                        >
+                          <UserCircle size={15} /> View My Profile
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setIsAvatarMenuOpen(false);
+                            navigate('/student-zone?tab=settings');
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs font-mono font-medium uppercase tracking-wider text-[#f5d061] hover:bg-[#f5d061]/10 rounded-lg transition-colors flex items-center gap-2.5"
+                        >
+                          <Settings size={15} /> Setup Profile
+                        </button>
+                      )}
+
+                      <Link
+                        to="/student-zone"
+                        onClick={() => setIsAvatarMenuOpen(false)}
+                        className="w-full text-left px-3 py-2 text-xs font-mono font-medium uppercase tracking-wider text-[#bba782] hover:text-[#fcf6ba] hover:bg-[#d4af37]/10 rounded-lg transition-colors flex items-center gap-2.5"
+                      >
+                        <Layers size={15} /> Student Zone
+                      </Link>
+
+                      {role === 'admin' && (
+                        <button
+                          onClick={() => {
+                            setIsAvatarMenuOpen(false);
+                            navigate('/seven-mod');
+                          }}
+                          className="w-full text-left px-3 py-2 text-xs font-mono font-medium uppercase tracking-wider text-[#fef08a] hover:bg-[#fef08a]/10 rounded-lg transition-colors flex items-center gap-2.5"
+                        >
+                          <Settings size={15} /> Admin Control
+                        </button>
+                      )}
+
+                      <div className="h-px bg-[rgba(212,175,55,0.2)] my-1 mx-1" />
+
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full text-left px-3 py-2 text-xs font-mono font-medium uppercase tracking-wider text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors flex items-center gap-2.5"
+                      >
+                        <LogIn size={15} className="rotate-180" /> Sign Out
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsLoginOpen(true)}
+                className="liquid-btn-primary px-5 py-2 text-xs text-[#fcf6ba] active:scale-95"
+              >
+                Sign In
+              </button>
+            )}
+
+            {/* Mobile Hamburger Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden w-9 h-9 rounded-lg liquid-glass flex items-center justify-center text-[#d4af37] hover:text-[#fcf6ba]"
+              aria-label="Toggle Navigation Menu"
+            >
+              {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Dynamic Glass Sheet Menu */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ type: "spring", damping: 25, stiffness: 220 }}
+            className="fixed inset-x-4 top-24 z-[90] md:hidden liquid-glass-card rounded-[14px] p-6 shadow-2xl border border-[rgba(212,175,55,0.4)]"
+          >
+            <div className="flex flex-col gap-2">
+              <NavLink
+                to="/"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    "px-4 py-3 rounded-lg text-sm font-mono font-medium uppercase tracking-wider flex items-center justify-between",
+                    isActive ? "bg-[#d4af37]/20 text-[#fcf6ba]" : "text-[#bba782] hover:bg-[#d4af37]/5"
+                  )
+                }
+              >
+                <span>Home</span>
+              </NavLink>
+
+              <NavLink
+                to="/services"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    "px-4 py-3 rounded-lg text-sm font-mono font-medium uppercase tracking-wider flex items-center justify-between",
+                    isActive ? "bg-[#d4af37]/20 text-[#fcf6ba]" : "text-[#bba782] hover:bg-[#d4af37]/5"
+                  )
+                }
+              >
+                <span>Services & IT</span>
+              </NavLink>
+
+              <div className="pl-4 flex flex-col gap-1 border-l border-[rgba(212,175,55,0.3)] my-1">
+                <Link
+                  to="/academics"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="px-3 py-2 text-xs font-mono text-[#bba782] hover:text-[#fcf6ba]"
+                >
+                  • Academics
+                </Link>
+                <Link
+                  to="/courses"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="px-3 py-2 text-xs font-mono text-[#bba782] hover:text-[#fcf6ba]"
+                >
+                  • Courses
+                </Link>
+                <Link
+                  to="/notes"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="px-3 py-2 text-xs font-mono text-[#bba782] hover:text-[#fcf6ba]"
+                >
+                  • Notes
+                </Link>
               </div>
 
-              <div className="mt-auto border-t border-border pt-6 pb-6">
-                {!user ? (
-                  <button onClick={() => { setIsLoginOpen(true); setIsMobileMenuOpen(false); }} className="cool-button w-full py-5 text-sm">
-                    Portal Access
-                  </button>
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    {profile?.username ? (
-                      <NavLink 
-                        to={`/profile/${profile.username}`} 
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="w-full py-4 rounded-xl bg-primary/10 text-primary font-black uppercase tracking-widest text-center text-[10px]"
-                      >
-                        View My Profile
-                      </NavLink>
-                    ) : (
-                      <NavLink 
-                        to="/student-zone?tab=settings" 
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="w-full py-4 rounded-xl bg-amber-500/10 text-amber-500 font-black uppercase tracking-widest text-center text-[10px]"
-                      >
-                        Setup Profile
-                      </NavLink>
-                    )}
-                    {role === 'admin' && (
-                      <NavLink 
-                        to="/seven-mod" 
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="w-full py-4 rounded-xl bg-accent/10 text-accent font-black uppercase tracking-widest text-center text-[10px]"
-                      >
-                        Admin Control Panel
-                      </NavLink>
-                    )}
-                    <button onClick={handleSignOut} className="w-full py-4 bg-muted rounded-xl font-black uppercase tracking-widest text-destructive text-[10px] hover:bg-destructive/5 transition-colors">
-                      Sign Out
-                    </button>
-                  </div>
-                )}
-              </div>
+              <NavLink
+                to="/stars"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    "px-4 py-3 rounded-lg text-sm font-mono font-medium uppercase tracking-wider flex items-center justify-between",
+                    isActive ? "bg-[#d4af37]/20 text-[#fcf6ba]" : "text-[#bba782] hover:bg-[#d4af37]/5"
+                  )
+                }
+              >
+                <span>Stars</span>
+              </NavLink>
+
+              <NavLink
+                to="/contact"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    "px-4 py-3 rounded-lg text-sm font-mono font-medium uppercase tracking-wider flex items-center justify-between",
+                    isActive ? "bg-[#d4af37]/20 text-[#fcf6ba]" : "text-[#bba782] hover:bg-[#d4af37]/5"
+                  )
+                }
+              >
+                <span>Contact</span>
+              </NavLink>
+
+              <NavLink
+                to="/student-zone"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    "px-4 py-3 rounded-lg text-sm font-mono font-medium uppercase tracking-wider flex items-center justify-between",
+                    isActive ? "bg-[#d4af37]/20 text-[#fcf6ba]" : "text-[#bba782] hover:bg-[#d4af37]/5"
+                  )
+                }
+              >
+                <span>Student Zone</span>
+              </NavLink>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Auth Modal */}
+      {/* Auth Modal with Royal Liquid Glass Styling */}
       {isLoginOpen && (
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-card w-full max-w-md rounded-3xl p-8 shadow-2xl relative border border-border">
-            <button onClick={() => { setIsLoginOpen(false); setShowVerificationSent(false); }} className="absolute top-4 right-4 p-2 hover:bg-muted rounded-full"><X size={20} /></button>
-            
+        <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-xl flex items-center justify-center p-4">
+          <div className="liquid-glass-card w-full max-w-md rounded-[16px] p-8 shadow-2xl relative border border-[rgba(212,175,55,0.45)]">
+            <button
+              onClick={() => {
+                setIsLoginOpen(false);
+                setShowVerificationSent(false);
+              }}
+              className="absolute top-5 right-5 p-2 hover:bg-white/10 rounded-lg text-[#d4af37] transition"
+            >
+              <X size={20} />
+            </button>
+
             {showVerificationSent ? (
               <div className="flex flex-col items-center text-center gap-4 py-6">
-                <div className="w-16 h-16 rounded-full bg-primary/20 text-primary flex items-center justify-center mb-2">
+                <div className="w-16 h-16 rounded-xl bg-[#d4af37]/20 text-[#d4af37] flex items-center justify-center mb-2 border border-[#d4af37]/35">
                   <Mail size={32} />
                 </div>
-                <h3 className="text-xl font-black uppercase tracking-widest text-primary">Check Your Email</h3>
-                <p className="text-sm text-muted-foreground">
-                  We've sent a verification link to <span className="font-bold text-foreground">{loginEmail}</span>.
-                  Please verify your email to complete registration.
+                <h3 className="text-xl font-heading text-[#fcf6ba]">
+                  Check Your Email
+                </h3>
+                <p className="text-sm font-serif-body text-[#bba782] leading-relaxed">
+                  We've sent a verification link to{' '}
+                  <span className="font-mono text-[#fcf6ba]">{loginEmail}</span>. Please verify your email to complete registration.
                 </p>
-                <button onClick={() => { setIsLoginOpen(false); setShowVerificationSent(false); }} className="w-full py-4 mt-4 bg-muted text-foreground rounded-xl font-black uppercase tracking-widest hover:bg-muted/80 transition-colors">
+                <button
+                  onClick={() => {
+                    setIsLoginOpen(false);
+                    setShowVerificationSent(false);
+                  }}
+                  className="w-full py-3.5 mt-4 liquid-glass text-[#fcf6ba] rounded-lg font-mono font-medium uppercase tracking-wider text-xs hover:bg-[#d4af37]/10 transition-colors"
+                >
                   Close
                 </button>
               </div>
             ) : (
               <>
-                <h2 className="text-2xl font-black uppercase tracking-widest mb-8">{isSignUpMode ? 'Create Account' : 'Welcome Back'}</h2>
-                <form onSubmit={isSignUpMode ? handleManualSignUp : handleWebsiteAuth} className="flex flex-col gap-4">
+                <h2 className="text-2xl font-heading text-[#fcf6ba] mb-6">
+                  {isSignUpMode ? 'Create Royal Account' : 'Welcome to 5EVEN'}
+                </h2>
+                <form
+                  onSubmit={isSignUpMode ? handleManualSignUp : handleWebsiteAuth}
+                  className="flex flex-col gap-3.5"
+                >
                   {isSignUpMode && (
                     <>
-                      <input type="text" placeholder="Full Name" value={signupFullName} onChange={e => setSignupFullName(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
-                      <input type="text" placeholder="Username" value={signupUsername} onChange={e => setSignupUsername(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
+                      <input
+                        type="text"
+                        placeholder="Full Name"
+                        value={signupFullName}
+                        onChange={(e) => setSignupFullName(e.target.value)}
+                        className="w-full px-4 py-3 rounded-lg border border-[rgba(212,175,55,0.3)] bg-black/60 text-[#fbf5e6] placeholder-[#bba782]/60 outline-none focus:border-[#d4af37] transition font-sans text-sm"
+                      />
+                      <input
+                        type="text"
+                        placeholder="Username"
+                        value={signupUsername}
+                        onChange={(e) => setSignupUsername(e.target.value)}
+                        className="w-full px-4 py-3 rounded-lg border border-[rgba(212,175,55,0.3)] bg-black/60 text-[#fbf5e6] placeholder-[#bba782]/60 outline-none focus:border-[#d4af37] transition font-mono text-sm"
+                      />
                       <GlassSelect
                         value={signupGender}
                         onChange={(val) => setSignupGender(val)}
                         options={[
                           { value: 'male', label: 'Male' },
                           { value: 'female', label: 'Female' },
-                          { value: 'others', label: 'Others' }
+                          { value: 'others', label: 'Others' },
                         ]}
                         placeholder="Select Gender"
                         className="w-full"
                       />
                     </>
                   )}
-                  <input type="email" placeholder="Email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
-                  <input type="password" placeholder="Password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} className="w-full p-4 rounded-xl border border-border bg-muted/30 outline-none focus:border-primary" />
-                  
-                  {loginError && <p className="text-destructive text-xs font-bold">{loginError}</p>}
-                  
-                  <button type="submit" disabled={isLoginBusy} className="w-full py-4 bg-primary text-white rounded-xl font-black uppercase tracking-widest mt-2 hover:scale-[1.02] transition-all disabled:opacity-50">
-                    {isLoginBusy ? 'Processing...' : (isSignUpMode ? 'Register' : 'Login')}
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-[rgba(212,175,55,0.3)] bg-black/60 text-[#fbf5e6] placeholder-[#bba782]/60 outline-none focus:border-[#d4af37] transition font-mono text-sm"
+                  />
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    className="w-full px-4 py-3 rounded-lg border border-[rgba(212,175,55,0.3)] bg-black/60 text-[#fbf5e6] placeholder-[#bba782]/60 outline-none focus:border-[#d4af37] transition font-mono text-sm"
+                  />
+
+                  {loginError && (
+                    <p className="text-rose-400 text-xs font-mono">{loginError}</p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isLoginBusy}
+                    className="w-full py-3.5 liquid-btn-primary text-xs disabled:opacity-50 mt-2"
+                  >
+                    {isLoginBusy ? 'Processing...' : isSignUpMode ? 'Register' : 'Login'}
                   </button>
                 </form>
 
-                <div className="relative my-8">
+                <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-border"></span>
+                    <span className="w-full border-t border-[rgba(212,175,55,0.2)]" />
                   </div>
-                  <div className="relative flex justify-center text-[10px] font-black uppercase">
-                    <span className="bg-card px-4 text-muted-foreground tracking-[0.3em]">Or Secure Access</span>
+                  <div className="relative flex justify-center text-[10px] font-mono uppercase">
+                    <span className="bg-[#050507] px-4 text-[#bba782] tracking-[0.25em]">
+                      Or Secure Access
+                    </span>
                   </div>
                 </div>
 
@@ -389,14 +661,19 @@ const Navbar = () => {
                     }
                   }}
                   disabled={isLoginBusy}
-                  className="w-full flex items-center justify-center gap-3 py-4 rounded-xl border border-border bg-white/5 hover:bg-white/10 transition-all font-black uppercase tracking-widest text-[10px] disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-[rgba(212,175,55,0.35)] bg-black/50 hover:bg-[#d4af37]/10 text-[#fcf6ba] transition-all font-mono uppercase tracking-wider text-xs disabled:opacity-50"
                 >
-                  <i className="ri-google-fill text-lg"></i>
+                  <i className="ri-google-fill text-base text-[#d4af37]" />
                   <span>Continue with Google</span>
                 </button>
-                
-                <button onClick={() => setIsSignUpMode(!isSignUpMode)} className="w-full mt-6 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
-                  {isSignUpMode ? 'Already have an account? Login' : 'New here? Create account'}
+
+                <button
+                  onClick={() => setIsSignUpMode(!isSignUpMode)}
+                  className="w-full mt-5 text-xs font-mono tracking-wider text-[#bba782] hover:text-[#d4af37] transition-colors text-center"
+                >
+                  {isSignUpMode
+                    ? 'Already have an account? Login'
+                    : 'New here? Create account'}
                 </button>
               </>
             )}

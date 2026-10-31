@@ -966,10 +966,10 @@ export const UniversalEnquiryModal = ({ isOpen, onClose, item = null, itemType =
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-5 rounded-xl bg-primary text-primary-foreground font-black uppercase tracking-widest hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-primary/20 disabled:opacity-50 flex items-center justify-center gap-3"
+                    className="w-full py-4 rounded-xl bg-gradient-to-r from-[#14151e] via-[#211d13] to-[#14151e] border border-[#d4af37]/60 hover:border-[#fcf6ba] text-[#fcf6ba] font-mono font-bold uppercase tracking-widest text-xs shadow-[0_10px_30px_rgba(0,0,0,0.85),0_0_20px_rgba(212,175,55,0.25)] hover:shadow-[0_0_35px_rgba(212,175,55,0.45)] hover:scale-[1.01] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3 cursor-pointer"
                   >
-                    {loading && <Loader2 size={16} className="animate-spin" />}
-                    <span>{loading ? 'Sending Request...' : 'Submit Enquiry'}</span>
+                    {loading && <Loader2 size={16} className="animate-spin text-[#d4af37]" />}
+                    <span>{loading ? 'Submitting Dossier...' : 'Submit Institutional Enquiry'}</span>
                   </button>
 
                 </form>

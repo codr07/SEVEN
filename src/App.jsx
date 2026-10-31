@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useLayoutEffect, Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Lenis from 'lenis';
 import { ThemeProvider } from './context/ThemeContext';
@@ -144,34 +144,39 @@ const AppContent = ({ loading, setLoading }) => {
       el.setAttribute('content', content);
     };
 
-    // Standard Tags
     updateMeta('meta[name="description"]', 'name', meta.description);
-
-    // Open Graph Tags
     updateMeta('meta[property="og:title"]', 'property', fullTitle);
     updateMeta('meta[property="og:description"]', 'property', meta.description);
     updateMeta('meta[property="og:image"]', 'property', meta.image);
     updateMeta('meta[property="og:url"]', 'property', window.location.href);
-
-    // Twitter Tags
     updateMeta('meta[name="twitter:title"]', 'name', fullTitle);
     updateMeta('meta[name="twitter:description"]', 'name', meta.description);
     updateMeta('meta[name="twitter:image"]', 'name', meta.image);
-
   }, [location.pathname]);
 
-  const isAppLoading = loading || authLoading || dataLoading;
+  // Keep loading bounded so the user never gets an infinite spinner or freeze
+  useEffect(() => {
+    if (!authLoading && !dataLoading) {
+      setLoading(false);
+    }
+    const maxTimer = setTimeout(() => {
+      setLoading(false);
+    }, 2200);
+    return () => clearTimeout(maxTimer);
+  }, [authLoading, dataLoading, setLoading]);
+
+  const isAppLoading = loading;
 
   return (
     <>
       <GlobalBackground />
       {isAppLoading && <LoadingScreen onLoadingComplete={() => setLoading(false)} />}
       {!isAppLoading && (
-        <div className="min-h-screen transition-colors duration-300 flex flex-col md:flex-row">
+        <div className="min-h-screen transition-colors duration-300 flex flex-col">
           {!isAdminPage && <Navbar />}
           <div className="flex-1 flex flex-col w-full min-w-0">
             <main className="flex-1">
-              <Suspense fallback={<div className="h-screen w-full flex items-center justify-center">Loading...</div>}>
+              <Suspense fallback={<div className="h-screen w-full flex items-center justify-center text-white/50">Loading...</div>}>
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/academics" element={<Academics />} />
@@ -223,50 +228,51 @@ const AppContent = ({ loading, setLoading }) => {
   );
 };
 
-const App = () => {
-  const [loading, setLoading] = useState(false);
+export default function App() {
+  const [loading, setLoading] = useState(true);
 
   useLayoutEffect(() => {
-    console.log('App: Initializing smooth scroll (Lenis)');
-    try {
-      const lenis = new Lenis({
-        duration: 1.2,
-        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      });
-      window.lenis = lenis;
+    // Hardware accelerated ultra-smooth 60fps Lenis instance
+    const lenis = new Lenis({
+      duration: 1.0,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      wheelMultiplier: 0.9,
+      touchMultiplier: 1.5,
+      infinite: false,
+      syncTouch: false,
+    });
 
-      console.log('App: Lenis initialized successfully');
+    window.lenis = lenis;
 
-      function raf(time) {
-        lenis.raf(time);
-        requestAnimationFrame(raf);
-      }
-
-      requestAnimationFrame(raf);
-
-      return () => {
-        lenis.destroy();
-        delete window.lenis;
-        console.log('App: Lenis destroyed');
-      };
-    } catch (err) {
-      console.error('App: Failed to initialize Lenis:', err);
+    let animationFrameId;
+    function raf(time) {
+      lenis.raf(time);
+      animationFrameId = requestAnimationFrame(raf);
     }
+
+    animationFrameId = requestAnimationFrame(raf);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      lenis.destroy();
+      window.lenis = null;
+    };
   }, []);
 
   return (
-    <AlertProvider>
-      <AuthProvider>
-        <DataProvider>
-          <ThemeProvider>
-            <Router>
+    <Router>
+      <ThemeProvider>
+        <AuthProvider>
+          <DataProvider>
+            <AlertProvider>
               <AppContent loading={loading} setLoading={setLoading} />
-            </Router>
-          </ThemeProvider>
-        </DataProvider>
-      </AuthProvider>
-    </AlertProvider>
+            </AlertProvider>
+          </DataProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </Router>
   );
-};
-
-export default App;
+}

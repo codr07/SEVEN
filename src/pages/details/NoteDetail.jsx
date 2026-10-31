@@ -99,7 +99,7 @@ const NoteDetail = () => {
   }
 
   const view = note.extra_details || {};
-  const coverUrl = view.cover || note.thumbnail || note.image_url || note.cover_image || 'https://images.unsplash.com/photo-1517842645767-c639042777db?q=80&w=1200&auto=format&fit=crop';
+  const coverUrl = view.cover || note.thumbnail || note.image_url || note.cover_image || '/assets/images/img/banner.png';
 
   return (
     <div className="min-h-screen w-full bg-background pb-20 pt-32 px-4 md:px-8 text-foreground">
@@ -125,7 +125,7 @@ const NoteDetail = () => {
                     src={coverUrl} 
                     alt={note.title} 
                     className="h-full w-full object-cover" 
-                    onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1517842645767-c639042777db?q=80&w=1200&auto=format&fit=crop'; }}
+                    onError={(e) => { e.currentTarget.src = '/assets/images/img/banner.png'; }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
                 </>

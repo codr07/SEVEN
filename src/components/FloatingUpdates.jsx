@@ -90,8 +90,10 @@ const FloatingUpdates = () => {
             >
               <div className="p-8 border-b border-white/5 flex items-center justify-between">
                 <div>
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-1">Operational Brief</h4>
-                  <h2 className="text-3xl font-black text-foreground italic uppercase tracking-tighter">5EVEN Updates</h2>
+                  <h4 className="text-[10px] font-mono font-bold uppercase tracking-[0.25em] text-[#d4af37] mb-1">Operational Brief</h4>
+                  <h2 className="text-2xl font-serif font-bold text-[#fcf6ba] tracking-tight">
+                    <span className="font-mono text-[#d4af37]">5EVEN</span> Bulletins
+                  </h2>
                 </div>
                 <button
                   onClick={() => setIsOpen(false)}

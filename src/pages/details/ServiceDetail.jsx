@@ -62,7 +62,7 @@ const ServiceDetail = () => {
   }
 
   const view = service.extra_details || {};
-  const coverUrl = view.cover || service.thumbnail || service.image_url || service.cover_image || 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1200&auto=format&fit=crop';
+  const coverUrl = view.cover || service.thumbnail || service.image_url || service.cover_image || '/assets/images/img/banner.png';
 
   return (
     <div className="min-h-screen w-full bg-background pb-20 pt-32 px-4 md:px-8 text-foreground">
@@ -82,7 +82,7 @@ const ServiceDetail = () => {
               src={coverUrl}
               alt={service.title}
               className="h-full w-full object-cover"
-              onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1200&auto=format&fit=crop'; }}
+              onError={(e) => { e.currentTarget.src = '/assets/images/img/banner.png'; }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
             <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10">
@@ -146,9 +146,9 @@ const ServiceDetail = () => {
 
               <button
                 onClick={() => setShowEnquiry(true)}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-6 py-5 text-base font-black uppercase tracking-widest text-background shadow-lg hover:-translate-y-1 hover:bg-secondary transition-all duration-300"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#14151e] via-[#211d13] to-[#14151e] border border-[#d4af37]/60 hover:border-[#fcf6ba] px-6 py-4 text-xs font-mono font-bold uppercase tracking-widest text-[#fcf6ba] shadow-[0_10px_30px_rgba(0,0,0,0.85),0_0_20px_rgba(212,175,55,0.25)] hover:shadow-[0_0_35px_rgba(212,175,55,0.45)] hover:-translate-y-0.5 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300"
               >
-                <MessageSquarePlus size={20} />
+                <MessageSquarePlus size={18} className="text-[#d4af37]" />
                 Enquire Now
               </button>
             </aside>
